@@ -11,7 +11,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/go-json-experiment/json"
+	"encoding/json"
 )
 
 var service string

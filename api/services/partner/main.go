@@ -13,9 +13,10 @@ import (
 	"time"
 
 	"github.com/ardanlabs/conf/v3"
-	"github.com/ardanlabs/service/foundation/logger"
-	"github.com/ardanlabs/service/api/services/api/debug"
-	"github.com/ardanlabs/service/api/services/sales/mux"
+	"github.com/francowini/rafiki/foundation/logger"
+	"github.com/francowini/rafiki/api/services/partner/mux"
+	"github.com/francowini/rafiki/api/services/api/debug"
+
 )
 
 
@@ -31,10 +32,10 @@ func main() {
 	}
 
 	traceIDFn := func(ctx context.Context) string {
-		return "sales-service" // otel.GetTraceID(ctx)
+		return "partner-service" // otel.GetTraceID(ctx)
 	}
 
-	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "SALES", traceIDFn, events)
+	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "PARTNER", traceIDFn, events)
 
 	// -------------------------------------------------------------------------
 
@@ -77,7 +78,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 	}
 
 
-	const prefix = "SALES"
+	const prefix = "PARTNER"
 	help, err := conf.Parse(prefix, &cfg)
 	if err != nil {
 		if errors.Is(err, conf.ErrHelpWanted) {
