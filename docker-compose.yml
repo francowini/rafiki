@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:18.0
+    container_name: topifier-postgres
+    restart: unless-stopped
+    environment:
+      # BITWARDEN_REF: topifier-hetzner-postgres
+      POSTGRES_DB: ${POSTGRES_DB:-topifier}
+      POSTGRES_USER: ${POSTGRES_USER:-topifier}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-topifier}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  partner-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: topifier-partner-service
+    restart: unless-stopped
+    environment:
+      # BITWARDEN_REF: topifier-hetzner-service
+      SALES_WEB_APIHOST: 0.0.0.0:3000
+      SALES_WEB_DEBUGHOST: 0.0.0.0:3010
+      SALES_WEB_READTIMEOUT: 5s
+      SALES_WEB_WRITETIMEOUT: 10s
+      SALES_WEB_IDLETIMEOUT: 120s
+      SALES_WEB_SHUTDOWNTIMEOUT: 20s
+      SALES_WEB_CORSALLOWEDORIGINS: "*"
+    ports:
+      - "3000:3000"
+      - "3010:3010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3010/debug/readiness"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
