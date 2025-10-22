@@ -58,8 +58,8 @@ docker-compose --version
 
 ### 3. Create deployment directory
 ```bash
-mkdir -p /opt/topifier
-cd /opt/topifier
+mkdir -p /opt/rafiki
+cd /opt/rafiki
 ```
 
 ### 4. Clone or upload your code
@@ -69,7 +69,7 @@ git clone YOUR_REPO_URL .
 
 # Option 2: Manual upload
 # Use scp from your local machine:
-# scp -r /path/to/topifier/* root@YOUR_SERVER_IP:/opt/topifier/
+# scp -r /path/to/topifier/* root@YOUR_SERVER_IP:/opt/rafiki/
 ```
 
 ### 5. Create .env file
@@ -102,14 +102,14 @@ ufw --force enable
 
 ### First Deployment
 ```bash
-cd /opt/topifier
+cd /opt/rafiki
 chmod +x deploy.sh
 ./deploy.sh
 ```
 
 ### Subsequent Deployments
 ```bash
-cd /opt/topifier
+cd /opt/rafiki
 git pull  # If using git
 ./deploy.sh
 ```

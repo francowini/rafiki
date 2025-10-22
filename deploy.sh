@@ -46,7 +46,7 @@ fi
 
 # Stop existing containers
 print_info "Stopping existing containers..."
-docker-compose down || true
+docker compose down || true
 
 # Pull latest changes (if using git deployment)
 if [ -d .git ]; then
@@ -56,7 +56,7 @@ fi
 
 # Build and start services
 print_info "Building and starting services..."
-docker-compose up -d --build
+docker compose up -d --build
 
 # Wait for services to be healthy
 print_info "Waiting for services to be healthy..."
@@ -64,9 +64,9 @@ sleep 10
 
 # Check service health
 print_info "Checking service health..."
-if docker-compose ps | grep -q "Up"; then
+if docker compose ps | grep -q "Up"; then
     print_info "Services are running:"
-    docker-compose ps
+    docker compose ps
 
     print_info ""
     print_info "========================================="
@@ -75,9 +75,9 @@ if docker-compose ps | grep -q "Up"; then
     print_info "API available at: http://localhost:3000"
     print_info "Debug/Metrics at: http://localhost:3010"
     print_info ""
-    print_info "View logs with: docker-compose logs -f"
+    print_info "View logs with: docker compose logs -f"
 else
     print_error "Service deployment failed!"
-    print_error "Check logs with: docker-compose logs"
+    print_error "Check logs with: docker compose logs"
     exit 1
 fi
