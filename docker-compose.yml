@@ -26,15 +26,6 @@ services:
       dockerfile: Dockerfile
     container_name: topifier-partner-service
     restart: unless-stopped
-    environment:
-      # BITWARDEN_REF: topifier-hetzner-service
-      SALES_WEB_APIHOST: 0.0.0.0:3000
-      SALES_WEB_DEBUGHOST: 0.0.0.0:3010
-      SALES_WEB_READTIMEOUT: 5s
-      SALES_WEB_WRITETIMEOUT: 10s
-      SALES_WEB_IDLETIMEOUT: 120s
-      SALES_WEB_SHUTDOWNTIMEOUT: 20s
-      SALES_WEB_CORSALLOWEDORIGINS: "*"
     ports:
       - "3000:3000"
       - "3010:3010"

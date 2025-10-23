@@ -62,18 +62,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 	cfg := struct {
 		conf.Version
 		Web struct {
-			ReadTimeout        time.Duration `conf:"default:5s"`
-			WriteTimeout       time.Duration `conf:"default:10s"`
-			IdleTimeout        time.Duration `conf:"default:120s"`
-			ShutdownTimeout    time.Duration `conf:"default:20s"`
-			APIHost            string        `conf:"default:0.0.0.0:3000"`
-			DebugHost          string        `conf:"default:0.0.0.0:3010"`
-			CORSAllowedOrigins []string      `conf:"default:*"`
+			APIHost  string `conf:"default:0.0.0.0:3000"`
+			DebugHost string `conf:"default:0.0.0.0:3010"`
 		}
 	}{
 		Version: conf.Version{
 			Build: build,
-			Desc:  "Sales",
+			Desc:  "Partner Service",
 		},
 	}
 
@@ -129,12 +124,9 @@ func run(ctx context.Context, log *logger.Logger) error {
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
 	api := http.Server{
-		Addr:         cfg.Web.APIHost,
-		Handler:      mux.WebAPI(),
-		ReadTimeout:  cfg.Web.ReadTimeout,
-		WriteTimeout: cfg.Web.WriteTimeout,
-		IdleTimeout:  cfg.Web.IdleTimeout,
-		ErrorLog:     logger.NewStdLogger(log, logger.LevelError),
+		Addr:     cfg.Web.APIHost,
+		Handler:  mux.WebAPI(),
+		ErrorLog: logger.NewStdLogger(log, logger.LevelError),
 	}
 
 	serverErrors := make(chan error, 1)
@@ -154,7 +146,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 		log.Info(ctx, "shutdown", "status", "shutdown started", "signal", sig)
 		defer log.Info(ctx, "shutdown", "status", "shutdown complete", "signal", sig)
 
-		ctx, cancel := context.WithTimeout(ctx, cfg.Web.ShutdownTimeout)
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
 
 		if err := api.Shutdown(ctx); err != nil {
