@@ -1,62 +1,78 @@
-# Multi-Mind - Subagent-Based Collaborative Analysis
+# Multi-Mind - Habits Tracker Development Team
 
-Execute a multi-specialist collaborative analysis using independent subagents.
+Execute a collaborative analysis using two specialized subagents for the Rafiki habits tracker project.
 
-**Usage**: `/project:multi-mind topic [rounds=3]`
+**Usage**: `/multi-mind [topic/task]`
+
+## Project Context
+
+This is a habits tracker application (Rafiki/Topifier) built in Go with PostgreSQL, deployed on Hetzner servers. The two-agent team consists of:
+1. **Backend Engineer**: Go development, API design, database operations
+2. **DevOps Engineer**: Deployment, infrastructure, Docker, server management
 
 ## Implementation
 
-Execute this multi-specialist analysis using the Task tool to create independent subagents:
+Execute this two-specialist analysis using the Task tool to create independent subagents:
 
 ### Phase 1: Specialist Assignment & Research
 
-First, analyze the topic and determine 4-6 specialist roles needed. Then launch parallel subagents using the Task tool:
+Launch parallel subagents using the Task tool:
 
-**Example Implementation**:
-```
-// Launch parallel specialist subagents
-Task 1: "Technical Specialist"
-- Prompt: "As a technical specialist, research [topic] focusing on implementation details, architecture, performance considerations, and technical challenges. Use WebSearch to find latest technical documentation and case studies."
+**Agent 1: Backend Engineer**
+- Prompt: "As a backend engineer specializing in Go, analyze [topic] focusing on:
+  - Go implementation patterns and best practices
+  - PostgreSQL database design and queries
+  - API endpoint design and HTTP routing (using Go 1.22+ patterns)
+  - Service architecture (following the partner-service pattern)
+  - Configuration management with ardanlabs/conf
+  - Structured logging with foundation/logger
+  - Error handling and validation
+  - Review relevant code in api/services/partner/, foundation/, and business/
+  Use Read, Glob, and Grep tools to examine the existing codebase."
 
-Task 2: "Business Strategy Specialist"  
-- Prompt: "As a business strategy specialist, analyze [topic] from market dynamics, competitive landscape, ROI, and strategic positioning perspectives. Search for market reports and business analyses."
+**Agent 2: DevOps Engineer**
+- Prompt: "As a DevOps engineer, analyze [topic] focusing on:
+  - Docker and docker-compose configuration
+  - Hetzner server deployment strategies
+  - Service deployment and orchestration
+  - Environment variable management
+  - Health checks and monitoring
+  - CORS and network configuration
+  - Review deployment scripts and documentation in devops/ folder
+  Use Read tool to examine deployment scripts, Docker files, and configuration files."
 
-Task 3: "User Experience Specialist"
-- Prompt: "As a UX specialist, investigate [topic] focusing on user needs, usability concerns, adoption barriers, and human factors. Find user studies and experience reports."
+Each subagent operates independently with access to Read, Glob, Grep, and analysis tools.
 
-[Additional specialists as needed...]
-```
-
-Each subagent operates independently with access to WebSearch, Read, and analysis tools.
-
-**Specialist Selection Criteria**:
-- Unique domain expertise relevant to the topic
-- Different methodological approaches (quantitative/qualitative, theoretical/practical, etc.)
-- Varied temporal perspectives (historical, current, future-focused)
-- Distinct risk/opportunity sensitivities
-- Independent information sources and knowledge bases
+**Specialist Domains**:
+- **Backend**: Go codebase, API logic, database schemas, business logic
+- **DevOps**: Infrastructure, deployment scripts, containerization, server configuration
 
 ### Phase 2: Cross-Pollination Round
 
-After receiving all specialist reports, launch a second round of subagents:
+After receiving both specialist reports, launch a second round of subagents:
 
 ```
-Use the Task tool to launch subagents that:
-1. Review all other specialists' findings
-2. Identify intersections with their domain
-3. Challenge assumptions from their perspective
-4. Build on insights while maintaining distinct viewpoint
-5. Flag blind spots in other analyses
+Backend Engineer Review:
+- Review DevOps findings for deployment considerations
+- Identify how infrastructure choices affect code design
+- Ensure API configuration aligns with deployment strategy
+- Flag potential issues with containerization or environment setup
+
+DevOps Engineer Review:
+- Review Backend findings for deployment implications
+- Identify infrastructure requirements for new features
+- Ensure deployment scripts support code changes
+- Flag potential performance or scaling concerns
 ```
 
-### Phase 3: Synthesis & Iteration
+### Phase 3: Synthesis & Final Recommendations
 
-For each round (default 3, user-configurable):
+After both rounds:
 - Collect all subagent outputs
-- Synthesize without homogenizing perspectives
-- Identify emerging patterns
-- Determine focus areas for next round
-- Launch new subagent tasks with refined prompts
+- Synthesize backend and devops perspectives
+- Identify coordination points between code and infrastructure
+- Provide actionable implementation plan
+- Highlight dependencies between backend work and devops work
 
 ## Anti-Repetition Mechanisms
 
@@ -64,56 +80,59 @@ For each round (default 3, user-configurable):
 - Track what has been thoroughly covered vs. what needs deeper exploration
 - Redirect specialists away from rehashing previous points
 - Push for new angles, deeper analysis, or broader implications
-- Synthesize without homogenizing distinct specialist perspectives
+- Ensure backend and devops perspectives remain distinct and valuable
 
 **Specialist Guidelines**:
 - Build on previous round insights rather than restating them
-- Focus on what your unique expertise adds to the collective understanding
-- Search for information others likely missed due to their different focus areas
-- Challenge the group's emerging consensus from your specialist perspective
+- Backend focuses on code quality, maintainability, and Go best practices
+- DevOps focuses on deployability, reliability, and operational excellence
+- Cross-pollinate by considering the other specialist's domain concerns
 
 ## Output Protocol
 
 ```
-=== MULTI-MIND ANALYSIS: [Topic] ===
-Rounds: [X] | Specialists: [Dynamic assignment based on topic]
+=== RAFIKI HABITS TRACKER ANALYSIS: [Topic] ===
+Specialists: Backend Engineer + DevOps Engineer
 
---- ROUND 1 ---
-🔍 KNOWLEDGE ACQUISITION
-[Each specialist's web research findings in their domain]
+--- ROUND 1: INITIAL ANALYSIS ---
+🔧 BACKEND ENGINEER ANALYSIS
+[Go code analysis, API design, database considerations]
 
-🎯 SPECIALIST ANALYSIS  
-[Each specialist's unique perspective and insights]
+🚀 DEVOPS ENGINEER ANALYSIS
+[Infrastructure analysis, deployment strategy, operational concerns]
 
-🔄 CROSS-POLLINATION
-[Specialists engage with each other's findings]
+--- ROUND 2: CROSS-POLLINATION ---
+🔧 BACKEND ENGINEER REVIEW
+[Review of DevOps findings and their impact on code]
 
-⚖️ MODERATOR SYNTHESIS
-[Progress assessment, key insights, next round focus]
-
---- ROUND 2 ---
-[Repeat structure with deeper analysis building on Round 1]
+🚀 DEVOPS ENGINEER REVIEW
+[Review of Backend findings and their deployment implications]
 
 --- FINAL SYNTHESIS ---
-🧠 COLLECTIVE INTELLIGENCE OUTCOME
-[Comprehensive insights from all specialist perspectives]
+🎯 IMPLEMENTATION PLAN
+[Step-by-step plan coordinating backend and devops work]
 
-🎯 KEY INSIGHTS
-[Most valuable discoveries from the multi-mind process]
+💻 BACKEND TASKS
+[Specific Go code changes, database migrations, API updates]
 
-⚠️ REMAINING UNCERTAINTIES  
-[What the collective analysis couldn't resolve]
+🛠️ DEVOPS TASKS
+[Infrastructure updates, deployment script changes, configuration updates]
 
-🔮 IMPLICATIONS
-[Forward-looking insights for decision-making]
+⚠️ DEPENDENCIES & COORDINATION
+[Which tasks depend on each other, handoff points]
+
+🔮 DEPLOYMENT STRATEGY
+[How to safely roll out the changes to Hetzner]
 ```
 
 ## Success Metrics
 - Each round produces genuinely new insights (not repetition)
-- Specialists maintain distinct valuable perspectives throughout
-- Web research continuously introduces fresh information
+- Backend and DevOps perspectives remain distinct and valuable
 - Cross-pollination generates insights no single specialist would reach
-- Collective outcome exceeds sum of individual specialist contributions
-- Different error types are caught by different specialists' approaches
+- Implementation plan is actionable and comprehensive
+- Dependencies between backend and devops work are clearly identified
+- Deployment strategy minimizes risk and downtime
+- Code changes align with infrastructure capabilities
+- Infrastructure supports feature requirements
 
-Execute the multi-mind analysis starting with dynamic specialist assignment based on topic complexity and domain requirements.
+Execute the two-agent analysis with the Backend Engineer and DevOps Engineer working in parallel, then cross-pollinating their findings to produce a coordinated implementation plan.

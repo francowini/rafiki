@@ -1,0 +1,2 @@
+-- Version: 1.01
+-- Description: Create table goals
