@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ardanlabs/service/foundation/logger"
+	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

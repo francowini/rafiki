@@ -1,0 +1,27 @@
+# Grafana Datasource Configuration
+# Connects Grafana to Tempo for trace visualization
+
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    isDefault: true
+    jsonData:
+      httpMethod: GET
+      tracesToLogsV2:
+        # Enable correlation with logs
+        datasourceUid: 'logs'
+        tags: ['trace_id']
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      serviceMap:
+        datasourceUid: 'tempo'
+      lokiSearch:
+        datasourceUid: 'logs'
+    editable: true
+    version: 1

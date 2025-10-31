@@ -33,55 +33,7 @@ make help
 
 # Check version
 make version
-
-# Test API endpoint
-make curl-test
 ```
-
-### Docker/Deployment
-```bash
-# Build and start all services (Postgres + Partner service)
-docker compose up -d --build
-
-# View logs
-docker compose logs -f
-docker compose logs -f partner-service
-
-# Deploy to Hetzner (run on server)
-./deploy.sh
-
-# Stop services
-docker compose down
-```
-
-### Dependencies
-```bash
-# Update all dependencies
-make deps-upgrade
-
-# Tidy dependencies
-make tidy
-
-# Reset dependencies
-make deps-reset
-
-# List dependencies
-make deps-list
-```
-
-## Configuration
-
-Service configuration is via environment variables with the `PARTNER_` prefix:
-
-- `PARTNER_WEB_APIHOST`: API server address (default: 0.0.0.0:3000)
-- `PARTNER_WEB_DEBUGHOST`: Debug server address (default: 0.0.0.0:3010)
-- `PARTNER_WEB_READTIMEOUT`: HTTP read timeout (default: 5s)
-- `PARTNER_WEB_WRITETIMEOUT`: HTTP write timeout (default: 10s)
-- `PARTNER_WEB_IDLETIMEOUT`: HTTP idle timeout (default: 120s)
-- `PARTNER_WEB_SHUTDOWNTIMEOUT`: Graceful shutdown timeout (default: 20s)
-- `PARTNER_WEB_CORSALLOWEDORIGINS`: CORS origins (default: *)
-
-Database configuration uses standard `POSTGRES_*` variables (see docker-compose.yml).
 
 ## Service Lifecycle
 
@@ -93,12 +45,6 @@ The main service ([api/services/partner/main.go](api/services/partner/main.go)) 
 4. Start API server with graceful shutdown support
 5. Handle SIGINT/SIGTERM for clean shutdown
 
-## Docker Architecture
-
-- Multi-stage build: `golang:1.25-alpine` builder → `alpine:3.22` runtime
-- Binary location in container: `/app/partner`
-- Health checks on both services (API readiness endpoint + Postgres)
-- Persistent Postgres data via named volume
 
 ## Deployment
 
@@ -110,7 +56,6 @@ Target platform: Hetzner CPX11 servers
 - Service endpoints:
   - API: `http://SERVER_IP:3000`
   - Debug/Metrics: `http://SERVER_IP:3010`
-  - Health: `http://SERVER_IP:3010/debug/readiness`
 
 ## Code Patterns
 

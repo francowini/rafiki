@@ -11,8 +11,8 @@ help:
 version:
 	go run api/services/partner/main.go --version
 
-curl-test:
-	curl -i http://localhost:3000/test
+curl-ready:
+	curl -i http://localhost:3000/readiness
 
 # ==============================================================================
 # Define dependencies

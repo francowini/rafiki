@@ -11,7 +11,7 @@ RUN go mod download 2>/dev/null || true
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/partner ./api/services/partner/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/partner ./api/services/partners/main.go
 
 # Runtime stage
 FROM alpine:3.22

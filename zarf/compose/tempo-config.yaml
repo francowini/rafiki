@@ -1,0 +1,73 @@
+# Tempo Configuration for Personal/Development Use
+# Optimized for low memory usage on 2GB server
+
+usage_report:
+  reporting_enabled: false
+
+server:
+  http_listen_port: 3200
+  log_level: info
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        # HTTP receiver disabled to save memory
+        # http:
+        #   endpoint: "0.0.0.0:4318"
+
+ingester:
+  # How long to wait before considering a trace complete
+  # If no new spans arrive for this duration, the trace is marked as complete
+  trace_idle_period: 10s           # Increased to handle slow operations (DB queries, etc.)
+
+  # Small block sizes for low-volume personal use
+  max_block_bytes: 250_000        # 250KB blocks (fine for 100 traces/day)
+  max_block_duration: 2m           # Flush every 2 minutes
+
+compactor:
+  compaction:
+    # Compaction settings for low-volume personal use (100 traces/day)
+    # Aggressive retention to prevent disk filling on CPX11 (40GB disk)
+    compaction_window: 1h          # Compact every hour
+    max_block_bytes: 25_000_000    # 25MB max compacted block
+    block_retention: 12h            # Keep traces for 12 hours (~500KB-1MB storage)
+    compacted_block_retention: 6h   # Keep compacted for 6 hours
+    max_time_per_tenant: 12h        # Delete data older than 12 hours
+    retention_concurrency: 10       # Cleanup workers
+
+storage:
+  trace:
+    backend: local
+    block:
+      bloom_filter_false_positive: .05
+      v2_index_downsample_bytes: 1000
+      v2_encoding: zstd            # Good compression
+    wal:
+      path: /tmp/tempo/wal
+      v2_encoding: snappy          # Fast compression for WAL
+    local:
+      path: /tmp/tempo/blocks
+    pool:
+      max_workers: 20              # Reduced from default 100
+      queue_depth: 2000            # Reduced from default 10000
+
+# Metrics configuration (optional, can be removed)
+metrics_generator:
+  storage:
+    path: /tmp/tempo/generator
+
+# Data retention and cleanup
+# For CPX11 (40GB disk), traces should use <100MB total
+# Current settings: 12h retention = ~500KB-1MB for 100 traces/day
+# Monitor with: docker exec rafiki-tempo du -sh /tmp/tempo
+overrides:
+  defaults:
+    ingestion:
+      # Limit how much data can be ingested
+      rate_limit_bytes: 5_000_000    # 5MB/sec max ingestion
+      burst_size_bytes: 10_000_000   # 10MB burst
+    # Global retention override (fallback)
+    max_search_duration: 12h         # Can only search last 12 hours

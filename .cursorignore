@@ -1,0 +1,6 @@
+# Runtime data directories
+zarf/compose/tempo-data/
+zarf/compose/database-data/
+
+# Vendor dependencies
+vendor/
