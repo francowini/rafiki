@@ -6,7 +6,7 @@ Execute a collaborative analysis using two specialized subagents for the Rafiki 
 
 ## Project Context
 
-This is a habits tracker application (Rafiki/Topifier) built in Go with PostgreSQL, deployed on Hetzner servers. The two-agent team consists of:
+This is a habits tracker application (Rafiki) built in Go with PostgreSQL, deployed on Hetzner servers. The two-agent team consists of:
 1. **Backend Engineer**: Go development, API design, database operations
 2. **DevOps Engineer**: Deployment, infrastructure, Docker, server management
 
