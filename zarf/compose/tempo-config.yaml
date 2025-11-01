@@ -63,11 +63,8 @@ metrics_generator:
 # For CPX11 (40GB disk), traces should use <100MB total
 # Current settings: 12h retention = ~500KB-1MB for 100 traces/day
 # Monitor with: docker exec rafiki-tempo du -sh /tmp/tempo
-overrides:
-  defaults:
-    ingestion:
-      # Limit how much data can be ingested
-      rate_limit_bytes: 5_000_000    # 5MB/sec max ingestion
-      burst_size_bytes: 10_000_000   # 10MB burst
-    # Global retention override (fallback)
-    max_search_duration: 12h         # Can only search last 12 hours
+
+# Query frontend configuration
+query_frontend:
+  search:
+    max_duration: 12h  # Can only search last 12 hours
