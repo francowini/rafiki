@@ -23,14 +23,19 @@ SERVER_IP="178.156.170.37"
 SERVER_USER="root"
 DEPLOY_PATH="/opt/rafiki"
 
+# Get the project root (parent directory of devops)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+ENV_FILE="$PROJECT_ROOT/.env"
+
 print_info "========================================="
 print_info "Copy .env to Hetzner Server"
 print_info "========================================="
 
 # Check if .env file exists locally
-if [ ! -f ".env" ]; then
-    print_error ".env file not found in current directory!"
-    print_info "Please create a .env file first"
+if [ ! -f "$ENV_FILE" ]; then
+    print_error ".env file not found at $ENV_FILE!"
+    print_info "Please create a .env file in the project root first"
     exit 1
 fi
 
@@ -58,7 +63,7 @@ fi
 
 # Copy .env file to server
 print_info "Copying .env file to server at $DEPLOY_PATH/.env..."
-sshpass -p "$SERVER_PASSWORD" scp -o StrictHostKeyChecking=no .env $SERVER_USER@$SERVER_IP:$DEPLOY_PATH/.env
+sshpass -p "$SERVER_PASSWORD" scp -o StrictHostKeyChecking=no "$ENV_FILE" $SERVER_USER@$SERVER_IP:$DEPLOY_PATH/.env
 
 if [ $? -eq 0 ]; then
     print_info ""
