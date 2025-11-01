@@ -39,7 +39,7 @@ func main() {
 		return otel.GetTraceID(ctx)
 	}
 
-	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "SALES", traceIDFn, events)
+	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "RAFIKI", traceIDFn, events)
 
 	// -------------------------------------------------------------------------
 
@@ -162,7 +162,6 @@ func run(ctx context.Context, log *logger.Logger) error {
 		ServiceName: cfg.Tempo.ServiceName,
 		Host:        cfg.Tempo.Host,
 		ExcludedRoutes: map[string]struct{}{
-			"/v1/liveness":  {},
 			"/v1/readiness": {},
 		},
 		Probability: cfg.Tempo.Probability,
