@@ -34,15 +34,25 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Get the project root (parent directory of devops)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+ENV_FILE="$PROJECT_ROOT/.env"
+
+print_info "Project root: $PROJECT_ROOT"
+
 # Load environment variables from .env file
-if [ -f .env ]; then
-    print_info "Loading environment variables from .env file"
-    export $(grep -v '^#' .env | xargs)
+if [ -f "$ENV_FILE" ]; then
+    print_info "Loading environment variables from $ENV_FILE"
+    export $(grep -v '^#' "$ENV_FILE" | xargs)
 else
-    print_warn ".env file not found. Please create it with required variables"
+    print_warn ".env file not found at $ENV_FILE"
     print_warn "Required: POSTGRES_PASSWORD"
     exit 1
 fi
+
+# Change to project root directory for docker compose commands
+cd "$PROJECT_ROOT"
 
 # Stop existing containers
 print_info "Stopping existing containers..."
