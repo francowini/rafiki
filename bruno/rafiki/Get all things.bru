@@ -1,0 +1,31 @@
+meta {
+  name: Get all things
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://localhost:3000/v1/thinks
+  body: none
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "category": "ideas",
+    "content": "some content"
+  }
+}
+
+tests {
+  {}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

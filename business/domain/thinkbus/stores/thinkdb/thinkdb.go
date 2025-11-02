@@ -83,8 +83,8 @@ func (s *Store) Count(ctx context.Context) (int, error) {
 		Count int `db:"count"`
 	}
 
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, nil, &count); err != nil {
-		return 0, fmt.Errorf("namedquerystruct: %w", err)
+	if err := sqldb.QueryStruct(ctx, s.log, s.db, q, &count); err != nil {
+		return 0, fmt.Errorf("querystruct: %w", err)
 	}
 
 	return count.Count, nil

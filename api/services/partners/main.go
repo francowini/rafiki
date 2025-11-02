@@ -19,6 +19,7 @@ import (
 	"github.com/francowini/rafiki/app/sdk/mux"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
+	"github.com/francowini/rafiki/business/sdk/migrate"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/otel"
@@ -85,8 +86,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 		}
 		Tempo struct {
 			Host        string  `conf:"default:tempo:4317"`
-			ServiceName string  `conf:"default:sales"`
-			Probability float64 `conf:"default:0.05"`
+			ServiceName string  `conf:"default:rafiki-service"`
+			Probability float64 `conf:"default:1.0"`
 			// Shouldn't use a high Probability value in non-developer systems.
 			// 0.05 should be enough for most systems. Some might want to have
 			// this even lower.
@@ -143,6 +144,17 @@ func run(ctx context.Context, log *logger.Logger) error {
 	}
 
 	defer db.Close()
+
+	// -------------------------------------------------------------------------
+	// Run Database Migrations
+
+	log.Info(ctx, "startup", "status", "running database migrations")
+
+	if err := migrate.Migrate(ctx, db); err != nil {
+		return fmt.Errorf("running migrations: %w", err)
+	}
+
+	log.Info(ctx, "startup", "status", "database migrations completed")
 
 	// -------------------------------------------------------------------------
 	// Create Business Packages

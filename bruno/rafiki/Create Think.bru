@@ -1,0 +1,31 @@
+meta {
+  name: Create Think
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:3000/v1/thinks
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "category": "ideas",
+    "content": "some content"
+  }
+}
+
+tests {
+  {}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
