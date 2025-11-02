@@ -6,8 +6,6 @@ services:
     image: postgres:18.0
     container_name: rafiki-postgres
     restart: unless-stopped
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
