@@ -3,6 +3,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -10,8 +11,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-
-	"encoding/json"
 )
 
 var service string

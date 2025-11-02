@@ -35,9 +35,11 @@ import (
 	"strings"
 )
 
-var typeByteSlice = reflect.TypeOf([]byte{})
-var typeDriverValuer = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
-var typeSQLScanner = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+var (
+	typeByteSlice    = reflect.TypeOf([]byte{})
+	typeDriverValuer = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
+	typeSQLScanner   = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+)
 
 // Array returns the optimal driver.Valuer and sql.Scanner for an array or
 // slice of any dimension.
@@ -374,7 +376,7 @@ type Generic struct{ A any }
 
 func (Generic) evaluateDestination(rt reflect.Type) (reflect.Type, func([]byte, reflect.Value) error, string) {
 	var assign func([]byte, reflect.Value) error
-	var del = ","
+	del := ","
 
 	// TODO calculate the assign function for other types
 	// TODO repeat this section on the element type of arrays or slices (multidimensional)
@@ -751,9 +753,9 @@ func appendArrayElement(b []byte, rv reflect.Value) ([]byte, string, error) {
 		}
 	}
 
-	var del = ","
+	del := ","
 	var err error
-	var iv = rv.Interface()
+	iv := rv.Interface()
 
 	if ad, ok := iv.(Delimiter); ok {
 		del = ad.Delimiter()
@@ -836,7 +838,7 @@ Element:
 			dims[depth-1] = 0
 			i++
 		case '"':
-			var elem = []byte{}
+			elem := []byte{}
 			var escape bool
 			for i++; i < len(src); i++ {
 				if escape {

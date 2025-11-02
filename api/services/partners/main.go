@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-
 	"errors"
 	"expvar"
 	"fmt"
@@ -18,13 +17,17 @@ import (
 	"github.com/francowini/rafiki/api/services/partners/all"
 	"github.com/francowini/rafiki/app/sdk/debug"
 	"github.com/francowini/rafiki/app/sdk/mux"
+	"github.com/francowini/rafiki/business/domain/thinkbus"
+	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/otel"
 )
 
-var build = "develop"
-var routes = "all" // go build -ldflags "-X main.routes=crud"
+var (
+	build  = "develop"
+	routes = "all" // go build -ldflags "-X main.routes=crud"
+)
 
 func main() {
 	var log *logger.Logger
@@ -52,7 +55,6 @@ func main() {
 }
 
 func run(ctx context.Context, log *logger.Logger) error {
-
 	// -------------------------------------------------------------------------
 	// GOMAXPROCS
 
@@ -145,13 +147,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 	// -------------------------------------------------------------------------
 	// Create Business Packages
 
-	// TODO: ADD 
+	thinkStore := thinkdb.NewStore(log, db)
+	thinkBus := thinkbus.NewBusiness(log, thinkStore)
 
 	// -------------------------------------------------------------------------
 	// Initialize authentication support
 
 	log.Info(ctx, "startup", "status", "initializing authentication support")
-
 
 	// -------------------------------------------------------------------------
 	// Start Tracing Support
@@ -199,6 +201,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 		DB:     db,
 		Tracer: tracer,
 		BusConfig: mux.BusConfig{
+			ThinkBus: thinkBus,
 		},
 	}
 
@@ -247,7 +250,6 @@ func run(ctx context.Context, log *logger.Logger) error {
 }
 
 func buildRoutes() mux.RouteAdder {
-
 	// The idea here is that we can build different versions of the binary
 	// with different sets of exposed web APIs. By default we build a single
 	// instance with all the web APIs.
@@ -258,11 +260,10 @@ func buildRoutes() mux.RouteAdder {
 	// transactional database calls and the other tuned for the reporting calls.
 	// Tuning meaning indexing and memory requirements. The two databases can be
 	// kept in sync with replication.
-	
 
 	if routes != "all" {
 		panic("unexpected route")
 	}
-	
+
 	return all.Routes()
 }

@@ -18,7 +18,6 @@ var validate *validator.Validate
 var translator ut.Translator
 
 func init() {
-
 	// Instantiate a validator.
 	validate = validator.New(validator.WithRequiredStructEnabled())
 

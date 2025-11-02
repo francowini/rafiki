@@ -33,7 +33,6 @@ type Config struct {
 
 // InitTracing configures open telemetry to be used with the service.
 func InitTracing(log *logger.Logger, cfg Config) (trace.TracerProvider, func(ctx context.Context), error) {
-
 	// WARNING: The current settings are using defaults which may not be
 	// compatible with your project. Please review the documentation for
 	// opentelemetry.

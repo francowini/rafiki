@@ -36,9 +36,11 @@ const (
 	infinityTSNegativeMustBeSmaller = "database: infinity timestamp: negative value must be smaller (before) than positive"
 )
 
-var infinityTSEnabled = false
-var infinityTSNegative time.Time
-var infinityTSPositive time.Time
+var (
+	infinityTSEnabled  = false
+	infinityTSNegative time.Time
+	infinityTSPositive time.Time
+)
 
 type parameterStatus struct {
 	// server version in the same format as server_version_num, or 0 if unavailable.

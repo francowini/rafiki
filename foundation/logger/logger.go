@@ -137,7 +137,6 @@ func (log *Logger) write(ctx context.Context, level Level, caller int, msg strin
 }
 
 func new(w io.Writer, minLevel Level, serviceName string, traceIDFn TraceIDFn, events Events) *Logger {
-
 	// Convert the file name to just the name.ext when this key/value will
 	// be logged.
 	f := func(groups []string, a slog.Attr) slog.Attr {

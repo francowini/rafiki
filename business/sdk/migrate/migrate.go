@@ -13,10 +13,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var (
-	//go:embed sql/migrate.sql
-	migrateDoc string
-)
+//go:embed sql/migrate.sql
+var migrateDoc string
 
 // Migrate attempts to bring the database up to date with the migrations
 // defined in this package.

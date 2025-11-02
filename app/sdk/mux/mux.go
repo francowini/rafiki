@@ -11,6 +11,8 @@ import (
 	"github.com/francowini/rafiki/foundation/web"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/francowini/rafiki/business/domain/thinkbus"
 )
 
 // StaticSite represents a static site to run.
@@ -46,17 +48,17 @@ func WithFileServer(react bool, static embed.FS, dir string, path string) func(o
 	}
 }
 
-
 type BusConfig struct {
+	ThinkBus *thinkbus.Business
 }
 
 // Config contains all the mandatory systems required by handlers.
 type Config struct {
-	Build       string
-	Log         *logger.Logger
-	DB          *sqlx.DB
-	Tracer      trace.Tracer
-	BusConfig   BusConfig
+	Build     string
+	Log       *logger.Logger
+	DB        *sqlx.DB
+	Tracer    trace.Tracer
+	BusConfig BusConfig
 }
 
 // RouteAdder defines behavior that sets the routes to bind for an instance

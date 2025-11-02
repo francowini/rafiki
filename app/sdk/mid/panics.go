@@ -15,7 +15,6 @@ import (
 func Panics() web.MidFunc {
 	m := func(next web.HandlerFunc) web.HandlerFunc {
 		h := func(ctx context.Context, r *http.Request) (resp web.Encoder) {
-
 			// Defer a function to recover from a panic and set the err return
 			// variable after the fact.
 			defer func() {
