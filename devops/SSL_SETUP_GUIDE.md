@@ -9,7 +9,9 @@ This guide will help you obtain an SSL certificate from Let's Encrypt for your p
 - ✅ DNS configured: `api.rafiki.lat` points to your Hetzner server IP
 - ✅ SSH access to your Hetzner server
 - ✅ Ports 80 and 443 open on firewall
-- ✅ Code deployed on server
+- ✅ Code deployed on server (including `nginx/nginx.conf` file)
+
+**IMPORTANT:** Before running this guide, ensure that the `nginx/nginx.conf` file exists in your project. This file should have been created during Phase 2 setup and deployed to the server. If it's missing, you'll get a "cannot create subdirectories" error when starting nginx.
 
 ---
 
@@ -279,6 +281,39 @@ https://api.rafiki.lat/v1/liveness
 ---
 
 ## Troubleshooting
+
+### If Step 13 fails with "cannot create subdirectories" error:
+
+**Error message:**
+```
+error mounting "/opt/rafiki/nginx/nginx.conf" to rootfs: cannot create subdirectories
+```
+
+**Cause:** The `nginx/nginx.conf` file is missing on the server.
+
+**Solution:**
+
+1. Stop all services:
+```bash
+docker compose --profile production down
+```
+
+2. Create the nginx directory:
+```bash
+mkdir -p nginx
+```
+
+3. Create the nginx.conf file (see the complete configuration in the project repository at `nginx/nginx.conf`)
+
+4. If you accidentally created `nginx.conf` as a directory, remove it first:
+```bash
+rm -rf nginx.conf
+```
+
+5. Restart services:
+```bash
+docker compose --profile production up -d --build
+```
 
 ### If Step 10 fails (certificate request):
 
