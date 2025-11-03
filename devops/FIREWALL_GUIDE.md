@@ -69,99 +69,6 @@ Rule 4: ICMP (optional)
 
 ---
 
-## Option 2: UFW (Uncomplicated Firewall) - Server-based
-
-If you prefer to configure the firewall directly on the server using UFW:
-
-### Step 1: SSH into your server
-
-```bash
-ssh root@178.156.170.37
-```
-
-### Step 2: Install UFW (if not installed)
-
-```bash
-apt update
-apt install ufw -y
-```
-
-**What to expect:** UFW is installed.
-
-### Step 3: Set default policies
-
-```bash
-ufw default deny incoming
-ufw default allow outgoing
-```
-
-**What to expect:** By default, all incoming connections are blocked, all outgoing allowed.
-
-### Step 4: Allow SSH (IMPORTANT!)
-
-```bash
-ufw allow 22/tcp comment 'SSH access'
-```
-
-**What to expect:** SSH port 22 is allowed. **DO THIS BEFORE ENABLING UFW** or you'll lock yourself out!
-
-### Step 5: Allow HTTP and HTTPS
-
-```bash
-ufw allow 80/tcp comment 'HTTP for Let's Encrypt'
-ufw allow 443/tcp comment 'HTTPS API'
-```
-
-**What to expect:** Ports 80 and 443 are now allowed.
-
-### Step 6: (Optional) Restrict SSH to your IP only
-
-Get your current IP:
-
-```bash
-curl ifconfig.me
-```
-
-Suppose your IP is `200.123.45.67`, then:
-
-```bash
-ufw delete allow 22/tcp
-ufw allow from 200.123.45.67 to any port 22 proto tcp comment 'SSH from my IP'
-```
-
-**What to expect:** SSH is now only accessible from your IP address.
-
-### Step 7: Enable UFW
-
-```bash
-ufw enable
-```
-
-**What to expect:**
-- Warning: "Command may disrupt existing ssh connections. Proceed with operation (y|n)?"
-- Type `y` and press Enter
-- Output: "Firewall is active and enabled on system startup"
-
-### Step 8: Verify firewall status
-
-```bash
-ufw status verbose
-```
-
-**What to expect:** You should see:
-
-```
-Status: active
-
-To                         Action      From
---                         ------      ----
-22/tcp                     ALLOW       200.123.45.67    # SSH from my IP
-80/tcp                     ALLOW       Anywhere         # HTTP for Let's Encrypt
-443/tcp                    ALLOW       Anywhere         # HTTPS API
-```
-
----
-
 ## Testing Firewall Configuration
 
 ### Test 1: Check SSH still works
@@ -203,18 +110,6 @@ curl http://178.156.170.37:3000
 **What to expect:** Connection timeout or "Connection refused". This is GOOD - internal ports should not be publicly accessible.
 
 ---
-
-## Additional Security Recommendations
-
-### 1. Rate Limiting (Already configured in nginx)
-
-Your nginx config already includes:
-
-```nginx
-limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
-```
-
-This limits clients to 10 requests per second.
 
 ### 2. Fail2Ban (Optional but recommended)
 

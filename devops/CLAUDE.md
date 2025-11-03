@@ -142,6 +142,23 @@ docker exec -it rafiki-postgres psql -U rafiki -d rafiki
 - **Tempo**: `http://localhost:3200`
 - **PostgreSQL**: `localhost:5432`
 
+## Production Infrastructure
+
+**Domain**: api.rafiki.lat → 178.156.170.37
+
+**SSL/HTTPS**:
+- Nginx reverse proxy with Let's Encrypt certificates
+- Certificate auto-renewal via certbot container
+- See: `devops/SSL_CERTIFICATE_SETUP.md`
+
+**Production Services** (Docker Compose profile):
+- nginx (ports 80, 443) - Reverse proxy with SSL termination
+- certbot - Automatic certificate renewal
+- Start: `docker compose --profile production up -d --build`
+
+**Firewall Configuration**:
+- See: `devops/FIREWALL_GUIDE.md`
+
 ## File Structure Notes
 - All deployment scripts are in `devops/` directory
 - Scripts auto-detect project root (parent of devops)
