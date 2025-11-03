@@ -61,9 +61,14 @@ mkdir -p zarf/compose/tempo-data/blocks
 mkdir -p zarf/compose/tempo-data/generator
 chmod -R 777 zarf/compose/tempo-data
 
+# Create required directories for Certbot (SSL certificates)
+print_info "Ensuring certbot directories exist..."
+mkdir -p certbot/www
+mkdir -p certbot/conf
+
 # Stop existing containers
 print_info "Stopping existing containers..."
-docker compose down || true
+docker compose --profile production down || true
 
 # Pull latest changes (if using git deployment)
 if [ -d .git ]; then
@@ -71,9 +76,9 @@ if [ -d .git ]; then
     git pull
 fi
 
-# Build and start services
-print_info "Building and starting services..."
-docker compose up -d --build
+# Build and start services with production profile (includes nginx + certbot)
+print_info "Building and starting services with production profile..."
+docker compose --profile production up -d --build
 
 # Wait for services to be healthy
 print_info "Waiting for services to be healthy..."
@@ -81,20 +86,26 @@ sleep 10
 
 # Check service health
 print_info "Checking service health..."
-if docker compose ps | grep -q "Up"; then
+if docker compose --profile production ps | grep -q "Up"; then
     print_info "Services are running:"
-    docker compose ps
+    docker compose --profile production ps
 
     print_info ""
     print_info "========================================="
     print_info "Deployment completed successfully!"
     print_info "========================================="
-    print_info "API available at: http://localhost:3000"
+    print_info "API available at: https://api.rafiki.lat (via Nginx)"
+    print_info "Direct access: http://localhost:3000 (backend only)"
     print_info "Debug/Metrics at: http://localhost:3010"
     print_info ""
-    print_info "View logs with: docker compose logs -f"
+    print_info "Next steps:"
+    print_info "1. Ensure DNS is configured for api.rafiki.lat"
+    print_info "2. Obtain SSL certificate (see deployment docs)"
+    print_info "3. Configure firewall to allow ports 80 and 443"
+    print_info ""
+    print_info "View logs with: docker compose --profile production logs -f"
 else
     print_error "Service deployment failed!"
-    print_error "Check logs with: docker compose logs"
+    print_error "Check logs with: docker compose --profile production logs"
     exit 1
 fi

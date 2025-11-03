@@ -9,6 +9,9 @@ database-data/
 
 # Environment
 api/cmd/frontends/admin/.env
+.env.local
+.env.production
+.env
 
 # Mac
 .DS_Store
@@ -47,4 +50,5 @@ _testmain.go
 .vscode/tasks.json
 zarf/compose/database-data/data
 zarf/compose/tempo-data/
+certbot/
 .env
