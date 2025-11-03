@@ -61,6 +61,28 @@ func NewApp(log Logger, tracer trace.Tracer, mw ...MidFunc) *App {
 	}
 }
 
+// matchWildcardOrigin checks if a pattern with wildcard matches the origin.
+// Supports patterns like "https://*.vercel.app" matching "https://foo.vercel.app"
+func matchWildcardOrigin(pattern, origin string) bool {
+	if pattern == "" || origin == "" {
+		return false
+	}
+
+	// Convert pattern to regex
+	// Escape special regex characters except *
+	regexPattern := regexp.QuoteMeta(pattern)
+	// Replace escaped \* with .*
+	regexPattern = regexp.MustCompile(`\\\*`).ReplaceAllString(regexPattern, ".*")
+	// Add start and end anchors
+	regexPattern = "^" + regexPattern + "$"
+
+	matched, err := regexp.MatchString(regexPattern, origin)
+	if err != nil {
+		return false
+	}
+	return matched
+}
+
 // ServeHTTP implements the http.Handler interface. It's the entry point for
 // all http traffic and allows the opentelemetry mux to run first to handle
 // tracing. The opentelemetry mux then calls the application mux to handle
@@ -79,17 +101,31 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		reqOrigin := r.Header.Get("Origin")
 		originAllowed := false
+		allowedOrigin := ""
 
 		for _, origin := range a.origins {
-			if origin == "*" || origin == reqOrigin {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
+			if origin == "*" {
+				// When wildcard is used, respond with the requesting origin
+				// This is safer than responding with "*" as it works with credentials
+				allowedOrigin = reqOrigin
+				originAllowed = true
+				break
+			} else if origin == reqOrigin {
+				// Exact match
+				allowedOrigin = origin
+				originAllowed = true
+				break
+			} else if matchWildcardOrigin(origin, reqOrigin) {
+				// Wildcard pattern match (e.g., https://*.vercel.app matches https://foo.vercel.app)
+				allowedOrigin = reqOrigin
 				originAllowed = true
 				break
 			}
 		}
 
 		// Only set CORS headers if origin is allowed
-		if originAllowed {
+		if originAllowed && allowedOrigin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 			w.Header().Set("Access-Control-Allow-Methods", "POST, PATCH, GET, OPTIONS, PUT, DELETE")
 			w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 			w.Header().Set("Access-Control-Max-Age", "86400")

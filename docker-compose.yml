@@ -141,7 +141,7 @@ services:
       - PARTNER_WEB_WRITETIMEOUT=10s
       - PARTNER_WEB_IDLETIMEOUT=120s
       - PARTNER_WEB_SHUTDOWNTIMEOUT=20s
-      - PARTNER_WEB_CORSALLOWEDORIGINS=${PARTNER_WEB_CORSALLOWEDORIGINS:-*}
+      - PARTNER_WEB_CORSALLOWEDORIGINS=https://app.rafiki.lat,https://*.vercel.app
 
       # Go Runtime Configuration
       - GOMAXPROCS=2
