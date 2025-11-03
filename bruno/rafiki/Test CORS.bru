@@ -1,0 +1,21 @@
+meta {
+  name: Test CORS
+  type: http
+  seq: 5
+}
+
+options {
+  url: {{base-url}}/v1/thinks
+  body: none
+  auth: inherit
+}
+
+headers {
+  Origin: http://localhost:3000
+  Access-Control-Request-Method: GET
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}

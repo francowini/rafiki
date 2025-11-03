@@ -78,16 +78,28 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Access-Control-Allow-Origin value to the same value as the Origin.
 
 		reqOrigin := r.Header.Get("Origin")
+		originAllowed := false
+
 		for _, origin := range a.origins {
 			if origin == "*" || origin == reqOrigin {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
+				originAllowed = true
 				break
 			}
 		}
 
-		w.Header().Set("Access-Control-Allow-Methods", "POST, PATCH, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		w.Header().Set("Access-Control-Max-Age", "86400")
+		// Only set CORS headers if origin is allowed
+		if originAllowed {
+			w.Header().Set("Access-Control-Allow-Methods", "POST, PATCH, GET, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+
+			// Handle preflight OPTIONS requests
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+		}
 	}
 
 	// In the following example, max-age is set to 2 years, and is suffixed with

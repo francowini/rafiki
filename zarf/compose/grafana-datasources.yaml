@@ -11,6 +11,7 @@ datasources:
     isDefault: true
     jsonData:
       httpMethod: GET
+      grpcEnabled: false  # Force HTTP-only, disable gRPC (Grafana 12+ defaults to gRPC)
       tracesToLogsV2:
         # Enable correlation with logs
         datasourceUid: 'logs'

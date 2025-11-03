@@ -219,6 +219,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	webAPI := mux.WebAPI(cfgMux,
 		buildRoutes(),
+		mux.WithCORS(cfg.Web.CORSAllowedOrigins),
 	)
 
 	api := http.Server{
