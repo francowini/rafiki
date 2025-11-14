@@ -6,13 +6,14 @@ import (
 	"embed"
 	"net/http"
 
+	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/mid"
+	"github.com/francowini/rafiki/business/domain/thinkbus"
+	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/web"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/francowini/rafiki/business/domain/thinkbus"
 )
 
 // StaticSite represents a static site to run.
@@ -50,6 +51,8 @@ func WithFileServer(react bool, static embed.FS, dir string, path string) func(o
 
 type BusConfig struct {
 	ThinkBus *thinkbus.Business
+	UserBus  userbus.ExtBusiness
+	Auth     *auth.Auth
 }
 
 // Config contains all the mandatory systems required by handlers.

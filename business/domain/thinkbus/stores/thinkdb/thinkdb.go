@@ -32,9 +32,9 @@ func NewStore(log *logger.Logger, db *sqlx.DB) *Store {
 func (s *Store) Create(ctx context.Context, think thinkbus.Think) error {
 	const q = `
 	INSERT INTO thinks
-		(think_id, category, content, date_created, date_updated)
+		(think_id, user_id, category, content, date_created, date_updated)
 	VALUES
-		(:think_id, :category, :content, :date_created, :date_updated)`
+		(:think_id, :user_id, :category, :content, :date_created, :date_updated)`
 
 	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBThink(think)); err != nil {
 		return fmt.Errorf("namedexeccontext: %w", err)
@@ -44,8 +44,9 @@ func (s *Store) Create(ctx context.Context, think thinkbus.Think) error {
 }
 
 // Query retrieves a list of all thinks from the database with pagination
-func (s *Store) Query(ctx context.Context, orderBy order.By, page page.Page) ([]thinkbus.Think, error) {
+func (s *Store) Query(ctx context.Context, userID uuid.UUID, orderBy order.By, page page.Page) ([]thinkbus.Think, error) {
 	data := map[string]any{
+		"user_id":       userID,
 		"offset":        (page.Number() - 1) * page.RowsPerPage(),
 		"rows_per_page": page.RowsPerPage(),
 	}
@@ -57,9 +58,11 @@ func (s *Store) Query(ctx context.Context, orderBy order.By, page page.Page) ([]
 
 	q := fmt.Sprintf(`
 	SELECT
-		think_id, category, content, date_created, date_updated
+		think_id, user_id, category, content, date_created, date_updated
 	FROM
 		thinks
+	WHERE
+		user_id = :user_id
 	%s
 	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`, orderByClause)
 
@@ -72,39 +75,47 @@ func (s *Store) Query(ctx context.Context, orderBy order.By, page page.Page) ([]
 }
 
 // Count returns the total number of thinks
-func (s *Store) Count(ctx context.Context) (int, error) {
+func (s *Store) Count(ctx context.Context, userID uuid.UUID) (int, error) {
+	data := map[string]any{
+		"user_id": userID,
+	}
+
 	const q = `
 	SELECT
 		COUNT(1) AS count
 	FROM
-		thinks`
+		thinks
+	WHERE
+		user_id = :user_id`
 
 	var count struct {
 		Count int `db:"count"`
 	}
 
-	if err := sqldb.QueryStruct(ctx, s.log, s.db, q, &count); err != nil {
-		return 0, fmt.Errorf("querystruct: %w", err)
+	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &count); err != nil {
+		return 0, fmt.Errorf("namedquerystruct: %w", err)
 	}
 
 	return count.Count, nil
 }
 
 // QueryByID retrieves a single think by its ID
-func (s *Store) QueryByID(ctx context.Context, thinkID uuid.UUID) (thinkbus.Think, error) {
+func (s *Store) QueryByID(ctx context.Context, thinkID uuid.UUID, userID uuid.UUID) (thinkbus.Think, error) {
 	data := struct {
-		ID string `db:"think_id"`
+		ThinkID string `db:"think_id"`
+		UserID  string `db:"user_id"`
 	}{
-		ID: thinkID.String(),
+		ThinkID: thinkID.String(),
+		UserID:  userID.String(),
 	}
 
 	const q = `
 	SELECT
-		think_id, category, content, date_created, date_updated
+		think_id, user_id, category, content, date_created, date_updated
 	FROM
 		thinks
 	WHERE
-		think_id = :think_id`
+		think_id = :think_id AND user_id = :user_id`
 
 	var dbThink think
 	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &dbThink); err != nil {

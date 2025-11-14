@@ -2,6 +2,7 @@
 package all
 
 import (
+	"github.com/francowini/rafiki/app/domain/authapp"
 	"github.com/francowini/rafiki/app/domain/checkapp"
 	"github.com/francowini/rafiki/app/domain/thinkapp"
 	"github.com/francowini/rafiki/app/sdk/mux"
@@ -23,8 +24,15 @@ func (add) Add(app *web.App, cfg mux.Config) {
 		Log:   cfg.Log,
 		DB:    cfg.DB,
 	})
+
+	authapp.Routes(app, authapp.Config{
+		Auth:    cfg.BusConfig.Auth,
+		UserBus: cfg.BusConfig.UserBus,
+	})
+
 	thinkapp.Routes(app, thinkapp.Config{
 		Log:      cfg.Log,
 		ThinkBus: cfg.BusConfig.ThinkBus,
+		Auth:     cfg.BusConfig.Auth,
 	})
 }

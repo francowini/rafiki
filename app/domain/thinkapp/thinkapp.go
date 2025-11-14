@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/francowini/rafiki/app/sdk/errs"
+	"github.com/francowini/rafiki/app/sdk/mid"
 	"github.com/francowini/rafiki/app/sdk/query"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/sdk/order"
@@ -31,7 +32,8 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	// Validation happens in conversion via Parse functions
-	nt, err := toBusNewThink(app)
+	// UserID extracted from context in toBusNewThink
+	nt, err := toBusNewThink(ctx, app)
 	if err != nil {
 		return errs.New(errs.InvalidArgument, err)
 	}
@@ -48,6 +50,11 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	qp := parseQueryParams(r)
 
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
 	page, err := page.Parse(qp.Page, qp.Rows)
 	if err != nil {
 		return errs.NewFieldErrors("page", err)
@@ -58,12 +65,12 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.NewFieldErrors("order", err)
 	}
 
-	thinks, err := a.thinkBus.Query(ctx, orderBy, page)
+	thinks, err := a.thinkBus.Query(ctx, userID, orderBy, page)
 	if err != nil {
 		return errs.Newf(errs.Internal, "query: %s", err)
 	}
 
-	total, err := a.thinkBus.Count(ctx)
+	total, err := a.thinkBus.Count(ctx, userID)
 	if err != nil {
 		return errs.Newf(errs.Internal, "count: %s", err)
 	}
@@ -73,12 +80,17 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 
 // queryByID returns a think by its ID
 func (a *app) queryByID(ctx context.Context, r *http.Request) web.Encoder {
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
 	thinkID, err := uuid.Parse(web.Param(r, "think_id"))
 	if err != nil {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	think, err := a.thinkBus.QueryByID(ctx, thinkID)
+	think, err := a.thinkBus.QueryByID(ctx, thinkID, userID)
 	if err != nil {
 		return errs.Newf(errs.Internal, "querybyid: thinkID[%s]: %s", thinkID, err)
 	}

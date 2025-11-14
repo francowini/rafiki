@@ -62,6 +62,7 @@ func ValidCategories() []string {
 // Think represents a thought/note in the system
 type Think struct {
 	ID          uuid.UUID
+	UserID      uuid.UUID
 	Category    Category
 	Content     content.Content
 	DateCreated time.Time
@@ -70,6 +71,7 @@ type Think struct {
 
 // NewThink contains information needed to create a new think
 type NewThink struct {
+	UserID   uuid.UUID
 	Category Category
 	Content  content.Content
 }

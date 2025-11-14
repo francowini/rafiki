@@ -15,9 +15,9 @@ import (
 // retrieve data.
 type Storer interface {
 	Create(ctx context.Context, think Think) error
-	Query(ctx context.Context, orderBy order.By, page page.Page) ([]Think, error)
-	Count(ctx context.Context) (int, error)
-	QueryByID(ctx context.Context, thinkID uuid.UUID) (Think, error)
+	Query(ctx context.Context, userID uuid.UUID, orderBy order.By, page page.Page) ([]Think, error)
+	Count(ctx context.Context, userID uuid.UUID) (int, error)
+	QueryByID(ctx context.Context, thinkID uuid.UUID, userID uuid.UUID) (Think, error)
 }
 
 // Business manages the set of APIs for think access.
@@ -41,6 +41,7 @@ func (b *Business) Create(ctx context.Context, nt NewThink) (Think, error) {
 
 	think := Think{
 		ID:          uuid.New(),
+		UserID:      nt.UserID,
 		Category:    nt.Category,
 		Content:     nt.Content,
 		DateCreated: now,
@@ -55,8 +56,8 @@ func (b *Business) Create(ctx context.Context, nt NewThink) (Think, error) {
 }
 
 // Query retrieves a list of all thinks with pagination
-func (b *Business) Query(ctx context.Context, orderBy order.By, page page.Page) ([]Think, error) {
-	thinks, err := b.storer.Query(ctx, orderBy, page)
+func (b *Business) Query(ctx context.Context, userID uuid.UUID, orderBy order.By, page page.Page) ([]Think, error) {
+	thinks, err := b.storer.Query(ctx, userID, orderBy, page)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
@@ -65,8 +66,8 @@ func (b *Business) Query(ctx context.Context, orderBy order.By, page page.Page) 
 }
 
 // Count returns the total number of thinks
-func (b *Business) Count(ctx context.Context) (int, error) {
-	count, err := b.storer.Count(ctx)
+func (b *Business) Count(ctx context.Context, userID uuid.UUID) (int, error) {
+	count, err := b.storer.Count(ctx, userID)
 	if err != nil {
 		return 0, fmt.Errorf("count: %w", err)
 	}
@@ -75,8 +76,8 @@ func (b *Business) Count(ctx context.Context) (int, error) {
 }
 
 // QueryByID finds the think by the specified ID
-func (b *Business) QueryByID(ctx context.Context, thinkID uuid.UUID) (Think, error) {
-	think, err := b.storer.QueryByID(ctx, thinkID)
+func (b *Business) QueryByID(ctx context.Context, thinkID uuid.UUID, userID uuid.UUID) (Think, error) {
+	think, err := b.storer.QueryByID(ctx, thinkID, userID)
 	if err != nil {
 		return Think{}, fmt.Errorf("query: thinkID[%s]: %w", thinkID, err)
 	}

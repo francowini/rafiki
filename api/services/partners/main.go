@@ -15,12 +15,16 @@ import (
 	"github.com/ardanlabs/conf/v3"
 
 	"github.com/francowini/rafiki/api/services/partners/all"
+	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/debug"
 	"github.com/francowini/rafiki/app/sdk/mux"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
+	"github.com/francowini/rafiki/business/domain/userbus"
+	"github.com/francowini/rafiki/business/domain/userbus/stores/userdb"
 	"github.com/francowini/rafiki/business/sdk/migrate"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/foundation/keystore"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/otel"
 )
@@ -167,6 +171,39 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	log.Info(ctx, "startup", "status", "initializing authentication support")
 
+	// Load RSA keys for JWT signing/verification
+	ks := keystore.New()
+
+	// Load from filesystem (development and production)
+	keysLoaded := 0
+
+	// Try loading from zarf/keys directory
+	keysFS := os.DirFS("./zarf/keys")
+	keysLoaded, err = ks.LoadByFileSystem(keysFS)
+	if err != nil {
+		return fmt.Errorf("loading auth keys from filesystem: %w", err)
+	}
+
+	if keysLoaded == 0 {
+		return fmt.Errorf("no authentication keys loaded - cannot start service")
+	}
+
+	log.Info(ctx, "startup", "keys_loaded", keysLoaded)
+
+	// Initialize UserBus (required for authentication)
+	userStore := userdb.NewStore(log, db)
+	userBus := userbus.NewBusiness(log, userStore)
+
+	// Initialize Auth
+	authInstance := auth.New(auth.Config{
+		Log:       log,
+		UserBus:   userBus,
+		KeyLookup: ks,
+		Issuer:    "rafiki-service",
+	})
+
+	log.Info(ctx, "startup", "status", "authentication support enabled")
+
 	// -------------------------------------------------------------------------
 	// Start Tracing Support
 
@@ -214,6 +251,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 		Tracer: tracer,
 		BusConfig: mux.BusConfig{
 			ThinkBus: thinkBus,
+			UserBus:  userBus,
+			Auth:     authInstance,
 		},
 	}
 

@@ -1,12 +1,13 @@
 package thinkapp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/francowini/rafiki/app/sdk/errs"
-
+	"github.com/francowini/rafiki/app/sdk/mid"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/types/content"
 )
@@ -68,18 +69,31 @@ func toAppThinks(thinks []thinkbus.Think) []Think {
 
 // =============================================================================
 
-func toBusNewThink(nt NewThink) (thinkbus.NewThink, error) {
+func toBusNewThink(ctx context.Context, nt NewThink) (thinkbus.NewThink, error) {
+	var errors errs.FieldErrors
+
+	// Extract userID from JWT claims via context
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		errors.Add("userID", err)
+	}
+
 	category, err := thinkbus.ParseCategory(nt.Category)
 	if err != nil {
-		return thinkbus.NewThink{}, fmt.Errorf("parse category: %w", err)
+		errors.Add("category", err)
 	}
 
 	cnt, err := content.Parse(nt.Content)
 	if err != nil {
-		return thinkbus.NewThink{}, fmt.Errorf("parse content: %w", err)
+		errors.Add("content", err)
+	}
+
+	if len(errors) > 0 {
+		return thinkbus.NewThink{}, fmt.Errorf("validate: %w", errors.ToError())
 	}
 
 	return thinkbus.NewThink{
+		UserID:   userID,
 		Category: category,
 		Content:  cnt,
 	}, nil
