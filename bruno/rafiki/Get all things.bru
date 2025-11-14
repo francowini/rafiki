@@ -1,5 +1,5 @@
 meta {
-  name: Get all things
+  name: Get all thinks (Authenticated)
   type: http
   seq: 5
 }
@@ -7,25 +7,37 @@ meta {
 get {
   url: {{base-url}}/v1/thinks
   body: none
-  auth: inherit
+  auth: bearer
 }
 
 headers {
   Content-Type: application/json
 }
 
-body:json {
-  {
-    "category": "ideas",
-    "content": "some content"
-  }
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+docs {
+  # Get All Thinks (Requires Authentication)
+
+  Returns all thinks for the authenticated user.
+  Supports pagination with query params:
+  - page (default: 1)
+  - rows (default: 10)
+  - orderBy (default: date_created,DESC)
 }
 
 tests {
-  {}
-}
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
 
-settings {
-  encodeUrl: true
-  timeout: 0
+  test("should return paginated response", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("items");
+    expect(data).to.have.property("total");
+    expect(data).to.have.property("page");
+    expect(data).to.have.property("rowsPerPage");
+  });
 }

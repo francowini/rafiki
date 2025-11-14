@@ -1,0 +1,27 @@
+version: '3.8'
+
+# Production docker-compose override
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  partner-service:
+    # Mount production keys from external directory
+    # Store your production keys in /opt/rafiki/keys on the server
+    volumes:
+      - /opt/rafiki/keys:/app/zarf/keys:ro  # Read-only mount
+
+    environment:
+      # Production environment variables
+      - PARTNER_WEB_CORS_ALLOWED_ORIGINS=https://yourdomain.com
+      # Add other production env vars here
+
+    restart: unless-stopped
+
+  postgres:
+    restart: unless-stopped
+
+  tempo:
+    restart: unless-stopped
+
+  grafana:
+    restart: unless-stopped

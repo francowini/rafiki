@@ -52,3 +52,8 @@ zarf/compose/database-data/data
 zarf/compose/tempo-data/
 certbot/
 .env
+
+# JWT Keys - Production keys should NEVER be committed!
+# Development key (54bb2165-71e1-41a6-af3e-7da4a0e1e2c1.pem) is allowed for local dev
+zarf/keys/*.pem
+!zarf/keys/54bb2165-71e1-41a6-af3e-7da4a0e1e2c1.pem

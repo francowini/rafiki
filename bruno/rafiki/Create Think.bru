@@ -1,5 +1,5 @@
 meta {
-  name: Create Think
+  name: Create Think (Authenticated)
   type: http
   seq: 3
 }
@@ -7,25 +7,48 @@ meta {
 post {
   url: {{base-url}}/v1/thinks
   body: json
-  auth: inherit
+  auth: bearer
 }
 
 headers {
   Content-Type: application/json
 }
 
+auth:bearer {
+  token: {{jwt-token}}
+}
+
 body:json {
   {
     "category": "reflection",
-    "content": "some content"
+    "content": "This is my first authenticated think"
   }
 }
 
-tests {
-  {}
+docs {
+  # Create Think (Requires Authentication)
+
+  Creates a new think associated with the authenticated user.
+  Requires Bearer token obtained from login endpoint.
+
+  Valid categories: reflection, learning, goal, habit, value, idea
 }
 
-settings {
-  encodeUrl: true
-  timeout: 0
+tests {
+  test("should return 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("should return think object", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("id");
+    expect(data).to.have.property("category");
+    expect(data).to.have.property("content");
+  });
+
+  // Save think ID for other requests
+  const data = res.getBody();
+  if (data.id) {
+    bru.setEnvVar("think-id", data.id);
+  }
 }

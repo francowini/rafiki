@@ -1,0 +1,41 @@
+meta {
+  name: Get Think by ID (Authenticated)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base-url}}/v1/thinks/{{think-id}}
+  body: none
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+docs {
+  # Get Think by ID (Requires Authentication)
+
+  Returns a specific think by ID.
+  User can only access their own thinks.
+
+  Uses `think-id` variable (set after creating a think).
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return think object", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("id");
+    expect(data).to.have.property("category");
+    expect(data).to.have.property("content");
+  });
+}

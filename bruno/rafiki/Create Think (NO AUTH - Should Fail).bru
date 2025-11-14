@@ -1,0 +1,43 @@
+meta {
+  name: Create Think (NO AUTH - Should Fail)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base-url}}/v1/thinks
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "category": "reflection",
+    "content": "This should fail without auth"
+  }
+}
+
+docs {
+  # Create Think WITHOUT Authentication (Should Fail)
+
+  This request intentionally has no Authorization header.
+  It should return 401 Unauthorized.
+
+  Used to verify that authentication is required.
+}
+
+tests {
+  test("should return 401", function() {
+    expect(res.status).to.equal(401);
+  });
+
+  test("should not allow unauthenticated access", function() {
+    const data = res.getBody();
+    // Should have error message
+    expect(data).to.exist;
+  });
+}

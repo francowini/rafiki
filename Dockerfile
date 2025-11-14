@@ -24,6 +24,10 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /app/bin/partner .
 
+# Copy RSA keys from zarf/keys (for local development)
+# In production, mount keys from external directory using volumes
+COPY --from=builder /app/zarf/keys ./zarf/keys
+
 # Expose ports (API and Debug)
 EXPOSE 3000 3010
 
