@@ -15,14 +15,40 @@ async function fetchAPI<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  // Get token from localStorage
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('auth_token')
+    : null;
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...options?.headers,
+  };
+
+  // Add Bearer token if available
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   try {
     const response = await fetch(url, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
+      headers,
     });
+
+    // Handle 401 Unauthorized - clear auth and redirect
+    if (response.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        window.location.href = '/login';
+      }
+      throw new APIError(401, 'Unauthorized - please login again');
+    }
+
+    // Handle 403 Forbidden
+    if (response.status === 403) {
+      throw new APIError(403, 'Forbidden - insufficient permissions');
+    }
 
     if (!response.ok) {
       const errorText = await response.text();

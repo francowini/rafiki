@@ -15,13 +15,13 @@ PROD_PATH := /opt/rafiki
 # ==============================================================================
 
 run:
-	go run api/services/partner/main.go | go run api/tooling/logfmt/main.go
+	go run api/services/partners/main.go | go run api/tooling/logfmt/main.go
 
 help:
-	go run api/services/partner/main.go --help
+	go run api/services/partners/main.go --help
 
 version:
-	go run api/services/partner/main.go --version
+	go run api/services/partners/main.go --version
 
 # ==============================================================================
 # Docker Compose - Local Development
