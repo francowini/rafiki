@@ -15,8 +15,8 @@ Topifier is a personal development tracking application built in Go, designed to
 - **Logging**: Custom structured logger (`foundation/logger`) using Go's `slog` package with JSON output
 - **HTTP Routing**: Standard library `http.ServeMux` (Go 1.22+ pattern matching)
 - **Project Structure**:
-  - `api/services/partner/`: Main service entry point
-  - `api/services/partner/mux/`: HTTP route handlers
+  - `api/services/partners/`: Main service entry point
+  - `api/services/partners/mux/`: HTTP route handlers
   - `api/services/api/debug/`: Debug endpoint handlers
   - `foundation/logger/`: Shared logging infrastructure
   - `api/tooling/logfmt/`: Log formatting tool
@@ -28,16 +28,22 @@ Topifier is a personal development tracking application built in Go, designed to
 # Run the service locally (with log formatting)
 make run
 
-# View help and available flags
-make help
+# Start all services with Docker Compose
+make up
 
-# Check version
-make version
+# View logs
+make logs
+
+# Check health
+make health
+
+# Stop services
+make down
 ```
 
 ## Service Lifecycle
 
-The main service ([api/services/partner/main.go](api/services/partner/main.go)) follows this pattern:
+The main service ([api/services/partners/main.go](api/services/partners/main.go)) follows this pattern:
 
 1. Initialize logger with events and trace ID function
 2. Parse configuration from environment variables
@@ -48,19 +54,50 @@ The main service ([api/services/partner/main.go](api/services/partner/main.go)) 
 
 ## Deployment
 
-Target platform: Hetzner CPX11 servers
+Target platform: Hetzner CPX11 servers (178.156.170.37)
 
-- Deployment script: `./deploy.sh` (must run as root on server)
-- Credentials stored in Bitwarden with specific naming convention
-- Full deployment documentation: [devops/DEPLOYMENT.md](devops/DEPLOYMENT.md)
-- Service endpoints:
-  - API: `http://SERVER_IP:3000`
-  - Debug/Metrics: `http://SERVER_IP:3010`
+### Production Deployment (from local machine)
+```bash
+# Deploy with one command
+make deploy
+
+# View production logs
+make deploy-logs
+
+# Check production status
+make deploy-status
+
+# SSH to server
+make ssh
+```
+
+### Production Deployment (on server)
+```bash
+# SSH to server
+ssh root@178.156.170.37
+
+# Pull latest changes and deploy
+cd /opt/rafiki
+git pull origin main
+sudo ./devops/deploy.sh
+```
+
+### Important Notes
+- **One-Time Setup**: JWT keys, ADMIN user, and .env file are created ONCE only
+- **Regular Deployments**: Only run `make deploy` or `./devops/deploy.sh`
+- **Database Migrations**: Run automatically on every deployment (idempotent)
+- **Full Guide**: See [devops/DEPLOYMENT_GUIDE.md](devops/DEPLOYMENT_GUIDE.md)
+
+### Service Endpoints
+- API: `https://api.rafiki.lat` (production via nginx)
+- Direct API: `http://localhost:3000` (backend only)
+- Debug/Metrics: `http://localhost:3010`
+- Frontend: `https://app.rafiki.lat` (Vercel)
 
 ## Code Patterns
 
 ### Adding New Routes
-Routes are registered in [api/services/partner/mux/mux.go](api/services/partner/mux/mux.go) using Go 1.22+ patterns:
+Routes are registered in [api/services/partners/mux/mux.go](api/services/partners/mux/mux.go) using Go 1.22+ patterns:
 ```go
 mux.HandleFunc("GET /endpoint", handlerFunc)
 ```

@@ -152,6 +152,9 @@ services:
         condition: service_healthy
       tempo:
         condition: service_healthy
+    volumes:
+      # Mount JWT keys for authentication (development keys)
+      - ./zarf/keys:/app/zarf/keys:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/v1/readiness || exit 1"]
       interval: 10s

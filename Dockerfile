@@ -24,9 +24,10 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /app/bin/partner .
 
-# Copy RSA keys from zarf/keys (for local development)
-# In production, mount keys from external directory using volumes
-COPY --from=builder /app/zarf/keys ./zarf/keys
+# NOTE: RSA keys are NOT included in the image for security.
+# Mount keys from external directory using docker-compose volumes:
+#   Production: /opt/rafiki/keys:/app/zarf/keys:ro
+#   Development: ./zarf/keys:/app/zarf/keys:ro
 
 # Expose ports (API and Debug)
 EXPOSE 3000 3010

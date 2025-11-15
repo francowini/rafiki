@@ -19,7 +19,7 @@ The Rafiki frontend is a Next.js 14+ application deployed on Vercel's global edg
 │  (Edge Network)    │          │  178.156.170.37    │
 │                    │          │                    │
 │  Next.js Frontend  │──HTTPS───▶  Go Backend API   │
-│  app.rafiki.com    │  Calls   │  api.rafiki.com    │
+│  app.rafiki.lat    │  Calls   │  api.rafiki.lat    │
 └────────────────────┘          └────────────────────┘
 ```
 
@@ -30,7 +30,7 @@ The Rafiki frontend is a Next.js 14+ application deployed on Vercel's global edg
 - **UI Components:** shadcn/ui
 - **Styling:** Tailwind CSS
 - **Deployment:** Vercel
-- **Domain:** app.rafiki.com (production)
+- **Domain:** app.rafiki.lat (production)
 
 ## Prerequisites
 
@@ -89,7 +89,7 @@ NEXT_PUBLIC_ENV=development
 
 For production (configured in Vercel):
 ```bash
-NEXT_PUBLIC_API_URL=https://api.rafiki.com
+NEXT_PUBLIC_API_URL=https://api.rafiki.lat
 NEXT_PUBLIC_ENV=production
 ```
 
@@ -132,14 +132,14 @@ Follow the prompts:
 ```bash
 # Production
 vercel env add NEXT_PUBLIC_API_URL production
-# Enter: https://api.rafiki.com
+# Enter: https://api.rafiki.lat
 
 vercel env add NEXT_PUBLIC_ENV production
 # Enter: production
 
 # Preview
 vercel env add NEXT_PUBLIC_API_URL preview
-# Enter: https://api.rafiki.com
+# Enter: https://api.rafiki.lat
 
 vercel env add NEXT_PUBLIC_ENV preview
 # Enter: preview
@@ -183,11 +183,11 @@ vercel --prod
 2. Add the following:
 
 **Production:**
-- `NEXT_PUBLIC_API_URL` = `https://api.rafiki.com`
+- `NEXT_PUBLIC_API_URL` = `https://api.rafiki.lat`
 - `NEXT_PUBLIC_ENV` = `production`
 
 **Preview:**
-- `NEXT_PUBLIC_API_URL` = `https://api.rafiki.com`
+- `NEXT_PUBLIC_API_URL` = `https://api.rafiki.lat`
 - `NEXT_PUBLIC_ENV` = `preview`
 
 3. Click **Save**
@@ -203,7 +203,7 @@ vercel --prod
 
 1. Go to **Project → Settings → Domains**
 2. Click **"Add Domain"**
-3. Enter: `app.rafiki.com`
+3. Enter: `app.rafiki.lat`
 4. Vercel will provide DNS instructions
 
 ### 2. Configure DNS
@@ -220,44 +220,31 @@ TTL:   Auto or 3600
 ### 3. Verify Domain
 
 1. Wait for DNS propagation (5-30 minutes)
-2. Verify with: `dig app.rafiki.com`
+2. Verify with: `dig app.rafiki.lat`
 3. In Vercel dashboard, click **"Refresh"** to verify
 4. Vercel automatically provisions SSL certificate
 
 ## Backend CORS Configuration
 
-The backend must allow requests from the frontend domain.
+The backend is already configured to allow requests from:
+- `https://app.rafiki.lat` (production frontend)
+- `https://*.vercel.app` (Vercel preview deployments)
 
-### On Hetzner Server
+**Configuration location:** `docker-compose.yml` line 144
 
-```bash
-ssh root@178.156.170.37
-cd /opt/rafiki
-nano .env
-```
-
-Update CORS configuration:
-```bash
-PARTNER_WEB_CORSALLOWEDORIGINS=https://app.rafiki.com,https://rafiki-frontend-*.vercel.app,http://localhost:3000
-```
-
-Restart services:
-```bash
-docker compose down
-docker compose up -d
-```
+**No action needed** - CORS is pre-configured. Just verify it works:
 
 ### Verify CORS
 
 ```bash
-curl -i -X OPTIONS https://api.rafiki.com/v1/thinks \
-  -H "Origin: https://app.rafiki.com" \
+curl -i -X OPTIONS https://api.rafiki.lat/v1/thinks \
+  -H "Origin: https://app.rafiki.lat" \
   -H "Access-Control-Request-Method: GET"
 ```
 
 Expected response headers:
 ```
-Access-Control-Allow-Origin: https://app.rafiki.com
+Access-Control-Allow-Origin: https://app.rafiki.lat
 Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
 Access-Control-Allow-Headers: Content-Type, Authorization
 ```
@@ -268,14 +255,16 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 
 | Variable | Development | Preview | Production | Description |
 |----------|-------------|---------|------------|-------------|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:3000` | `https://api.rafiki.com` | `https://api.rafiki.com` | Backend API base URL |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:3000` | `https://api.rafiki.lat` | `https://api.rafiki.lat` | Backend API base URL |
 | `NEXT_PUBLIC_ENV` | `development` | `preview` | `production` | Environment identifier |
 
 ### Backend (Hetzner)
 
+**Note:** Backend CORS is configured in `docker-compose.yml`, not `.env`
+
 | Variable | Value | Description |
 |----------|-------|-------------|
-| `PARTNER_WEB_CORSALLOWEDORIGINS` | `https://app.rafiki.com,https://rafiki-frontend-*.vercel.app,http://localhost:3000` | Allowed CORS origins |
+| `PARTNER_WEB_CORSALLOWEDORIGINS` | `https://app.rafiki.lat,https://*.vercel.app` | Allowed CORS origins (configured in docker-compose.yml) |
 
 ## Deployment Workflow
 
@@ -368,7 +357,7 @@ export default function RootLayout({ children }) {
 ### External Monitoring
 
 Set up monitoring with:
-- **UptimeRobot:** Monitor `https://app.rafiki.com` availability
+- **UptimeRobot:** Monitor `https://app.rafiki.lat` availability
 - **Sentry:** Error tracking (optional)
 - **LogRocket:** Session replay (optional)
 
@@ -408,16 +397,17 @@ npm run type-check
 **Diagnosis:**
 ```bash
 # Check CORS configuration on backend
-curl -i -X OPTIONS https://api.rafiki.com/v1/thinks \
-  -H "Origin: https://app.rafiki.com" \
+curl -i -X OPTIONS https://api.rafiki.lat/v1/thinks \
+  -H "Origin: https://app.rafiki.lat" \
   -H "Access-Control-Request-Method: GET"
 ```
 
 **Solutions:**
-1. Verify backend CORS configuration includes frontend domain
-2. Restart backend services after CORS changes
+1. Verify backend CORS configuration in `docker-compose.yml` line 144
+2. CORS should already include `https://app.rafiki.lat` and `https://*.vercel.app`
 3. Check that backend is accessible from internet
 4. Verify SSL certificates are valid
+5. If CORS was changed, redeploy backend: `make deploy`
 
 ### API Not Responding
 
@@ -429,8 +419,8 @@ curl -i -X OPTIONS https://api.rafiki.com/v1/thinks \
 **Diagnosis:**
 ```bash
 # Check backend health
-curl https://api.rafiki.com/v1/readiness
-curl https://api.rafiki.com/v1/liveness
+curl https://api.rafiki.lat/v1/readiness
+curl https://api.rafiki.lat/v1/liveness
 
 # Check backend logs
 ssh root@178.156.170.37
@@ -515,7 +505,7 @@ Configure Next.js fetch caching:
 
 ```typescript
 // Cache for 60 seconds
-const data = await fetch('https://api.rafiki.com/v1/thinks', {
+const data = await fetch('https://api.rafiki.lat/v1/thinks', {
   next: { revalidate: 60 }
 });
 ```
@@ -670,7 +660,7 @@ jobs:
 - **Vercel Documentation:** https://vercel.com/docs
 - **shadcn/ui Documentation:** https://ui.shadcn.com
 - **Tailwind CSS Documentation:** https://tailwindcss.com/docs
-- **Backend Deployment Guide:** [DEPLOYMENT.md](./DEPLOYMENT.md)
+- **Backend Deployment Guide:** [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
 - **Frontend Implementation Plan:** [../docs/FRONTEND_IMPLEMENTATION_PLAN.md](../docs/FRONTEND_IMPLEMENTATION_PLAN.md)
 
 ## Support
@@ -678,12 +668,11 @@ jobs:
 For issues or questions:
 1. Check Vercel status page: https://vercel-status.com
 2. Review Vercel documentation
-3. Check backend health: [DEPLOYMENT.md](./DEPLOYMENT.md)
+3. Check backend health: [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
 4. Review frontend logs in Vercel dashboard
-5. Check CORS configuration on backend
+5. Check CORS configuration in `docker-compose.yml` (already configured)
 
 ---
 
-**Last Updated:** 2025-11-03
+**Last Updated:** 2025-11-15
 **Maintained By:** Rafiki Development Team
-**Next Review:** After production deployment

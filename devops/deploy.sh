@@ -100,45 +100,68 @@ fi
 print_info "Building and starting services with production profile..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production up -d --build
 
-# Wait for services to be healthy
-print_info "Waiting for services to be healthy..."
-sleep 10
+# Wait for services to start
+print_info "Waiting for services to start..."
+sleep 5
 
-# Check service health
-print_info "Checking service health..."
-if docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production ps | grep -q "Up"; then
-    print_info "Services are running:"
-    docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production ps
-
-    print_info ""
-    print_info "========================================="
-    print_info "Deployment completed successfully!"
-    print_info "========================================="
-    print_info "API available at: https://api.rafiki.lat (via Nginx)"
-    print_info "Direct access: http://localhost:3000 (backend only)"
-    print_info "Debug/Metrics at: http://localhost:3010"
-    print_info ""
-
-    # Check if keys are loaded
-    print_info "Checking authentication status..."
-    sleep 3
-    if docker compose logs partner-service 2>/dev/null | grep -q "keys_loaded"; then
-        KEYS_LOADED=$(docker compose logs partner-service | grep "keys_loaded" | tail -1 | grep -o 'keys_loaded":[0-9]*' | cut -d: -f2)
-        print_info "✓ Authentication enabled - Keys loaded: $KEYS_LOADED"
-    else
-        print_warn "⚠ Could not verify key loading - check logs"
-    fi
-
-    print_info ""
-    print_info "Next steps:"
-    print_info "1. Create admin user: ./zarf/create-user.sh admin@domain.com password ADMIN"
-    print_info "2. Ensure DNS is configured for api.rafiki.lat"
-    print_info "3. Obtain SSL certificate (see deployment docs)"
-    print_info "4. Configure firewall to allow ports 80 and 443"
-    print_info ""
-    print_info "View logs with: docker compose --profile production logs -f"
-else
-    print_error "Service deployment failed!"
+# Check if containers are running
+print_info "Verifying containers are running..."
+if ! docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production ps | grep -q "Up"; then
+    print_error "Containers failed to start!"
     print_error "Check logs with: docker compose --profile production logs"
     exit 1
 fi
+
+# Wait for health checks to pass
+print_info "Waiting for health checks (max 60 seconds)..."
+HEALTH_CHECK_COUNT=0
+MAX_HEALTH_CHECKS=12
+
+while [ $HEALTH_CHECK_COUNT -lt $MAX_HEALTH_CHECKS ]; do
+    if curl -sf http://localhost:3000/v1/readiness > /dev/null 2>&1; then
+        print_info "✓ Health check passed!"
+        break
+    fi
+    HEALTH_CHECK_COUNT=$((HEALTH_CHECK_COUNT + 1))
+    echo -n "."
+    sleep 5
+done
+
+echo "" # New line after dots
+
+if [ $HEALTH_CHECK_COUNT -ge $MAX_HEALTH_CHECKS ]; then
+    print_error "Health check timeout! Service may not be ready."
+    print_error "Check logs with: docker compose --profile production logs partner-service"
+    print_warn "Service is running but not responding to health checks."
+    exit 1
+fi
+
+# Show running services
+print_info "Services are running:"
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production ps
+
+print_info ""
+print_info "========================================="
+print_info "✅ Deployment completed successfully!"
+print_info "========================================="
+print_info "API available at: https://api.rafiki.lat (via Nginx)"
+print_info "Direct access: http://localhost:3000 (backend only)"
+print_info "Debug/Metrics at: http://localhost:3010"
+print_info ""
+
+# Check if keys are loaded
+print_info "Checking authentication status..."
+sleep 2
+if docker compose logs partner-service 2>/dev/null | grep -q "keys_loaded"; then
+    KEYS_LOADED=$(docker compose logs partner-service | grep "keys_loaded" | tail -1 | grep -o 'keys_loaded":[0-9]*' | cut -d: -f2)
+    print_info "✓ Authentication enabled - Keys loaded: $KEYS_LOADED"
+else
+    print_warn "⚠ Could not verify key loading - check logs"
+fi
+
+print_info ""
+print_info "Quick commands:"
+print_info "  View logs:        docker compose logs -f partner-service"
+print_info "  Health check:     curl http://localhost:3000/v1/readiness"
+print_info "  Create user:      ./zarf/create-user.sh <email> <password> <ROLE> <name>"
+print_info ""

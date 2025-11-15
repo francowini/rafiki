@@ -11,9 +11,10 @@ services:
       - /opt/rafiki/keys:/app/zarf/keys:ro  # Read-only mount
 
     environment:
-      # Production environment variables
-      - PARTNER_WEB_CORS_ALLOWED_ORIGINS=https://yourdomain.com
-      # Add other production env vars here
+      # Production-specific environment variables
+      # CORS is already configured in docker-compose.yml for app.rafiki.lat
+      # Add other production overrides here if needed
+      - PARTNER_TEMPO_PROBABILITY=0.1  # 10% sampling in production (vs 100% in dev)
 
     restart: unless-stopped
 
