@@ -18,21 +18,11 @@ auth:bearer {
   token: {{jwt-token}}
 }
 
-docs {
-  # Get All Thinks (Requires Authentication)
-
-  Returns all thinks for the authenticated user.
-  Supports pagination with query params:
-  - page (default: 1)
-  - rows (default: 10)
-  - orderBy (default: date_created,DESC)
-}
-
 tests {
   test("should return 200", function() {
     expect(res.status).to.equal(200);
   });
-
+  
   test("should return paginated response", function() {
     const data = res.getBody();
     expect(data).to.have.property("items");
@@ -40,4 +30,14 @@ tests {
     expect(data).to.have.property("page");
     expect(data).to.have.property("rowsPerPage");
   });
+}
+
+docs {
+  # Get All Thinks (Requires Authentication)
+  
+  Returns all thinks for the authenticated user.
+  Supports pagination with query params:
+  - page (default: 1)
+  - rows (default: 10)
+  - orderBy (default: date_created,DESC)
 }

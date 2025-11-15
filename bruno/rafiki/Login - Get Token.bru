@@ -5,40 +5,40 @@ meta {
 }
 
 get {
-  url: {{base-url}}/v1/auth/token/54bb2165-71e1-41a6-af3e-7da4a0e1e2c1
+  url: {{base-url}}/v1/auth/token/d8859c9d-f7f8-4f25-98e1-7b8951281d1c
   body: none
   auth: basic
 }
 
 auth:basic {
-  username: test@example.com
-  password: password123
-}
-
-docs {
-  # Login Endpoint
-
-  Authenticates user with Basic Auth (email:password)
-  Returns JWT token valid for 48 hours.
-
-  The token is automatically saved to `jwt-token` variable
-  for use in subsequent authenticated requests.
+  username: francoolsson1995@gmail.com
+  password: Sake2021
 }
 
 tests {
   test("should return 200", function() {
     expect(res.status).to.equal(200);
   });
-
+  
   test("should return token", function() {
     const data = res.getBody();
     expect(data).to.have.property("token");
   });
-
+  
   // Save token to environment variable
   const data = res.getBody();
   if (data.token) {
     bru.setEnvVar("jwt-token", data.token);
     console.log("Token saved to jwt-token variable");
   }
+}
+
+docs {
+  # Login Endpoint
+  
+  Authenticates user with Basic Auth (email:password)
+  Returns JWT token valid for 48 hours.
+  
+  The token is automatically saved to `jwt-token` variable
+  for use in subsequent authenticated requests.
 }
