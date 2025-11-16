@@ -111,3 +111,82 @@ log.Error(ctx, "error message", "err", err)
 
 ### Service Configuration
 Add new config fields to the `cfg` struct in `main.go` with `conf` tags for defaults and environment variable mapping.
+
+### Business Types with Validation
+IMPORTANT: The business layer ALWAYS uses strong types with validation for domain values. Never use primitive types (int, string, float64) directly in business domain models.
+
+**Pattern**: Create dedicated types in `business/types/` for any value that has validation rules:
+
+```go
+// Example: business/types/intensity/intensity.go
+package intensity
+
+import "fmt"
+
+// Intensity represents a validated intensity value (0-10 scale).
+type Intensity struct {
+	value int
+}
+
+// Value returns the int value of the intensity.
+func (i Intensity) Value() int {
+	return i.value
+}
+
+// String returns the string representation.
+func (i Intensity) String() string {
+	return fmt.Sprintf("%d", i.value)
+}
+
+// Equal provides support for the go-cmp package and testing.
+func (i Intensity) Equal(i2 Intensity) bool {
+	return i.value == i2.value
+}
+
+// MarshalText provides support for logging and any marshal needs.
+func (i Intensity) MarshalText() ([]byte, error) {
+	return []byte(i.String()), nil
+}
+
+// Parse validates and creates an Intensity. This is where validation happens.
+func Parse(value int) (Intensity, error) {
+	if value < 0 || value > 10 {
+		return Intensity{}, fmt.Errorf("intensity must be between 0 and 10, got %d", value)
+	}
+	return Intensity{value}, nil
+}
+
+// MustParse is like Parse but panics on error. Use in tests only.
+func MustParse(value int) Intensity {
+	intensity, err := Parse(value)
+	if err != nil {
+		panic(err)
+	}
+	return intensity
+}
+```
+
+**Usage in Business Domain Models**:
+```go
+// business/domain/momentbus/model.go
+type Moment struct {
+	ID               uuid.UUID
+	UserID           uuid.UUID
+	Situation        content.Content    // Strong type for text content
+	Intensity        intensity.Intensity // Strong type for 0-10 scale
+	Cost             money.Money         // Strong type for monetary values
+	Quantity         quantity.Quantity   // Strong type for quantities
+	DateCreated      time.Time
+}
+```
+
+**Existing Business Types**:
+- `business/types/content` - Text content with validation
+- `business/types/name` - Names with validation
+- Create new types as needed following this pattern
+
+**Why This Pattern**:
+- Validation happens once at parse time
+- Type system enforces valid data throughout the application
+- Impossible to construct invalid business objects
+- Clear separation of concerns: app layer parses primitives → business types

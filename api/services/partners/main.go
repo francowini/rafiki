@@ -18,6 +18,8 @@ import (
 	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/debug"
 	"github.com/francowini/rafiki/app/sdk/mux"
+	"github.com/francowini/rafiki/business/domain/momentbus"
+	"github.com/francowini/rafiki/business/domain/momentbus/stores/momentdb"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
 	"github.com/francowini/rafiki/business/domain/userbus"
@@ -166,6 +168,9 @@ func run(ctx context.Context, log *logger.Logger) error {
 	thinkStore := thinkdb.NewStore(log, db)
 	thinkBus := thinkbus.NewBusiness(log, thinkStore)
 
+	momentStore := momentdb.NewStore(log, db)
+	momentBus := momentbus.NewBusiness(log, momentStore)
+
 	// -------------------------------------------------------------------------
 	// Initialize authentication support
 
@@ -250,9 +255,10 @@ func run(ctx context.Context, log *logger.Logger) error {
 		DB:     db,
 		Tracer: tracer,
 		BusConfig: mux.BusConfig{
-			ThinkBus: thinkBus,
-			UserBus:  userBus,
-			Auth:     authInstance,
+			ThinkBus:  thinkBus,
+			MomentBus: momentBus,
+			UserBus:   userBus,
+			Auth:      authInstance,
 		},
 	}
 
