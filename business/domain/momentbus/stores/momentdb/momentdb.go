@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"github.com/francowini/rafiki/business/domain/momentbus"
-	"github.com/francowini/rafiki/business/sdk/order"
-	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/google/uuid"
@@ -91,14 +89,27 @@ func (s *Store) Delete(ctx context.Context, moment momentbus.Moment) error {
 }
 
 // Query retrieves a list of existing moments from the database.
-func (s *Store) Query(ctx context.Context, userID uuid.UUID, orderBy order.By, pg page.Page) ([]momentbus.Moment, error) {
+func (s *Store) Query(ctx context.Context, filter momentbus.QueryFilter) ([]momentbus.Moment, error) {
 	data := map[string]any{
-		"user_id":       userID,
-		"offset":        (pg.Number() - 1) * pg.RowsPerPage(),
-		"rows_per_page": pg.RowsPerPage(),
+		"offset":        (filter.Page.Number() - 1) * filter.Page.RowsPerPage(),
+		"rows_per_page": filter.Page.RowsPerPage(),
 	}
 
-	orderByClause, err := orderByClause(orderBy)
+	// Build WHERE clause dynamically
+	var whereClause string
+	if filter.ID != nil && filter.UserID != nil {
+		data["moment_id"] = *filter.ID
+		data["user_id"] = *filter.UserID
+		whereClause = "WHERE moment_id = :moment_id AND user_id = :user_id"
+	} else if filter.ID != nil {
+		data["moment_id"] = *filter.ID
+		whereClause = "WHERE moment_id = :moment_id"
+	} else if filter.UserID != nil {
+		data["user_id"] = *filter.UserID
+		whereClause = "WHERE user_id = :user_id"
+	}
+
+	orderByClause, err := orderByClause(filter.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -110,10 +121,9 @@ func (s *Store) Query(ctx context.Context, userID uuid.UUID, orderBy order.By, p
 		intensity, date_created, date_updated
 	FROM
 		moments
-	WHERE
-		user_id = :user_id
 	%s
-	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`, orderByClause)
+	%s
+	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`, whereClause, orderByClause)
 
 	var dbMoms []moment
 	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, q, data, &dbMoms); err != nil {
@@ -150,19 +160,30 @@ func (s *Store) QueryByID(ctx context.Context, momentID uuid.UUID) (momentbus.Mo
 	return toBusMoment(dbMom)
 }
 
-// Count returns the total number of moments in the database.
-func (s *Store) Count(ctx context.Context, userID uuid.UUID) (int, error) {
-	data := map[string]any{
-		"user_id": userID,
+// Count returns the total number of moments that match the filter.
+func (s *Store) Count(ctx context.Context, filter momentbus.QueryFilter) (int, error) {
+	data := map[string]any{}
+
+	// Build WHERE clause dynamically
+	var whereClause string
+	if filter.ID != nil && filter.UserID != nil {
+		data["moment_id"] = *filter.ID
+		data["user_id"] = *filter.UserID
+		whereClause = "WHERE moment_id = :moment_id AND user_id = :user_id"
+	} else if filter.ID != nil {
+		data["moment_id"] = *filter.ID
+		whereClause = "WHERE moment_id = :moment_id"
+	} else if filter.UserID != nil {
+		data["user_id"] = *filter.UserID
+		whereClause = "WHERE user_id = :user_id"
 	}
 
-	const q = `
+	q := fmt.Sprintf(`
 	SELECT
 		COUNT(1) AS count
 	FROM
 		moments
-	WHERE
-		user_id = :user_id`
+	%s`, whereClause)
 
 	var count struct {
 		Count int `db:"count"`

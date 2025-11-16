@@ -1,0 +1,137 @@
+# CodeRabbit Review - Issues to Fix
+
+## Summary
+7 actionable comments from CodeRabbit review of the Moments feature PR.
+
+---
+
+## 🚨 CRITICAL ISSUE
+
+### 1. Documentation-implementation mismatch for Storer interface
+**File:** `docs/moments-feature-backend-implementation.md` (lines 243-252)
+**Issue:** The documented Storer interface shows `Query` and `Count` methods accepting a `QueryFilter` parameter, but the actual implementation in `business/domain/momentbus/momentbus.go` uses individual parameters (`userID`, `orderBy`, `page`).
+
+**Required Action:**
+Choose one of:
+1. ✅ Update the implementation to match documented design (recommended for flexibility)
+2. Update the documentation to reflect the current implementation
+
+**Files to update if choosing option 1:**
+- `business/domain/momentbus/momentbus.go` - Update Query/Count methods to use QueryFilter
+- `business/domain/momentbus/stores/momentdb/momentdb.go` - Update Store implementation
+
+---
+
+## 🧹 NITPICK ISSUES (5)
+
+### 2. Add UnmarshalText for intensity type
+**File:** `business/types/intensity/intensity.go` (lines 29-32)
+**Issue:** `MarshalText` is implemented but there's no corresponding `UnmarshalText` method for unmarshaling from JSON/text formats.
+
+**Suggested Implementation:**
+```go
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+func (i *Intensity) UnmarshalText(data []byte) error {
+	value, err := strconv.Atoi(string(data))
+	if err != nil {
+		return fmt.Errorf("invalid intensity value: %w", err)
+	}
+
+	parsed, err := Parse(value)
+	if err != nil {
+		return err
+	}
+
+	*i = parsed
+	return nil
+}
+```
+
+Add import: `"strconv"`
+
+---
+
+### 3. Align Action/Cancel with data-slot API
+**File:** `frontend/components/ui/alert-dialog.tsx` (lines 121-143)
+**Issue:** All other components set `data-slot` for styling/selection, but `AlertDialogAction` and `AlertDialogCancel` do not.
+
+**Required Changes:**
+Add `data-slot="alert-dialog-action"` to AlertDialogAction
+Add `data-slot="alert-dialog-cancel"` to AlertDialogCancel
+
+---
+
+### 4. Add forwardRef support to AlertDialog wrapper components
+**File:** `frontend/components/ui/alert-dialog.tsx` (lines 31-45, 47-64, 95-119)
+**Issue:** Wrapper components don't forward refs to their underlying Radix primitives, which deviates from shadcn/ui standard pattern.
+
+**Components to update:**
+- `AlertDialogOverlay`
+- `AlertDialogContent`
+- `AlertDialogTitle`
+- `AlertDialogDescription`
+
+**Pattern:** Use `React.forwardRef` with `React.ElementRef` and `React.ComponentPropsWithoutRef`
+
+---
+
+### 5. Document QueryFilter default semantics
+**File:** `business/domain/momentbus/filter.go` (lines 9-15)
+**Issue:** QueryFilter fields lack documentation about default behavior.
+
+**Suggested Actions:**
+Either:
+- Add field comments explaining that nil IDs are ignored and how Page/OrderBy defaults are chosen
+- OR provide a constructor like `NewQueryFilter(page.Page, order.By)` with sensible defaults
+
+---
+
+### 6. Align authentication order across handlers
+**File:** `app/domain/momentapp/momentapp.go` (lines 50-77, 94-115, 155-176)
+**Issue:** `update` and `delete` handlers call `QueryByID` before `mid.GetUserID`, whereas `queryByID` gets userID first. Unauthenticated requests to update/delete will reach the DB before being rejected.
+
+**Recommended Pattern for consistency:**
+1. Parse `moment_id`
+2. Retrieve `userID` via `mid.GetUserID`
+3. Fetch the moment
+4. Enforce `moment.UserID == userID`
+5. Apply update/delete
+
+This mirrors `queryByID` and keeps all handlers following the same auth-before-data-access structure.
+
+---
+
+## ⚠️ UX ISSUE
+
+### 7. Reconsider slider fallback behavior
+**File:** `frontend/components/ui/slider.tsx` (lines 16-24)
+**Issue:** When both `value` and `defaultValue` are undefined, `_values` falls back to `[min, max]`, creating a dual-thumb slider by default. Standard Radix patterns default to single-value sliders (e.g., `defaultValue={[50]}`).
+
+**Required Action:**
+Choose one of:
+- Document that this component is designed for range sliders by default and require consumers to provide explicit values/defaultValue
+- OR use a single-value fallback like `[min]` for consistency with typical slider UX
+
+**Note:** This is a UX/design decision, not a Radix incompatibility.
+
+---
+
+## ✅ POSITIVE FEEDBACK (No action needed)
+
+The following were praised:
+- Moment domain models demonstrate strong typing and proper separation of concerns
+- Validation approach with defense in depth is sound
+- Excellent error aggregation pattern
+- Proper handling of optional update fields
+- Standard dependency injection pattern
+- Solid business logic with proper validation
+- Clean error handling and delegation
+- Excellent documentation of the intensity type
+
+---
+
+## INVALID/INCORRECT COMMENTS (No action needed)
+
+The following review comments were identified as incorrect:
+- Callback ordering concern in momentos/page.tsx (lines 41-51) - The code is safe from the described race condition
+- Timezone issue (line 84-84) - This is a pre-existing pattern, not specific to this PR

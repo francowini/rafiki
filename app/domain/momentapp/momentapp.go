@@ -58,17 +58,17 @@ func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
 	moment, err := a.momentBus.QueryByID(ctx, momentID)
 	if err != nil {
 		if errors.Is(err, momentbus.ErrNotFound) {
 			return errs.New(errs.NotFound, err)
 		}
 		return errs.Newf(errs.Internal, "querybyid: momentID[%s]: %s", momentID, err)
-	}
-
-	userID, err := mid.GetUserID(ctx)
-	if err != nil {
-		return errs.New(errs.Unauthenticated, err)
 	}
 
 	if moment.UserID != userID {
@@ -97,17 +97,17 @@ func (a *app) delete(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
 	moment, err := a.momentBus.QueryByID(ctx, momentID)
 	if err != nil {
 		if errors.Is(err, momentbus.ErrNotFound) {
 			return errs.New(errs.NotFound, err)
 		}
 		return errs.Newf(errs.Internal, "querybyid: momentID[%s]: %s", momentID, err)
-	}
-
-	userID, err := mid.GetUserID(ctx)
-	if err != nil {
-		return errs.New(errs.Unauthenticated, err)
 	}
 
 	if moment.UserID != userID {
@@ -139,12 +139,18 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.NewFieldErrors("order", err)
 	}
 
-	moments, err := a.momentBus.Query(ctx, userID, orderBy, pg)
+	filter := momentbus.QueryFilter{
+		UserID:  &userID,
+		Page:    pg,
+		OrderBy: orderBy,
+	}
+
+	moments, err := a.momentBus.Query(ctx, filter)
 	if err != nil {
 		return errs.Newf(errs.Internal, "query: %s", err)
 	}
 
-	total, err := a.momentBus.Count(ctx, userID)
+	total, err := a.momentBus.Count(ctx, filter)
 	if err != nil {
 		return errs.Newf(errs.Internal, "count: %s", err)
 	}

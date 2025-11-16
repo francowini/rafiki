@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/francowini/rafiki/business/sdk/order"
-	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/google/uuid"
@@ -19,9 +17,9 @@ type Storer interface {
 	Create(ctx context.Context, moment Moment) error
 	Update(ctx context.Context, moment Moment) error
 	Delete(ctx context.Context, moment Moment) error
-	Query(ctx context.Context, userID uuid.UUID, orderBy order.By, page page.Page) ([]Moment, error)
+	Query(ctx context.Context, filter QueryFilter) ([]Moment, error)
 	QueryByID(ctx context.Context, momentID uuid.UUID) (Moment, error)
-	Count(ctx context.Context, userID uuid.UUID) (int, error)
+	Count(ctx context.Context, filter QueryFilter) (int, error)
 }
 
 // Business manages the set of APIs for moment access.
@@ -125,8 +123,8 @@ func (b *Business) Delete(ctx context.Context, moment Moment) error {
 }
 
 // Query retrieves a list of existing moments from the system.
-func (b *Business) Query(ctx context.Context, userID uuid.UUID, orderBy order.By, pg page.Page) ([]Moment, error) {
-	moments, err := b.storer.Query(ctx, userID, orderBy, pg)
+func (b *Business) Query(ctx context.Context, filter QueryFilter) ([]Moment, error) {
+	moments, err := b.storer.Query(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
@@ -147,9 +145,9 @@ func (b *Business) QueryByID(ctx context.Context, momentID uuid.UUID) (Moment, e
 	return moment, nil
 }
 
-// Count returns the total number of moments for the user.
-func (b *Business) Count(ctx context.Context, userID uuid.UUID) (int, error) {
-	count, err := b.storer.Count(ctx, userID)
+// Count returns the total number of moments that match the filter.
+func (b *Business) Count(ctx context.Context, filter QueryFilter) (int, error) {
+	count, err := b.storer.Count(ctx, filter)
 	if err != nil {
 		return 0, fmt.Errorf("count: %w", err)
 	}

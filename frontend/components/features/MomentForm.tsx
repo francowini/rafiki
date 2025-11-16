@@ -35,6 +35,17 @@ export function MomentForm({ onSuccess, onCancel }: MomentFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Format current local time for datetime-local input
+  const getLocalDateTimeString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const {
     register,
     handleSubmit,
@@ -44,7 +55,7 @@ export function MomentForm({ onSuccess, onCancel }: MomentFormProps) {
   } = useForm<MomentFormData>({
     resolver: zodResolver(momentSchema),
     defaultValues: {
-      momentDate: new Date().toISOString().slice(0, 16), // Current datetime
+      momentDate: getLocalDateTimeString(),
       intensity: 5,
     },
   });

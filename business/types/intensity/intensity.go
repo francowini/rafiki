@@ -3,6 +3,7 @@ package intensity
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // Intensity represents a validated intensity value on a 0-10 scale.
@@ -29,6 +30,22 @@ func (i Intensity) Equal(i2 Intensity) bool {
 // MarshalText provides support for logging and any marshal needs.
 func (i Intensity) MarshalText() ([]byte, error) {
 	return []byte(i.String()), nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+func (i *Intensity) UnmarshalText(data []byte) error {
+	value, err := strconv.Atoi(string(data))
+	if err != nil {
+		return fmt.Errorf("invalid intensity value: %w", err)
+	}
+
+	parsed, err := Parse(value)
+	if err != nil {
+		return err
+	}
+
+	*i = parsed
+	return nil
 }
 
 // =============================================================================
