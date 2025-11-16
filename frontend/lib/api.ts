@@ -20,14 +20,18 @@ async function fetchAPI<T>(
     ? localStorage.getItem('auth_token')
     : null;
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options?.headers,
   };
 
   // Add Bearer token if available
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Merge with options headers
+  if (options?.headers) {
+    Object.assign(headers, options.headers);
   }
 
   try {
