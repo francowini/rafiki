@@ -53,3 +53,4 @@ zarf/keys/*.pem
 # Compiled genhash binaries (architecture-specific)
 zarf/genhash/genhash
 zarf/genhash/genhash-linux
+.vercel
