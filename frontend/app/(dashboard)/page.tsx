@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth-context';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { QuickStatsCard } from '@/components/dashboard/QuickStatsCard';
 import { FeatureCard } from '@/components/dashboard/FeatureCard';
-import { Brain, Target, Heart, Compass, Activity } from 'lucide-react';
+import { Brain, Target, Heart, Compass, Activity, Clock } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -91,6 +91,14 @@ export default function DashboardPage() {
             href="/habits"
             color="purple"
             available={false}
+          />
+          <FeatureCard
+            title="Moments"
+            description="Record and reflect on your difficult moments"
+            icon={Clock}
+            href="/momentos"
+            color="teal"
+            available={true}
           />
         </div>
       </div>

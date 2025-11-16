@@ -1,4 +1,4 @@
-import { Think, ThinkListResponse, NewThink, PaginationParams } from "./types";
+import { Think, ThinkListResponse, NewThink, PaginationParams, Moment, MomentListResponse, NewMoment, UpdateMoment } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -62,6 +62,11 @@ async function fetchAPI<T>(
       );
     }
 
+    // Handle 204 No Content responses (e.g., DELETE operations)
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
     return response.json();
   } catch (error) {
     if (error instanceof APIError) {
@@ -96,6 +101,66 @@ export const api = {
       return fetchAPI<Think>("/v1/thinks", {
         method: "POST",
         body: JSON.stringify(data),
+      });
+    },
+  },
+
+  moments: {
+    /**
+     * Get all moments with pagination
+     */
+    getAll: async (params?: {
+      page?: number;
+      rows?: number;
+      orderBy?: "moment_date" | "intensity" | "date_created" | "date_updated";
+      orderDirection?: "asc" | "desc";
+    }): Promise<MomentListResponse> => {
+      const queryParams = new URLSearchParams();
+
+      if (params?.page) queryParams.set("page", params.page.toString());
+      if (params?.rows) queryParams.set("rows", params.rows.toString());
+      if (params?.orderBy) queryParams.set("orderBy", params.orderBy);
+      if (params?.orderDirection) queryParams.set("orderDirection", params.orderDirection);
+
+      const query = queryParams.toString();
+      const endpoint = `/v1/moments${query ? `?${query}` : ""}`;
+
+      return fetchAPI<MomentListResponse>(endpoint);
+    },
+
+    /**
+     * Get a single moment by ID
+     */
+    getById: async (id: string): Promise<Moment> => {
+      return fetchAPI<Moment>(`/v1/moments/${id}`);
+    },
+
+    /**
+     * Create a new moment
+     */
+    create: async (data: NewMoment): Promise<Moment> => {
+      return fetchAPI<Moment>("/v1/moments", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+
+    /**
+     * Update an existing moment
+     */
+    update: async (id: string, data: UpdateMoment): Promise<Moment> => {
+      return fetchAPI<Moment>(`/v1/moments/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+    },
+
+    /**
+     * Delete a moment
+     */
+    delete: async (id: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/moments/${id}`, {
+        method: "DELETE",
       });
     },
   },

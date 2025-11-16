@@ -48,3 +48,50 @@ export interface PaginationParams {
   rows?: number;
   orderBy?: "think_id" | "category" | "date_created" | "date_updated";
 }
+
+// ============================================================================
+// Moment (Registro Funcional Diario) Types
+// ============================================================================
+
+export interface Moment {
+  id: string;
+  momentDate: string;              // ISO 8601 timestamp
+  situation: string;
+  thoughts: string;
+  physicalSymptoms: string;
+  behavior: string;
+  consequences: string;
+  valuesReflection: string;
+  intensity: number;               // 0-10
+  dateCreated: string;             // ISO 8601
+  dateUpdated: string;             // ISO 8601
+}
+
+export interface NewMoment {
+  momentDate: string;              // ISO 8601 timestamp
+  situation: string;
+  thoughts: string;
+  physicalSymptoms: string;
+  behavior: string;
+  consequences: string;
+  valuesReflection: string;
+  intensity: number;               // 0-10
+}
+
+export interface UpdateMoment {
+  momentDate?: string;
+  situation?: string;
+  thoughts?: string;
+  physicalSymptoms?: string;
+  behavior?: string;
+  consequences?: string;
+  valuesReflection?: string;
+  intensity?: number;
+}
+
+export interface MomentListResponse {
+  items: Moment[];
+  total: number;
+  page: number;
+  rowsPerPage: number;
+}

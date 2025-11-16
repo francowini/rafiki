@@ -9,13 +9,14 @@
 
 ## Table of Contents
 1. [Overview](#overview)
-2. [Database Migration](#database-migration)
-3. [Business Layer Implementation](#business-layer-implementation)
-4. [Database Layer Implementation](#database-layer-implementation)
-5. [Application Layer Implementation](#application-layer-implementation)
-6. [Integration & Route Registration](#integration--route-registration)
-7. [Testing](#testing)
-8. [Deployment](#deployment)
+2. [Business Types Layer](#business-types-layer)
+3. [Database Migration](#database-migration)
+4. [Business Layer Implementation](#business-layer-implementation)
+5. [Database Layer Implementation](#database-layer-implementation)
+6. [Application Layer Implementation](#application-layer-implementation)
+7. [Integration & Route Registration](#integration--route-registration)
+8. [Testing](#testing)
+9. [Deployment](#deployment)
 
 ---
 
@@ -37,6 +38,79 @@ This feature implements psychological self-observation tracking based on the "Re
 **User Isolation:** All queries filtered by `user_id` from JWT token.
 **Authentication:** Required on all endpoints.
 **Privacy:** Personal use, no sharing features.
+
+---
+
+## Business Types Layer
+
+**IMPORTANT**: Following the codebase pattern, we create strong types with validation for all domain values. Never use primitive types directly in business models.
+
+### File: `business/types/intensity/intensity.go`
+
+```go
+// Package intensity represents a validated intensity value (0-10 scale) in the system.
+package intensity
+
+import (
+	"fmt"
+)
+
+// Intensity represents a validated intensity value on a 0-10 scale.
+// This is commonly used for measuring distress, emotion, or pain intensity.
+type Intensity struct {
+	value int
+}
+
+// Value returns the int value of the intensity.
+func (i Intensity) Value() int {
+	return i.value
+}
+
+// String returns the string representation of the intensity.
+func (i Intensity) String() string {
+	return fmt.Sprintf("%d", i.value)
+}
+
+// Equal provides support for the go-cmp package and testing.
+func (i Intensity) Equal(i2 Intensity) bool {
+	return i.value == i2.value
+}
+
+// MarshalText provides support for logging and any marshal needs.
+func (i Intensity) MarshalText() ([]byte, error) {
+	return []byte(i.String()), nil
+}
+
+// =============================================================================
+
+// Parse validates the int value and returns an Intensity if the value complies
+// with the rules for intensity (0-10 scale).
+func Parse(value int) (Intensity, error) {
+	if value < 0 || value > 10 {
+		return Intensity{}, fmt.Errorf("intensity must be between 0 and 10, got %d", value)
+	}
+
+	return Intensity{value}, nil
+}
+
+// MustParse parses the int value and returns an Intensity if the value
+// complies with the rules for intensity. If an error occurs the function panics.
+// Use this only in tests or when you're certain the value is valid.
+func MustParse(value int) Intensity {
+	intensity, err := Parse(value)
+	if err != nil {
+		panic(err)
+	}
+
+	return intensity
+}
+```
+
+**Why This Pattern:**
+- ✅ Validation happens once at parse time
+- ✅ Type system enforces valid data throughout the application
+- ✅ Impossible to construct invalid Intensity values
+- ✅ Follows existing patterns: `content.Content`, `name.Name`, `quantity.Quantity`
 
 ---
 
@@ -97,15 +171,15 @@ import (
 	"time"
 
 	"github.com/francowini/rafiki/business/types/content"
+	"github.com/francowini/rafiki/business/types/intensity"
 	"github.com/google/uuid"
 )
 
 // Set of error variables for CRUD operations.
 var (
-	ErrNotFound         = errors.New("moment not found")
-	ErrInvalidIntensity = errors.New("intensity must be between 0 and 10")
-	ErrFutureDate       = errors.New("moment_date cannot be in the future")
-	ErrUniqueEntry      = errors.New("moment entry already exists")
+	ErrNotFound    = errors.New("moment not found")
+	ErrFutureDate  = errors.New("moment_date cannot be in the future")
+	ErrUniqueEntry = errors.New("moment entry already exists")
 )
 
 // Moment represents a tracked emotional/difficult moment in the system.
@@ -119,7 +193,7 @@ type Moment struct {
 	Behavior         content.Content
 	Consequences     content.Content
 	ValuesReflection content.Content
-	Intensity        int
+	Intensity        intensity.Intensity
 	DateCreated      time.Time
 	DateUpdated      time.Time
 }
@@ -134,7 +208,7 @@ type NewMoment struct {
 	Behavior         content.Content
 	Consequences     content.Content
 	ValuesReflection content.Content
-	Intensity        int
+	Intensity        intensity.Intensity
 }
 
 // UpdateMoment contains information needed to update a moment.
@@ -146,7 +220,7 @@ type UpdateMoment struct {
 	Behavior         *content.Content
 	Consequences     *content.Content
 	ValuesReflection *content.Content
-	Intensity        *int
+	Intensity        *intensity.Intensity
 }
 ```
 
@@ -193,11 +267,6 @@ func NewBusiness(log *logger.Logger, storer Storer) *Business {
 
 // Create adds a new moment to the system.
 func (b *Business) Create(ctx context.Context, nm NewMoment) (Moment, error) {
-	// Validate intensity range
-	if nm.Intensity < 0 || nm.Intensity > 10 {
-		return Moment{}, ErrInvalidIntensity
-	}
-
 	// Validate moment_date is not in future
 	now := time.Now()
 	if nm.MomentDate.After(now) {
@@ -261,9 +330,6 @@ func (b *Business) Update(ctx context.Context, moment Moment, um UpdateMoment) (
 	}
 
 	if um.Intensity != nil {
-		if *um.Intensity < 0 || *um.Intensity > 10 {
-			return Moment{}, ErrInvalidIntensity
-		}
 		moment.Intensity = *um.Intensity
 	}
 
@@ -420,7 +486,7 @@ func toDBMoment(bus momentbus.Moment) moment {
 		Behavior:         bus.Behavior.String(),
 		Consequences:     bus.Consequences.String(),
 		ValuesReflection: bus.ValuesReflection.String(),
-		Intensity:        bus.Intensity,
+		Intensity:        bus.Intensity.Value(),
 		DateCreated:      bus.DateCreated.UTC(),
 		DateUpdated:      bus.DateUpdated.UTC(),
 	}
@@ -457,6 +523,11 @@ func toBusMoment(db moment) (momentbus.Moment, error) {
 		return momentbus.Moment{}, fmt.Errorf("parse values_reflection: %w", err)
 	}
 
+	intensity, err := intensity.Parse(db.Intensity)
+	if err != nil {
+		return momentbus.Moment{}, fmt.Errorf("parse intensity: %w", err)
+	}
+
 	return momentbus.Moment{
 		ID:               db.ID,
 		UserID:           db.UserID,
@@ -467,7 +538,7 @@ func toBusMoment(db moment) (momentbus.Moment, error) {
 		Behavior:         behavior,
 		Consequences:     consequences,
 		ValuesReflection: valuesReflection,
-		Intensity:        db.Intensity,
+		Intensity:        intensity,
 		DateCreated:      db.DateCreated.In(time.Local),
 		DateUpdated:      db.DateUpdated.In(time.Local),
 	}, nil
@@ -816,7 +887,7 @@ func toAppMoment(moment momentbus.Moment) Moment {
 		Behavior:         moment.Behavior.String(),
 		Consequences:     moment.Consequences.String(),
 		ValuesReflection: moment.ValuesReflection.String(),
-		Intensity:        moment.Intensity,
+		Intensity:        moment.Intensity.Value(),
 		DateCreated:      moment.DateCreated.Format(time.RFC3339),
 		DateUpdated:      moment.DateUpdated.Format(time.RFC3339),
 	}
@@ -875,6 +946,11 @@ func toBusNewMoment(ctx context.Context, nm NewMoment) (momentbus.NewMoment, err
 		errors.Add("valuesReflection", err)
 	}
 
+	intensity, err := intensity.Parse(nm.Intensity)
+	if err != nil {
+		errors.Add("intensity", err)
+	}
+
 	if len(errors) > 0 {
 		return momentbus.NewMoment{}, fmt.Errorf("validate: %w", errors.ToError())
 	}
@@ -888,7 +964,7 @@ func toBusNewMoment(ctx context.Context, nm NewMoment) (momentbus.NewMoment, err
 		Behavior:         behavior,
 		Consequences:     consequences,
 		ValuesReflection: valuesReflection,
-		Intensity:        nm.Intensity,
+		Intensity:        intensity,
 	}, nil
 }
 
@@ -960,7 +1036,12 @@ func toBusUpdateMoment(ctx context.Context, um UpdateMoment) (momentbus.UpdateMo
 	}
 
 	if um.Intensity != nil {
-		bus.Intensity = um.Intensity
+		intensity, err := intensity.Parse(*um.Intensity)
+		if err != nil {
+			errors.Add("intensity", err)
+		} else {
+			bus.Intensity = &intensity
+		}
 	}
 
 	if len(errors) > 0 {
@@ -1012,9 +1093,6 @@ func (api *api) create(ctx context.Context, r *http.Request) web.Encoder {
 
 	moment, err := api.momentBus.Create(ctx, nm)
 	if err != nil {
-		if errors.Is(err, momentbus.ErrInvalidIntensity) {
-			return errs.New(errs.InvalidArgument, err)
-		}
 		if errors.Is(err, momentbus.ErrFutureDate) {
 			return errs.New(errs.InvalidArgument, err)
 		}
@@ -1059,9 +1137,6 @@ func (api *api) update(ctx context.Context, r *http.Request) web.Encoder {
 
 	moment, err = api.momentBus.Update(ctx, moment, um)
 	if err != nil {
-		if errors.Is(err, momentbus.ErrInvalidIntensity) {
-			return errs.New(errs.InvalidArgument, err)
-		}
 		if errors.Is(err, momentbus.ErrFutureDate) {
 			return errs.New(errs.InvalidArgument, err)
 		}
@@ -1508,6 +1583,9 @@ docker exec -it rafiki-postgres psql -U rafiki -d rafiki
 
 ## Implementation Checklist
 
+### Phase 0: Business Types Layer
+- [ ] Create `business/types/intensity/intensity.go`
+
 ### Phase 1: Business & Database Layers
 - [ ] Create `business/domain/momentbus/model.go`
 - [ ] Create `business/domain/momentbus/momentbus.go`
@@ -1559,7 +1637,8 @@ This implementation provides:
 - ✅ **Production-ready** with proper error handling and logging
 - ✅ **Zero-downtime deployment** with idempotent migrations
 
-**Total Files Created:** 11 new files
+**Total Files Created:** 12 new files (1 business type + 7 business layer + 4 app layer)
 **Total Files Modified:** 3 existing files
 **Database Tables Added:** 1 (moments)
 **API Endpoints:** 5 (POST, GET, GET/:id, PUT/:id, DELETE/:id)
+**Business Types Created:** 1 (`intensity.Intensity` for validated 0-10 scale values)

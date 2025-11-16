@@ -8,7 +8,7 @@ interface FeatureCardProps {
   description: string;
   icon: LucideIcon;
   href: string;
-  color: 'blue' | 'red' | 'green' | 'purple' | 'indigo';
+  color: 'blue' | 'red' | 'green' | 'purple' | 'indigo' | 'teal';
   available: boolean;
 }
 
@@ -18,6 +18,7 @@ const colorClasses = {
   green: 'bg-green-100 text-green-600 hover:bg-green-200',
   purple: 'bg-purple-100 text-purple-600 hover:bg-purple-200',
   indigo: 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200',
+  teal: 'bg-teal-100 text-teal-600 hover:bg-teal-200',
 };
 
 export function FeatureCard({ title, description, icon: Icon, href, color, available }: FeatureCardProps) {

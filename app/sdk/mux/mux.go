@@ -8,6 +8,7 @@ import (
 
 	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/mid"
+	"github.com/francowini/rafiki/business/domain/momentbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/foundation/logger"
@@ -50,9 +51,10 @@ func WithFileServer(react bool, static embed.FS, dir string, path string) func(o
 }
 
 type BusConfig struct {
-	ThinkBus *thinkbus.Business
-	UserBus  userbus.ExtBusiness
-	Auth     *auth.Auth
+	ThinkBus  *thinkbus.Business
+	MomentBus *momentbus.Business
+	UserBus   userbus.ExtBusiness
+	Auth      *auth.Auth
 }
 
 // Config contains all the mandatory systems required by handlers.
