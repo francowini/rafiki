@@ -15,12 +15,12 @@ interface MomentCardProps {
 
 export function MomentCard({ moment, onClick, onEdit, onDelete }: MomentCardProps) {
   const momentDate = new Date(moment.momentDate);
-  const dateStr = momentDate.toLocaleDateString("es-ES", {
+  const dateStr = momentDate.toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
-  const timeStr = momentDate.toLocaleTimeString("es-ES", {
+  const timeStr = momentDate.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -74,7 +74,7 @@ export function MomentCard({ moment, onClick, onEdit, onDelete }: MomentCardProp
               className="flex-1"
             >
               <Edit className="h-4 w-4 mr-1" />
-              Editar
+              Edit
             </Button>
           )}
           {onDelete && (

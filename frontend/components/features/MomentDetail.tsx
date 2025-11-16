@@ -21,7 +21,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
   if (!moment) return null;
 
   const momentDate = new Date(moment.momentDate);
-  const dateStr = momentDate.toLocaleDateString("es-ES", {
+  const dateStr = momentDate.toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -43,14 +43,14 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
             <div>
               <DialogTitle className="text-xl">{dateStr}</DialogTitle>
               <DialogDescription className="text-sm mt-1">
-                Registro del momento
+                Moment record
               </DialogDescription>
             </div>
             <Badge
               variant="outline"
               className={getIntensityColor(moment.intensity)}
             >
-              Intensidad: {moment.intensity}/10
+              Intensity: {moment.intensity}/10
             </Badge>
           </div>
         </DialogHeader>
@@ -59,7 +59,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
           {/* Situation */}
           <div className="space-y-2">
             <h4 className="font-medium text-sm text-muted-foreground">
-              Situacion
+              Situation
             </h4>
             <p className="text-base leading-relaxed">{moment.situation}</p>
           </div>
@@ -69,7 +69,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
           {/* Thoughts */}
           <div className="space-y-2">
             <h4 className="font-medium text-sm text-muted-foreground">
-              Pensamientos
+              Thoughts
             </h4>
             <p className="text-base leading-relaxed">{moment.thoughts}</p>
           </div>
@@ -79,7 +79,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
           {/* Physical Symptoms */}
           <div className="space-y-2">
             <h4 className="font-medium text-sm text-muted-foreground">
-              Sintomas fisicos o emociones
+              Physical symptoms or emotions
             </h4>
             <p className="text-base leading-relaxed">{moment.physicalSymptoms}</p>
           </div>
@@ -89,7 +89,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
           {/* Behavior */}
           <div className="space-y-2">
             <h4 className="font-medium text-sm text-muted-foreground">
-              Lo que hiciste
+              What you did
             </h4>
             <p className="text-base leading-relaxed">{moment.behavior}</p>
           </div>
@@ -99,7 +99,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
           {/* Consequences */}
           <div className="space-y-2">
             <h4 className="font-medium text-sm text-muted-foreground">
-              Consecuencias
+              Consequences
             </h4>
             <p className="text-base leading-relaxed">{moment.consequences}</p>
           </div>
@@ -109,7 +109,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
           {/* Values Reflection */}
           <div className="space-y-2">
             <h4 className="font-medium text-sm text-muted-foreground">
-              Reflexion sobre valores
+              Values reflection
             </h4>
             <p className="text-base leading-relaxed">{moment.valuesReflection}</p>
           </div>

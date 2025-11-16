@@ -29,13 +29,26 @@ import { api } from "@/lib/api";
 
 export default function MomentosPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null);
+  const [momentToEdit, setMomentToEdit] = useState<Moment | null>(null);
   const [momentToDelete, setMomentToDelete] = useState<Moment | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   const handleCreateSuccess = () => {
     setIsFormOpen(false);
     setRefresh((prev) => prev + 1);
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditFormOpen(false);
+    setMomentToEdit(null);
+    setRefresh((prev) => prev + 1);
+  };
+
+  const handleEdit = (moment: Moment) => {
+    setMomentToEdit(moment);
+    setIsEditFormOpen(true);
   };
 
   const handleDelete = async () => {
@@ -55,9 +68,9 @@ export default function MomentosPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Momentos</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Moments</h1>
           <p className="text-muted-foreground mt-1">
-            Registra y reflexiona sobre tus momentos dificiles
+            Record and reflect on your difficult moments
           </p>
         </div>
 
@@ -68,14 +81,14 @@ export default function MomentosPage() {
               className="bg-purple-600 hover:bg-purple-700"
             >
               <Plus className="h-5 w-5 mr-2" />
-              Nuevo momento
+              New moment
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
             <SheetHeader>
-              <SheetTitle className="text-xl">Registrar un momento</SheetTitle>
+              <SheetTitle className="text-xl">Record a moment</SheetTitle>
               <SheetDescription>
-                Tomate tu tiempo para describir lo que sucedio. No hay respuestas correctas o incorrectas.
+                Take your time to describe what happened. There are no right or wrong answers.
               </SheetDescription>
             </SheetHeader>
             <div className="mt-6">
@@ -92,6 +105,7 @@ export default function MomentosPage() {
       <MomentList
         refresh={refresh}
         onMomentClick={setSelectedMoment}
+        onMomentEdit={handleEdit}
         onMomentDelete={setMomentToDelete}
       />
 
@@ -102,6 +116,28 @@ export default function MomentosPage() {
         onClose={() => setSelectedMoment(null)}
       />
 
+      {/* Edit Form Sheet */}
+      <Sheet open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-xl">Edit moment</SheetTitle>
+            <SheetDescription>
+              Update your moment information.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <MomentForm
+              moment={momentToEdit}
+              onSuccess={handleEditSuccess}
+              onCancel={() => {
+                setIsEditFormOpen(false);
+                setMomentToEdit(null);
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog
         open={!!momentToDelete}
@@ -109,18 +145,18 @@ export default function MomentosPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Estas seguro?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta accion no se puede deshacer. El momento sera eliminado permanentemente.
+              This action cannot be undone. The moment will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Eliminar
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

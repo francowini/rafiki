@@ -93,11 +93,11 @@ export default function DashboardPage() {
             available={false}
           />
           <FeatureCard
-            title="Momentos"
-            description="Registra y reflexiona sobre tus momentos difíciles"
+            title="Moments"
+            description="Record and reflect on your difficult moments"
             icon={Clock}
             href="/momentos"
-            color="purple"
+            color="teal"
             available={true}
           />
         </div>

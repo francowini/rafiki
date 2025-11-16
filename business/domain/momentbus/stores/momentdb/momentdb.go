@@ -63,7 +63,7 @@ func (s *Store) Update(ctx context.Context, moment momentbus.Moment) error {
 		intensity = :intensity,
 		date_updated = :date_updated
 	WHERE
-		moment_id = :moment_id`
+		moment_id = :moment_id AND user_id = :user_id`
 
 	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBMoment(moment)); err != nil {
 		if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
@@ -95,19 +95,7 @@ func (s *Store) Query(ctx context.Context, filter momentbus.QueryFilter) ([]mome
 		"rows_per_page": filter.Page.RowsPerPage(),
 	}
 
-	// Build WHERE clause dynamically
-	var whereClause string
-	if filter.ID != nil && filter.UserID != nil {
-		data["moment_id"] = *filter.ID
-		data["user_id"] = *filter.UserID
-		whereClause = "WHERE moment_id = :moment_id AND user_id = :user_id"
-	} else if filter.ID != nil {
-		data["moment_id"] = *filter.ID
-		whereClause = "WHERE moment_id = :moment_id"
-	} else if filter.UserID != nil {
-		data["user_id"] = *filter.UserID
-		whereClause = "WHERE user_id = :user_id"
-	}
+	whereClause := buildWhereClause(filter, data)
 
 	orderByClause, err := orderByClause(filter.OrderBy)
 	if err != nil {
@@ -164,19 +152,7 @@ func (s *Store) QueryByID(ctx context.Context, momentID uuid.UUID) (momentbus.Mo
 func (s *Store) Count(ctx context.Context, filter momentbus.QueryFilter) (int, error) {
 	data := map[string]any{}
 
-	// Build WHERE clause dynamically
-	var whereClause string
-	if filter.ID != nil && filter.UserID != nil {
-		data["moment_id"] = *filter.ID
-		data["user_id"] = *filter.UserID
-		whereClause = "WHERE moment_id = :moment_id AND user_id = :user_id"
-	} else if filter.ID != nil {
-		data["moment_id"] = *filter.ID
-		whereClause = "WHERE moment_id = :moment_id"
-	} else if filter.UserID != nil {
-		data["user_id"] = *filter.UserID
-		whereClause = "WHERE user_id = :user_id"
-	}
+	whereClause := buildWhereClause(filter, data)
 
 	q := fmt.Sprintf(`
 	SELECT
@@ -194,4 +170,26 @@ func (s *Store) Count(ctx context.Context, filter momentbus.QueryFilter) (int, e
 	}
 
 	return count.Count, nil
+}
+
+// buildWhereClause constructs the WHERE clause for filtering moments and
+// populates the data map with the appropriate filter values.
+func buildWhereClause(filter momentbus.QueryFilter, data map[string]any) string {
+	if filter.ID != nil && filter.UserID != nil {
+		data["moment_id"] = *filter.ID
+		data["user_id"] = *filter.UserID
+		return "WHERE moment_id = :moment_id AND user_id = :user_id"
+	}
+
+	if filter.ID != nil {
+		data["moment_id"] = *filter.ID
+		return "WHERE moment_id = :moment_id"
+	}
+
+	if filter.UserID != nil {
+		data["user_id"] = *filter.UserID
+		return "WHERE user_id = :user_id"
+	}
+
+	return ""
 }

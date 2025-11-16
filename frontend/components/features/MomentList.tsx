@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { Moment } from "@/lib/types";
 import { MomentCard } from "./MomentCard";
@@ -27,7 +27,7 @@ export function MomentList({
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const loadMoments = async () => {
+  const loadMoments = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -42,15 +42,15 @@ export function MomentList({
       setMoments(response.items);
       setTotal(response.total);
     } catch (err: any) {
-      setError(err.message || "Error al cargar momentos");
+      setError(err.message || "Error loading moments");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [page]);
 
   useEffect(() => {
     loadMoments();
-  }, [page, refresh]);
+  }, [loadMoments, refresh]);
 
   if (isLoading && moments.length === 0) {
     return (
@@ -68,7 +68,7 @@ export function MomentList({
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
         <Button onClick={loadMoments} variant="outline" className="mt-4">
-          Reintentar
+          Retry
         </Button>
       </Alert>
     );
@@ -79,11 +79,11 @@ export function MomentList({
       <div className="text-center py-12">
         <div className="mx-auto max-w-md space-y-4">
           <h3 className="text-lg font-medium text-muted-foreground">
-            No hay momentos registrados
+            No moments recorded
           </h3>
           <p className="text-sm text-muted-foreground">
-            Cuando estes listo, este espacio esta aqui para ti. Registra tus momentos dificiles
-            para entenderlos mejor y encontrar patrones.
+            When you're ready, this space is here for you. Record your difficult moments
+            to better understand them and find patterns.
           </p>
         </div>
       </div>
@@ -112,17 +112,17 @@ export function MomentList({
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
           >
-            Anterior
+            Previous
           </Button>
           <span className="text-sm text-muted-foreground">
-            Pagina {page} de {Math.ceil(total / 20)}
+            Page {page} of {Math.ceil(total / 20)}
           </span>
           <Button
             variant="outline"
             onClick={() => setPage((p) => p + 1)}
             disabled={page >= Math.ceil(total / 20)}
           >
-            Siguiente
+            Next
           </Button>
         </div>
       )}
