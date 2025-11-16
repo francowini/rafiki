@@ -106,6 +106,7 @@ After both rounds:
 - Provide actionable implementation plan
 - Highlight dependencies between backend, frontend, and devops work
 - Ensure API contracts are clear and well-documented
+- **Generate comprehensive documentation in the `docs/` folder**
 
 ## Anti-Repetition Mechanisms
 
@@ -166,7 +167,20 @@ Specialists: Backend Engineer + Frontend Engineer + DevOps Engineer
 
 🔮 DEPLOYMENT STRATEGY
 [How to safely roll out the changes to Hetzner (backend) and Vercel (frontend)]
+
+📝 DOCUMENTATION
+[Generate comprehensive markdown documentation in docs/ folder with implementation plan]
 ```
+
+## Documentation Output
+
+**IMPORTANT:** After completing the analysis, always generate comprehensive documentation in the `docs/` folder:
+
+1. Create a detailed implementation plan document (e.g., `docs/[feature-name]-implementation-plan.md`)
+2. Include all findings from both rounds of analysis
+3. Provide step-by-step implementation instructions
+4. Document dependencies, deployment strategy, and rollback procedures
+5. Include code examples, configuration snippets, and command references
 
 ## Success Metrics
 - Each round produces genuinely new insights (not repetition)
@@ -180,5 +194,6 @@ Specialists: Backend Engineer + Frontend Engineer + DevOps Engineer
 - API contracts are clear and well-documented
 - Frontend UX is smooth and error handling is comprehensive
 - CORS and networking configuration supports full-stack integration
+- **Comprehensive documentation generated in docs/ folder**
 
 Execute the three-agent analysis with the Backend Engineer, Frontend Engineer, and DevOps Engineer working in parallel, then cross-pollinating their findings to produce a coordinated implementation plan.
