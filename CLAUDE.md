@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Topifier is a personal development tracking application built in Go, designed to help track ideales (ideals), valores (values), hábitos (habits), metas (goals), and objetivos (objectives). The service is containerized and deployed on Hetzner servers.
+Rafiki is a personal development tracking application built in Go, designed to help track ideales (ideals), valores (values), hábitos (habits), metas (goals), and objetivos (objectives). The service is containerized and deployed on Hetzner servers.
+
+CodeRabbit integration is enabled for automated code review on all pull requests.
 
 ## Architecture
 
