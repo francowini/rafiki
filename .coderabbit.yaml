@@ -1,0 +1,165 @@
+# CodeRabbit Configuration for Rafiki Project
+# This file customizes CodeRabbit's review behavior for the Rafiki codebase
+
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "assertive"
+
+  auto_review:
+    enabled: true
+    base_branches:
+      - main
+    drafts: false
+
+  # Exclude generated code, dependencies, and build artifacts from review
+  path_filters:
+    - "!vendor/**"
+    - "!frontend/node_modules/**"
+    - "!frontend/.next/**"
+    - "!**/*.pb.go"
+    - "!**/*_generated.go"
+    - "!**/go.sum"
+    - "!**/package-lock.json"
+
+  # Tool integrations for linting
+  tools:
+    golangci-lint:
+      enabled: true
+      config: ".golangci.yml"
+    eslint:
+      enabled: true
+      config: "frontend/eslint.config.mjs"
+
+  # Path-specific instructions for critical code areas
+  path_instructions:
+    - path: "business/types/**"
+      instructions: |
+        CRITICAL: Business validation types - NEVER suggest auto-fixes.
+        - These types enforce business rules and validation at the type level
+        - Each type must validate data in its Parse() function
+        - Changes here affect the entire domain model
+        - All validation logic must be thoroughly reviewed
+        - Test coverage must be comprehensive
+        - Breaking changes require careful migration planning
+
+    - path: "business/domain/**/model.go"
+      instructions: |
+        CRITICAL: Domain model definitions - API contracts.
+        - These structs define the core business domain
+        - Changes may break API compatibility
+        - Must use strong business types from business/types/
+        - NEVER use primitive types (int, string, float64) for domain values
+        - All fields must have proper validation
+        - Document any breaking changes clearly
+
+    - path: "app/sdk/auth/**"
+      instructions: |
+        SECURITY-SENSITIVE: Authentication implementation.
+        - Review for authentication bypass vulnerabilities
+        - Check JWT token validation is correct
+        - Verify role-based access control logic
+        - Ensure secure session management
+        - Check for timing attack vulnerabilities
+        - Validate all user input thoroughly
+
+    - path: "foundation/keystore/**"
+      instructions: |
+        SECURITY-SENSITIVE: Cryptographic key management.
+        - Review for secure key generation and storage
+        - Check for hardcoded secrets or keys
+        - Verify proper key rotation mechanisms
+        - Ensure keys are never logged
+        - Check file permissions are restrictive
+        - Validate encryption algorithms are modern and secure
+
+    - path: "frontend/lib/auth-context.tsx"
+      instructions: |
+        SECURITY-SENSITIVE: Client-side authentication state.
+        - Review token storage mechanisms (avoid localStorage for sensitive data)
+        - Check for XSS vulnerabilities in token handling
+        - Verify secure token refresh logic
+        - Ensure proper cleanup on logout
+        - Check for sensitive data exposure in client state
+
+    - path: "frontend/lib/api.ts"
+      instructions: |
+        CRITICAL: API client implementation.
+        - Review error handling completeness
+        - Check authentication header injection
+        - Verify CSRF protection mechanisms
+        - Ensure proper request/response typing
+        - Check for race conditions in concurrent requests
+        - Validate timeout and retry logic
+
+    - path: "api/services/partners/mux/**"
+      instructions: |
+        IMPORTANT: HTTP routing using Go 1.22+ patterns.
+        - Use new pattern matching: "GET /endpoint" not "/endpoint"
+        - Verify all routes have proper HTTP method constraints
+        - Check for route conflicts and shadowing
+        - Ensure middleware is applied correctly
+        - Validate all path parameters are extracted safely
+        - Review for CORS configuration if needed
+
+    - path: "frontend/app/**"
+      instructions: |
+        IMPORTANT: Next.js 16 App Router conventions.
+        - Follow App Router file conventions (page.tsx, layout.tsx, etc.)
+        - Use Server Components by default, mark Client Components with "use client"
+        - Verify proper data fetching patterns (no client-side useEffect for initial data)
+        - Check metadata exports for SEO
+        - Ensure proper loading and error boundaries
+        - Validate route groups and parallel routes usage
+
+    - path: "api/services/partners/main.go"
+      instructions: |
+        CRITICAL: Main service entry point.
+        - Review configuration parsing and validation
+        - Check graceful shutdown implementation
+        - Verify signal handling (SIGINT, SIGTERM)
+        - Ensure proper logger initialization
+        - Validate debug server isolation from main API
+        - Check for goroutine leaks
+
+    - path: "**/Dockerfile"
+      instructions: |
+        SECURITY: Container configuration.
+        - Use specific version tags, not 'latest'
+        - Run as non-root user when possible
+        - Minimize layer count and image size
+        - Check for exposed secrets or credentials
+        - Validate multi-stage build optimization
+        - Ensure proper health checks
+
+    - path: "devops/**"
+      instructions: |
+        INFRASTRUCTURE: Deployment and operations code.
+        - Review for security misconfigurations
+        - Check secrets management (use environment variables)
+        - Verify idempotent deployment scripts
+        - Ensure proper error handling and rollback
+        - Validate backup and restore procedures
+        - Check for hardcoded server addresses or credentials
+
+  # Request changes for high-severity issues
+  request_changes_workflow: true
+
+  # Add labels to reviewed PRs
+  labels:
+    - "coderabbit"
+
+# Chat configuration
+chat:
+  auto_reply: true
+
+# Knowledge base - helps CodeRabbit understand project context
+knowledge_base:
+  learnings:
+    scope: "auto"
+
+  # Key project patterns and conventions
+  opt_out:
+    - "package-lock.json"
+    - "go.sum"
