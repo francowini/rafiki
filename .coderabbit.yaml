@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
 # CodeRabbit Configuration for Rafiki Project
 # This file customizes CodeRabbit's review behavior for the Rafiki codebase
 
@@ -158,8 +160,4 @@ chat:
 knowledge_base:
   learnings:
     scope: "auto"
-
-  # Key project patterns and conventions
-  opt_out:
-    - "package-lock.json"
-    - "go.sum"
+  opt_out: false
