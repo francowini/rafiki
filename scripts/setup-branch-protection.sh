@@ -49,7 +49,7 @@ echo ""
 cat << 'EOF' > /tmp/branch-protection.json
 {
   "required_status_checks": null,
-  "enforce_admins": false,
+  "enforce_admins": true,
   "required_pull_request_reviews": null,
   "restrictions": null,
   "required_linear_history": true,
@@ -76,6 +76,7 @@ echo "✅ Branch protection configured successfully!"
 echo ""
 echo "Configuration applied:"
 echo "  - Direct pushes to main: BLOCKED (must use PRs)"
+echo "  - Enforce for admins: YES (even repo owners must use PRs)"
 echo "  - PR reviews required: NO (can merge without approval)"
 echo "  - Required linear history: enabled"
 echo "  - Force pushes: disabled"
