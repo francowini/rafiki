@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { ThinkForm } from "@/components/features/ThinkForm";
-import { ThinkList } from "@/components/features/ThinkList";
+import { useState } from 'react';
+import { ThinkForm } from '@/components/features/ThinkForm';
+import { ThinkList } from '@/components/features/ThinkList';
 
 export default function ThinksPage() {
   const [refreshKey, setRefreshKey] = useState(0);

@@ -18,7 +18,14 @@ const colorClasses = {
   indigo: 'bg-indigo-100 text-indigo-600',
 };
 
-export function QuickStatsCard({ title, value, description, trend, icon: Icon, color }: QuickStatsCardProps) {
+export function QuickStatsCard({
+  title,
+  value,
+  description,
+  trend,
+  icon: Icon,
+  color,
+}: QuickStatsCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -30,9 +37,7 @@ export function QuickStatsCard({ title, value, description, trend, icon: Icon, c
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
         <p className="text-xs text-muted-foreground">{description}</p>
-        {trend && (
-          <p className="text-xs text-green-600 mt-1">{trend}</p>
-        )}
+        {trend && <p className="text-xs text-green-600 mt-1">{trend}</p>}
       </CardContent>
     </Card>
   );

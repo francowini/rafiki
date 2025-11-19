@@ -1,27 +1,34 @@
-import { Think, ThinkListResponse, NewThink, PaginationParams, Moment, MomentListResponse, NewMoment, UpdateMoment } from "./types";
+import {
+  Think,
+  ThinkListResponse,
+  NewThink,
+  PaginationParams,
+  Moment,
+  MomentListResponse,
+  NewMoment,
+  UpdateMoment,
+} from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 class APIError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
     super(message);
-    this.name = "APIError";
+    this.name = 'APIError';
   }
 }
 
-async function fetchAPI<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
+async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
   // Get token from localStorage
-  const token = typeof window !== 'undefined'
-    ? localStorage.getItem('auth_token')
-    : null;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
 
   // Add Bearer token if available
@@ -56,10 +63,7 @@ async function fetchAPI<T>(
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new APIError(
-        response.status,
-        `API request failed: ${response.status} ${errorText}`
-      );
+      throw new APIError(response.status, `API request failed: ${response.status} ${errorText}`);
     }
 
     // Handle 204 No Content responses (e.g., DELETE operations)
@@ -72,7 +76,7 @@ async function fetchAPI<T>(
     if (error instanceof APIError) {
       throw error;
     }
-    throw new Error(`Network error: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -83,23 +87,22 @@ export const api = {
      */
     getAll: async (params?: PaginationParams): Promise<ThinkListResponse> => {
       const queryParams = new URLSearchParams();
-      if (params?.page) queryParams.set("page", params.page.toString());
-      if (params?.rows) queryParams.set("rows", params.rows.toString());
-      if (params?.orderBy) queryParams.set("orderBy", params.orderBy);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.rows) queryParams.set('rows', params.rows.toString());
+      if (params?.orderBy) queryParams.set('orderBy', params.orderBy);
 
       const query = queryParams.toString();
-      const endpoint = `/v1/thinks${query ? `?${query}` : ""}`;
+      const endpoint = `/v1/thinks${query ? `?${query}` : ''}`;
 
       return fetchAPI<ThinkListResponse>(endpoint);
     },
-
 
     /**
      * Create a new think
      */
     create: async (data: NewThink): Promise<Think> => {
-      return fetchAPI<Think>("/v1/thinks", {
-        method: "POST",
+      return fetchAPI<Think>('/v1/thinks', {
+        method: 'POST',
         body: JSON.stringify(data),
       });
     },
@@ -112,18 +115,18 @@ export const api = {
     getAll: async (params?: {
       page?: number;
       rows?: number;
-      orderBy?: "moment_date" | "intensity" | "date_created" | "date_updated";
-      orderDirection?: "asc" | "desc";
+      orderBy?: 'moment_date' | 'intensity' | 'date_created' | 'date_updated';
+      orderDirection?: 'asc' | 'desc';
     }): Promise<MomentListResponse> => {
       const queryParams = new URLSearchParams();
 
-      if (params?.page) queryParams.set("page", params.page.toString());
-      if (params?.rows) queryParams.set("rows", params.rows.toString());
-      if (params?.orderBy) queryParams.set("orderBy", params.orderBy);
-      if (params?.orderDirection) queryParams.set("orderDirection", params.orderDirection);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.rows) queryParams.set('rows', params.rows.toString());
+      if (params?.orderBy) queryParams.set('orderBy', params.orderBy);
+      if (params?.orderDirection) queryParams.set('orderDirection', params.orderDirection);
 
       const query = queryParams.toString();
-      const endpoint = `/v1/moments${query ? `?${query}` : ""}`;
+      const endpoint = `/v1/moments${query ? `?${query}` : ''}`;
 
       return fetchAPI<MomentListResponse>(endpoint);
     },
@@ -139,8 +142,8 @@ export const api = {
      * Create a new moment
      */
     create: async (data: NewMoment): Promise<Moment> => {
-      return fetchAPI<Moment>("/v1/moments", {
-        method: "POST",
+      return fetchAPI<Moment>('/v1/moments', {
+        method: 'POST',
         body: JSON.stringify(data),
       });
     },
@@ -150,7 +153,7 @@ export const api = {
      */
     update: async (id: string, data: UpdateMoment): Promise<Moment> => {
       return fetchAPI<Moment>(`/v1/moments/${id}`, {
-        method: "PUT",
+        method: 'PUT',
         body: JSON.stringify(data),
       });
     },
@@ -160,7 +163,7 @@ export const api = {
      */
     delete: async (id: string): Promise<void> => {
       return fetchAPI<void>(`/v1/moments/${id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
     },
   },
@@ -170,14 +173,14 @@ export const api = {
      * Check API readiness
      */
     readiness: async (): Promise<{ status: string }> => {
-      return fetchAPI<{ status: string }>("/v1/readiness");
+      return fetchAPI<{ status: string }>('/v1/readiness');
     },
 
     /**
      * Check API liveness
      */
     liveness: async (): Promise<{ status: string }> => {
-      return fetchAPI<{ status: string }>("/v1/liveness");
+      return fetchAPI<{ status: string }>('/v1/liveness');
     },
   },
 };

@@ -94,6 +94,75 @@ sudo ./devops/deploy.sh
 - Debug/Metrics: `http://localhost:3010`
 - Frontend: `https://app.rafiki.lat` (Vercel)
 
+## Code Quality & Development Guides
+
+### Automated Code Quality (CodeRabbit Phase 1)
+
+This project uses automated code quality tools:
+
+- **CodeRabbit Pro**: AI-powered code review on all PRs
+- **golangci-lint**: Go linting and formatting (backend)
+- **Prettier + ESLint**: TypeScript/React linting and formatting (frontend)
+- **Branch Protection**: Main branch requires PR reviews and passing checks
+- **Pre-commit Hooks**: Auto-formatting before commits (Phase 3)
+- **GitHub Actions**: Automated testing and linting on PRs (Phase 2)
+
+### Development Workflow
+
+**IMPORTANT**: The `main` branch is protected. All changes must go through pull requests.
+
+1. Create feature branch: `git checkout -b feature/my-feature`
+2. Make changes and commit (pre-commit hooks will auto-format)
+3. Push and create PR: `gh pr create`
+4. CodeRabbit reviews automatically
+5. Get 1 approval from team member
+6. Merge when all checks pass
+
+### Comprehensive Development Guides
+
+For detailed development workflows, code patterns, and best practices:
+
+- **Backend (Go)**: [devops/BACKEND_DEVELOPMENT.md](devops/BACKEND_DEVELOPMENT.md)
+  - golangci-lint configuration and usage
+  - Business types pattern (CRITICAL)
+  - Service architecture and patterns
+  - Testing, profiling, and deployment
+
+- **Frontend (TypeScript/Next.js)**: [devops/FRONTEND_DEVELOPMENT.md](devops/FRONTEND_DEVELOPMENT.md)
+  - Prettier and ESLint configuration
+  - Next.js 16 App Router patterns
+  - Component patterns and best practices
+  - API client and authentication
+
+- **Deployment**: [devops/DEPLOYMENT_GUIDE.md](devops/DEPLOYMENT_GUIDE.md)
+- **Branch Protection**: [scripts/setup-branch-protection.sh](scripts/setup-branch-protection.sh)
+
+### Quick Formatting Commands
+
+**Backend (Go)**:
+```bash
+# Auto-fix linter issues
+golangci-lint run --fix
+
+# Format code
+gofmt -w -s .
+goimports -w -local github.com/francowini/rafiki .
+```
+
+**Frontend (TypeScript)**:
+```bash
+cd frontend
+
+# Auto-fix linter issues
+npm run lint:fix
+
+# Format code
+npm run format
+
+# Run all checks
+npm run check
+```
+
 ## Code Patterns
 
 ### Adding New Routes

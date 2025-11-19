@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { Moment } from "@/lib/types";
+import { Moment } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 interface MomentDetailProps {
   moment: Moment | null;
@@ -21,18 +21,18 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
   if (!moment) return null;
 
   const momentDate = new Date(moment.momentDate);
-  const dateStr = momentDate.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  const dateStr = momentDate.toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 
   const getIntensityColor = (intensity: number) => {
-    if (intensity >= 8) return "bg-red-100 text-red-800 border-red-300";
-    if (intensity >= 5) return "bg-yellow-100 text-yellow-800 border-yellow-300";
-    return "bg-green-100 text-green-800 border-green-300";
+    if (intensity >= 8) return 'bg-red-100 text-red-800 border-red-300';
+    if (intensity >= 5) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+    return 'bg-green-100 text-green-800 border-green-300';
   };
 
   return (
@@ -42,14 +42,9 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
           <div className="flex items-start justify-between">
             <div>
               <DialogTitle className="text-xl">{dateStr}</DialogTitle>
-              <DialogDescription className="text-sm mt-1">
-                Moment record
-              </DialogDescription>
+              <DialogDescription className="text-sm mt-1">Moment record</DialogDescription>
             </div>
-            <Badge
-              variant="outline"
-              className={getIntensityColor(moment.intensity)}
-            >
+            <Badge variant="outline" className={getIntensityColor(moment.intensity)}>
               Intensity: {moment.intensity}/10
             </Badge>
           </div>
@@ -58,9 +53,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
         <div className="space-y-6 pt-4">
           {/* Situation */}
           <div className="space-y-2">
-            <h4 className="font-medium text-sm text-muted-foreground">
-              Situation
-            </h4>
+            <h4 className="font-medium text-sm text-muted-foreground">Situation</h4>
             <p className="text-base leading-relaxed">{moment.situation}</p>
           </div>
 
@@ -68,9 +61,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
 
           {/* Thoughts */}
           <div className="space-y-2">
-            <h4 className="font-medium text-sm text-muted-foreground">
-              Thoughts
-            </h4>
+            <h4 className="font-medium text-sm text-muted-foreground">Thoughts</h4>
             <p className="text-base leading-relaxed">{moment.thoughts}</p>
           </div>
 
@@ -88,9 +79,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
 
           {/* Behavior */}
           <div className="space-y-2">
-            <h4 className="font-medium text-sm text-muted-foreground">
-              What you did
-            </h4>
+            <h4 className="font-medium text-sm text-muted-foreground">What you did</h4>
             <p className="text-base leading-relaxed">{moment.behavior}</p>
           </div>
 
@@ -98,9 +87,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
 
           {/* Consequences */}
           <div className="space-y-2">
-            <h4 className="font-medium text-sm text-muted-foreground">
-              Consequences
-            </h4>
+            <h4 className="font-medium text-sm text-muted-foreground">Consequences</h4>
             <p className="text-base leading-relaxed">{moment.consequences}</p>
           </div>
 
@@ -108,9 +95,7 @@ export function MomentDetail({ moment, open, onClose }: MomentDetailProps) {
 
           {/* Values Reflection */}
           <div className="space-y-2">
-            <h4 className="font-medium text-sm text-muted-foreground">
-              Values reflection
-            </h4>
+            <h4 className="font-medium text-sm text-muted-foreground">Values reflection</h4>
             <p className="text-base leading-relaxed">{moment.valuesReflection}</p>
           </div>
         </div>

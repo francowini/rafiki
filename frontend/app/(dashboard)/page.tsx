@@ -58,7 +58,7 @@ export default function DashboardPage() {
             icon={Brain}
             href="/thinks"
             color="blue"
-            available={true}
+            available
           />
           <FeatureCard
             title="Values"
@@ -98,7 +98,7 @@ export default function DashboardPage() {
             icon={Clock}
             href="/momentos"
             color="teal"
-            available={true}
+            available
           />
         </div>
       </div>

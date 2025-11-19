@@ -1,35 +1,29 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { NewThink, ThinkCategory } from "@/lib/types";
-import { api, APIError } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { useState } from 'react';
+import { NewThink, ThinkCategory } from '@/lib/types';
+import { api, APIError } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const categories: ThinkCategory[] = [
-  "personal",
-  "work",
-  "ideas",
-  "learning",
-  "reflection",
-];
+const categories: ThinkCategory[] = ['personal', 'work', 'ideas', 'learning', 'reflection'];
 
 interface ThinkFormProps {
   onSuccess?: () => void;
 }
 
 export function ThinkForm({ onSuccess }: ThinkFormProps) {
-  const [category, setCategory] = useState<ThinkCategory>("personal");
-  const [content, setContent] = useState("");
+  const [category, setCategory] = useState<ThinkCategory>('personal');
+  const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +32,7 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
     setError(null);
 
     if (!content.trim()) {
-      setError("Content cannot be empty");
+      setError('Content cannot be empty');
       return;
     }
 
@@ -49,8 +43,8 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
       await api.thinks.create(newThink);
 
       // Reset form
-      setContent("");
-      setCategory("personal");
+      setContent('');
+      setCategory('personal');
 
       // Call success callback
       if (onSuccess) {
@@ -60,7 +54,7 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
       if (err instanceof APIError) {
         setError(`Failed to create think: ${err.message}`);
       } else {
-        setError("An unexpected error occurred");
+        setError('An unexpected error occurred');
       }
     } finally {
       setIsSubmitting(false);
@@ -113,7 +107,7 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
           </div>
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Creating..." : "Create Think"}
+            {isSubmitting ? 'Creating...' : 'Create Think'}
           </Button>
         </form>
       </CardContent>

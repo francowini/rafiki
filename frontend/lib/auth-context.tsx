@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 
 // Types
 export interface User {
-  sub: string;        // User ID from JWT
-  email: string;      // Email from JWT
-  name: string;       // Display name from JWT
-  roles: string[];    // User roles from JWT
+  sub: string; // User ID from JWT
+  email: string; // Email from JWT
+  name: string; // Display name from JWT
+  roles: string[]; // User roles from JWT
 }
 
 export interface DecodedJWT {
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await fetch(`${apiUrl}/v1/auth/token/${kid}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Basic ${credentials}`,
+          Authorization: `Basic ${credentials}`,
           'Content-Type': 'application/json',
         },
       });
@@ -163,7 +163,7 @@ function decodeJWT(token: string): DecodedJWT {
       atob(base64)
         .split('')
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
+        .join(''),
     );
 
     return JSON.parse(jsonPayload);

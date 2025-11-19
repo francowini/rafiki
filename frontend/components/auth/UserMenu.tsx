@@ -29,18 +29,14 @@ export function UserMenu() {
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
-            </p>
+            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {user.roles.includes('ADMIN') && (
           <>
             <DropdownMenuItem disabled>
-              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                Admin
-              </span>
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Admin</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>

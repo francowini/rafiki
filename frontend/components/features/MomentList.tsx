@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useCallback } from "react";
-import { api } from "@/lib/api";
-import { Moment } from "@/lib/types";
-import { MomentCard } from "./MomentCard";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useCallback } from 'react';
+import { api } from '@/lib/api';
+import { Moment } from '@/lib/types';
+import { MomentCard } from './MomentCard';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 interface MomentListProps {
   refresh?: number;
@@ -35,14 +35,14 @@ export function MomentList({
       const response = await api.moments.getAll({
         page,
         rows: 20,
-        orderBy: "moment_date",
-        orderDirection: "desc",
+        orderBy: 'moment_date',
+        orderDirection: 'desc',
       });
 
       setMoments(response.items);
       setTotal(response.total);
     } catch (err: any) {
-      setError(err.message || "Error loading moments");
+      setError(err.message || 'Error loading moments');
     } finally {
       setIsLoading(false);
     }
@@ -78,12 +78,10 @@ export function MomentList({
     return (
       <div className="text-center py-12">
         <div className="mx-auto max-w-md space-y-4">
-          <h3 className="text-lg font-medium text-muted-foreground">
-            No moments recorded
-          </h3>
+          <h3 className="text-lg font-medium text-muted-foreground">No moments recorded</h3>
           <p className="text-sm text-muted-foreground">
-            When you're ready, this space is here for you. Record your difficult moments
-            to better understand them and find patterns.
+            When you're ready, this space is here for you. Record your difficult moments to better
+            understand them and find patterns.
           </p>
         </div>
       </div>

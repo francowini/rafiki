@@ -1,9 +1,9 @@
 'use client';
 
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth-context";
-import { UserMenu } from "@/components/auth/UserMenu";
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/auth-context';
+import { UserMenu } from '@/components/auth/UserMenu';
 
 export function Header() {
   const { isAuthenticated } = useAuth();

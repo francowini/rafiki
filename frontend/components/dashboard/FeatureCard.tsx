@@ -21,7 +21,14 @@ const colorClasses = {
   teal: 'bg-teal-100 text-teal-600 hover:bg-teal-200',
 };
 
-export function FeatureCard({ title, description, icon: Icon, href, color, available }: FeatureCardProps) {
+export function FeatureCard({
+  title,
+  description,
+  icon: Icon,
+  href,
+  color,
+  available,
+}: FeatureCardProps) {
   const content = (
     <Card className={`transition-all hover:shadow-lg ${!available ? 'opacity-60' : ''}`}>
       <CardHeader>
@@ -29,9 +36,7 @@ export function FeatureCard({ title, description, icon: Icon, href, color, avail
           <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
             <Icon className="h-6 w-6" />
           </div>
-          {!available && (
-            <Lock className="h-4 w-4 text-muted-foreground" />
-          )}
+          {!available && <Lock className="h-4 w-4 text-muted-foreground" />}
         </div>
         <CardTitle className="mt-4">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>

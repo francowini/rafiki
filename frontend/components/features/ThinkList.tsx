@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { ThinkListResponse } from "@/lib/types";
-import { api, APIError } from "@/lib/api";
-import { ThinkCard } from "./ThinkCard";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useEffect, useState } from 'react';
+import { ThinkListResponse } from '@/lib/types';
+import { api, APIError } from '@/lib/api';
+import { ThinkCard } from './ThinkCard';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ThinkListProps {
   refresh?: number; // Increment to trigger refresh
@@ -26,14 +26,14 @@ export function ThinkList({ refresh = 0 }: ThinkListProps) {
       const response = await api.thinks.getAll({
         page: pageNum,
         rows: 10,
-        orderBy: "date_created",
+        orderBy: 'date_created',
       });
       setData(response);
     } catch (err) {
       if (err instanceof APIError) {
         setError(`Failed to load thinks: ${err.message}`);
       } else {
-        setError("An unexpected error occurred");
+        setError('An unexpected error occurred');
       }
     } finally {
       setIsLoading(false);
@@ -65,9 +65,7 @@ export function ThinkList({ refresh = 0 }: ThinkListProps) {
   if (!data || data.items.length === 0) {
     return (
       <Alert>
-        <AlertDescription>
-          No thinks yet. Create your first think above!
-        </AlertDescription>
+        <AlertDescription>No thinks yet. Create your first think above!</AlertDescription>
       </Alert>
     );
   }
@@ -77,9 +75,7 @@ export function ThinkList({ refresh = 0 }: ThinkListProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">
-          All Thinks ({data.total})
-        </h2>
+        <h2 className="text-xl font-semibold">All Thinks ({data.total})</h2>
         <span className="text-sm text-muted-foreground">
           Page {data.page} of {totalPages}
         </span>

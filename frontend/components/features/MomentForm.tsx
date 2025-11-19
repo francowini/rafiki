@@ -1,26 +1,26 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { api } from "@/lib/api";
-import { NewMoment, Moment } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { api } from '@/lib/api';
+import { NewMoment, Moment } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const momentSchema = z.object({
-  momentDate: z.string().min(1, "Date is required"),
-  situation: z.string().min(1, "This field is required"),
-  thoughts: z.string().min(1, "This field is required"),
-  physicalSymptoms: z.string().min(1, "This field is required"),
-  behavior: z.string().min(1, "This field is required"),
-  consequences: z.string().min(1, "This field is required"),
-  valuesReflection: z.string().min(1, "This field is required"),
+  momentDate: z.string().min(1, 'Date is required'),
+  situation: z.string().min(1, 'This field is required'),
+  thoughts: z.string().min(1, 'This field is required'),
+  physicalSymptoms: z.string().min(1, 'This field is required'),
+  behavior: z.string().min(1, 'This field is required'),
+  consequences: z.string().min(1, 'This field is required'),
+  valuesReflection: z.string().min(1, 'This field is required'),
   intensity: z.number().min(0).max(10),
 });
 
@@ -80,17 +80,17 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
       reset({
         momentDate: getLocalDateTimeString(),
         intensity: 5,
-        situation: "",
-        thoughts: "",
-        physicalSymptoms: "",
-        behavior: "",
-        consequences: "",
-        valuesReflection: "",
+        situation: '',
+        thoughts: '',
+        physicalSymptoms: '',
+        behavior: '',
+        consequences: '',
+        valuesReflection: '',
       });
     }
   }, [moment, reset]);
 
-  const intensity = watch("intensity");
+  const intensity = watch('intensity');
 
   const onSubmit = async (data: MomentFormData) => {
     setError(null);
@@ -115,7 +115,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         await api.moments.create(newMoment);
 
         // Clear localStorage draft if exists
-        localStorage.removeItem("moment-draft");
+        localStorage.removeItem('moment-draft');
       }
 
       if (onSuccess) {
@@ -152,7 +152,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         <Input
           id="momentDate"
           type="datetime-local"
-          {...register("momentDate")}
+          {...register('momentDate')}
           className="text-base"
         />
         {errors.momentDate && (
@@ -167,16 +167,14 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         </Label>
         <Textarea
           id="situation"
-          {...register("situation")}
+          {...register('situation')}
           placeholder="Example: I was at home, I had just eaten lunch alone..."
           className="min-h-24 text-base"
         />
         <p className="text-sm text-muted-foreground">
           Briefly describe where you were and what was happening before you felt bad.
         </p>
-        {errors.situation && (
-          <p className="text-sm text-destructive">{errors.situation.message}</p>
-        )}
+        {errors.situation && <p className="text-sm text-destructive">{errors.situation.message}</p>}
       </div>
 
       {/* Thoughts Field */}
@@ -186,16 +184,14 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         </Label>
         <Textarea
           id="thoughts"
-          {...register("thoughts")}
+          {...register('thoughts')}
           placeholder="Example: I'm wasting my time, I don't know what I'm going to do with my life..."
           className="min-h-24 text-base"
         />
         <p className="text-sm text-muted-foreground">
           What thoughts came to your mind? What were you telling yourself?
         </p>
-        {errors.thoughts && (
-          <p className="text-sm text-destructive">{errors.thoughts.message}</p>
-        )}
+        {errors.thoughts && <p className="text-sm text-destructive">{errors.thoughts.message}</p>}
       </div>
 
       {/* Physical Symptoms Field */}
@@ -205,7 +201,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         </Label>
         <Textarea
           id="physicalSymptoms"
-          {...register("physicalSymptoms")}
+          {...register('physicalSymptoms')}
           placeholder="Example: Heart palpitations, sweaty palms, anxiety, sadness..."
           className="min-h-24 text-base"
         />
@@ -224,16 +220,14 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         </Label>
         <Textarea
           id="behavior"
-          {...register("behavior")}
+          {...register('behavior')}
           placeholder="Example: I started cleaning, went for a walk, called a friend..."
           className="min-h-24 text-base"
         />
         <p className="text-sm text-muted-foreground">
           What did you do in response? Describe your actions.
         </p>
-        {errors.behavior && (
-          <p className="text-sm text-destructive">{errors.behavior.message}</p>
-        )}
+        {errors.behavior && <p className="text-sm text-destructive">{errors.behavior.message}</p>}
       </div>
 
       {/* Consequences Field */}
@@ -243,7 +237,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         </Label>
         <Textarea
           id="consequences"
-          {...register("consequences")}
+          {...register('consequences')}
           placeholder="Example: I felt a bit better, but then I felt sadder..."
           className="min-h-24 text-base"
         />
@@ -262,7 +256,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         </Label>
         <Textarea
           id="valuesReflection"
-          {...register("valuesReflection")}
+          {...register('valuesReflection')}
           placeholder="Example: I avoided being with myself, I didn't progress on anything I want for myself..."
           className="min-h-24 text-base"
         />
@@ -285,7 +279,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
           max={10}
           step={1}
           value={[intensity]}
-          onValueChange={(value) => setValue("intensity", value[0])}
+          onValueChange={(value) => setValue('intensity', value[0])}
           className="py-4"
         />
         <div className="flex justify-between text-sm text-muted-foreground">
@@ -293,20 +287,13 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
           <span>Moderate</span>
           <span>Intense</span>
         </div>
-        {errors.intensity && (
-          <p className="text-sm text-destructive">{errors.intensity.message}</p>
-        )}
+        {errors.intensity && <p className="text-sm text-destructive">{errors.intensity.message}</p>}
       </div>
 
       {/* Action Buttons */}
       <div className="flex gap-3 pt-4">
         {onCancel && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="flex-1"
-          >
+          <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
             Cancel
           </Button>
         )}
@@ -316,8 +303,12 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
           className="flex-1 bg-purple-600 hover:bg-purple-700"
         >
           {isSubmitting
-            ? (isEditMode ? "Updating..." : "Saving...")
-            : (isEditMode ? "Update moment" : "Save moment")}
+            ? isEditMode
+              ? 'Updating...'
+              : 'Saving...'
+            : isEditMode
+              ? 'Update moment'
+              : 'Save moment'}
         </Button>
       </div>
     </form>

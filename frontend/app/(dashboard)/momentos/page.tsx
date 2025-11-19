@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { MomentForm } from "@/components/features/MomentForm";
-import { MomentList } from "@/components/features/MomentList";
-import { MomentDetail } from "@/components/features/MomentDetail";
-import { Moment } from "@/lib/types";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { MomentForm } from '@/components/features/MomentForm';
+import { MomentList } from '@/components/features/MomentList';
+import { MomentDetail } from '@/components/features/MomentDetail';
+import { Moment } from '@/lib/types';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -13,7 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +23,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Plus } from "lucide-react";
-import { api } from "@/lib/api";
+} from '@/components/ui/alert-dialog';
+import { Plus } from 'lucide-react';
+import { api } from '@/lib/api';
 
 export default function MomentosPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -59,7 +59,7 @@ export default function MomentosPage() {
       setMomentToDelete(null);
       setRefresh((prev) => prev + 1);
     } catch (err) {
-      console.error("Error deleting moment:", err);
+      console.error('Error deleting moment:', err);
     }
   };
 
@@ -69,17 +69,12 @@ export default function MomentosPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Moments</h1>
-          <p className="text-muted-foreground mt-1">
-            Record and reflect on your difficult moments
-          </p>
+          <p className="text-muted-foreground mt-1">Record and reflect on your difficult moments</p>
         </div>
 
         <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
           <SheetTrigger asChild>
-            <Button
-              size="lg"
-              className="bg-purple-600 hover:bg-purple-700"
-            >
+            <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
               <Plus className="h-5 w-5 mr-2" />
               New moment
             </Button>
@@ -92,10 +87,7 @@ export default function MomentosPage() {
               </SheetDescription>
             </SheetHeader>
             <div className="mt-6">
-              <MomentForm
-                onSuccess={handleCreateSuccess}
-                onCancel={() => setIsFormOpen(false)}
-              />
+              <MomentForm onSuccess={handleCreateSuccess} onCancel={() => setIsFormOpen(false)} />
             </div>
           </SheetContent>
         </Sheet>
@@ -121,9 +113,7 @@ export default function MomentosPage() {
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="text-xl">Edit moment</SheetTitle>
-            <SheetDescription>
-              Update your moment information.
-            </SheetDescription>
+            <SheetDescription>Update your moment information.</SheetDescription>
           </SheetHeader>
           <div className="mt-6">
             <MomentForm
