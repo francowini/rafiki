@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build output
+.next
+out
+build
+dist
+
+# Cache
+.turbo
+.cache
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Lock files (managed by package manager)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Generated/minified files
+*.min.js
+*.min.css
+
+# Logs
+*.log
