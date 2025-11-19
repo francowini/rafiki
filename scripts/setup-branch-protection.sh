@@ -51,15 +51,10 @@ cat << 'EOF' > /tmp/branch-protection.json
   "required_status_checks": null,
   "enforce_admins": false,
   "required_pull_request_reviews": null,
-  "restrictions": {
-    "users": [],
-    "teams": [],
-    "apps": []
-  },
+  "restrictions": null,
   "required_linear_history": true,
   "allow_force_pushes": false,
   "allow_deletions": false,
-  "block_creations": false,
   "required_conversation_resolution": false,
   "lock_branch": false,
   "allow_fork_syncing": true
