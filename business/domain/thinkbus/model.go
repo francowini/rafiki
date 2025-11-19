@@ -4,8 +4,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/francowini/rafiki/business/types/content"
 	"github.com/google/uuid"
+
+	"github.com/francowini/rafiki/business/types/content"
 )
 
 // Set of error variables for CRUD operations.

@@ -9,8 +9,9 @@ import (
 	"github.com/ardanlabs/darwin/v3"
 	"github.com/ardanlabs/darwin/v3/dialects/postgres"
 	"github.com/ardanlabs/darwin/v3/drivers/generic"
-	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/francowini/rafiki/business/sdk/sqldb"
 )
 
 //go:embed sql/migrate.sql

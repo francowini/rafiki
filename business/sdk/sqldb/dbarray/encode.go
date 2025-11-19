@@ -67,7 +67,7 @@ type parameterStatus struct {
 // Calling EnableInfinityTS after a connection has been established results in
 // undefined behavior.  If EnableInfinityTS is called more than once, it will
 // panic.
-func EnableInfinityTS(negative time.Time, positive time.Time) {
+func EnableInfinityTS(negative, positive time.Time) {
 	if infinityTSEnabled {
 		panic(infinityTSEnabledAlready)
 	}

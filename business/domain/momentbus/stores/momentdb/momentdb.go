@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
+
 	"github.com/francowini/rafiki/business/domain/momentbus"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
-	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 // Store manages the set of APIs for moment database access.

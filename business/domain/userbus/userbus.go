@@ -8,12 +8,13 @@ import (
 	"net/mail"
 	"time"
 
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // Set of error variables for CRUD operations.
@@ -36,7 +37,7 @@ type Storer interface {
 }
 
 // ExtBusiness interface provides support for extensions that wrap extra functionality
-// around the core busines logic.
+// around the core business logic.
 type ExtBusiness interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error)
 	Create(ctx context.Context, actorID uuid.UUID, nu NewUser) (User, error)
@@ -54,15 +55,15 @@ type Extension func(ExtBusiness) ExtBusiness
 
 // Business manages the set of APIs for user access.
 type Business struct {
-	log      *logger.Logger
-	storer   Storer
+	log    *logger.Logger
+	storer Storer
 }
 
 // NewBusiness constructs a user business API for use.
 func NewBusiness(log *logger.Logger, storer Storer, extensions ...Extension) ExtBusiness {
 	b := ExtBusiness(&Business{
-		log:      log,
-		storer:   storer,
+		log:    log,
+		storer: storer,
 	})
 
 	for i := len(extensions) - 1; i >= 0; i-- {
@@ -84,8 +85,8 @@ func (b *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 	}
 
 	bus := Business{
-		log:      b.log,
-		storer:   storer,
+		log:    b.log,
+		storer: storer,
 	}
 
 	return &bus, nil

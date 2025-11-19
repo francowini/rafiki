@@ -149,7 +149,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 		return fmt.Errorf("connecting to db: %w", err)
 	}
 
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Error(ctx, "shutdown", "status", "closing database", "err", err)
+		}
+	}()
 
 	// -------------------------------------------------------------------------
 	// Run Database Migrations
@@ -299,7 +303,9 @@ func run(ctx context.Context, log *logger.Logger) error {
 		defer cancel()
 
 		if err := api.Shutdown(ctx); err != nil {
-			api.Close()
+			if closeErr := api.Close(); closeErr != nil {
+				log.Error(ctx, "shutdown", "status", "force closing server", "err", closeErr)
+			}
 			return fmt.Errorf("could not stop server gracefully: %w", err)
 		}
 	}

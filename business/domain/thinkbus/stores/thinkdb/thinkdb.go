@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
+
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
-	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 // Store manages the set of APIs for think database access
@@ -100,7 +101,7 @@ func (s *Store) Count(ctx context.Context, userID uuid.UUID) (int, error) {
 }
 
 // QueryByID retrieves a single think by its ID
-func (s *Store) QueryByID(ctx context.Context, thinkID uuid.UUID, userID uuid.UUID) (thinkbus.Think, error) {
+func (s *Store) QueryByID(ctx context.Context, thinkID, userID uuid.UUID) (thinkbus.Think, error) {
 	data := struct {
 		ThinkID string `db:"think_id"`
 		UserID  string `db:"user_id"`

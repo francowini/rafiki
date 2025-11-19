@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/types/content"
-	"github.com/google/uuid"
 )
 
 // think represents the database model

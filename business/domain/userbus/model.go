@@ -4,9 +4,10 @@ import (
 	"net/mail"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/business/types/name"
 	"github.com/francowini/rafiki/business/types/role"
-	"github.com/google/uuid"
 )
 
 // User represents information about an individual user.

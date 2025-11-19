@@ -8,13 +8,14 @@ import (
 	"fmt"
 	"net/mail"
 
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
+
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
-	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 // Store manages the set of APIs for user database access.

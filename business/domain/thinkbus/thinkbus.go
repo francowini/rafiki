@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/foundation/logger"
-	"github.com/google/uuid"
 )
 
 // Storer interface declares the behavior this package needs to persist and
@@ -17,7 +18,7 @@ type Storer interface {
 	Create(ctx context.Context, think Think) error
 	Query(ctx context.Context, userID uuid.UUID, orderBy order.By, page page.Page) ([]Think, error)
 	Count(ctx context.Context, userID uuid.UUID) (int, error)
-	QueryByID(ctx context.Context, thinkID uuid.UUID, userID uuid.UUID) (Think, error)
+	QueryByID(ctx context.Context, thinkID, userID uuid.UUID) (Think, error)
 }
 
 // Business manages the set of APIs for think access.
@@ -76,7 +77,7 @@ func (b *Business) Count(ctx context.Context, userID uuid.UUID) (int, error) {
 }
 
 // QueryByID finds the think by the specified ID
-func (b *Business) QueryByID(ctx context.Context, thinkID uuid.UUID, userID uuid.UUID) (Think, error) {
+func (b *Business) QueryByID(ctx context.Context, thinkID, userID uuid.UUID) (Think, error) {
 	think, err := b.storer.QueryByID(ctx, thinkID, userID)
 	if err != nil {
 		return Think{}, fmt.Errorf("query: thinkID[%s]: %w", thinkID, err)

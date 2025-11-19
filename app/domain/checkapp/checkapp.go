@@ -8,11 +8,12 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/francowini/rafiki/app/sdk/errs"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/web"
-	"github.com/jmoiron/sqlx"
 )
 
 type app struct {

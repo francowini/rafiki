@@ -1,0 +1,185 @@
+# golangci-lint configuration for Rafiki
+# This configuration separates auto-fixable linters (Tier 1) from manual review linters
+
+version: 2
+
+run:
+  # Timeout for analysis
+  timeout: 10m
+
+  # Include test files in linting
+  tests: true
+
+  # Don't check vendor directory
+  skip-dirs:
+    - vendor
+
+  # Use readonly modules download mode
+  modules-download-mode: readonly
+
+# Formatters - Tools that can modify code (Tier 1 - Auto-fixable)
+formatters:
+  enable:
+    - gofmt          # Go formatting
+    - gofumpt        # Stricter formatting (preferred over gofmt)
+    - goimports      # Import organization
+    - gci            # Import grouping and ordering
+
+  settings:
+    # gofumpt - stricter gofmt
+    gofumpt:
+      module-path: github.com/francowini/rafiki
+      extra-rules: true
+
+    # goimports - organize imports
+    goimports:
+      local-prefixes: github.com/francowini/rafiki
+
+    # gci - import grouping and ordering
+    gci:
+      sections:
+        - standard                             # Standard Go packages
+        - default                              # Everything else
+        - prefix(github.com/francowini/rafiki) # Local packages
+      skip-generated: true
+      custom-order: true
+
+# Linters - Tools that report issues
+linters:
+  enable:
+    # Code quality (some auto-fixable)
+    - ineffassign    # Ineffectual assignments (fast)
+    - canonicalheader # HTTP header formatting (auto-fix)
+    - copyloopvar    # Loop variable captures (replaces exportloopref, auto-fix)
+
+    # Important safety checks (no auto-fix, require manual review)
+    - errcheck       # Unchecked errors
+    - govet          # Go vet analysis (auto-fix)
+    - staticcheck    # Advanced static analysis (includes gosimple, auto-fix)
+    - bodyclose      # HTTP body close checks
+    - gocritic       # Various opinionated checks (auto-fix)
+    - revive         # Golint replacement with configurable rules (auto-fix)
+    - misspell       # Spelling mistakes (fast, auto-fix)
+    - unconvert      # Unnecessary type conversions
+    - unparam        # Unused function parameters
+    - nakedret       # Naked returns in long functions (fast, auto-fix)
+    - depguard       # Prevent use of deprecated packages (fast)
+    - unused         # Unused constants, variables, functions, types
+
+  # Disable overly strict or inappropriate linters
+  disable:
+    - exhaustruct      # Too strict - requires all struct fields
+    - varnamelen       # Conflicts with idiomatic Go (short names in tight scopes)
+    - gochecknoglobals # We use globals appropriately (logger, config)
+    - gochecknoinits   # We use init() appropriately (registration patterns)
+    - cyclop           # Too noisy for cognitive complexity
+    - funlen           # Function length varies by context
+    - gocognit         # Cognitive complexity is subjective
+    - nestif           # Nesting depth is sometimes necessary
+    - nlreturn         # Too opinionated about blank lines
+
+  settings:
+    # errcheck - check error handling
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - (*github.com/francowini/rafiki/foundation/logger.Logger).Info
+        - (*github.com/francowini/rafiki/foundation/logger.Logger).Error
+        - (*github.com/francowini/rafiki/foundation/logger.Logger).Debug
+        - (*github.com/francowini/rafiki/foundation/logger.Logger).Warn
+
+    # govet - configure checks
+    govet:
+      enable-all: true
+      disable:
+        - shadow     # Variable shadowing is sometimes intentional
+        - fieldalignment # Struct field ordering for memory is micro-optimization
+
+    # revive - configurable linting
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+        - name: package-comments
+        - name: indent-error-flow
+        - name: error-return
+        - name: error-naming
+        - name: var-naming
+        - name: unexported-return
+        - name: errorf
+
+    # gocritic - opinionated checks
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - paramTypeCombine  # Prefer explicit parameter types
+        - hugeParam         # We pass large structs by value intentionally
+        - rangeValCopy      # Sometimes necessary for immutability
+
+    # staticcheck - advanced static analysis
+    staticcheck:
+      checks:
+        - all
+        - -SA1019  # Using deprecated code is sometimes necessary
+
+    # depguard - prevent use of deprecated packages
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: io/ioutil
+              desc: "io/ioutil is deprecated, use os or io packages instead"
+
+    # misspell - spelling
+    misspell:
+      locale: US
+      ignore-words:
+        - rafiki  # Project name
+        - topifier # Old project name reference
+
+    # nakedret - naked returns
+    nakedret:
+      max-func-lines: 30  # Only flag naked returns in functions > 30 lines
+
+    # unparam - unused parameters
+    unparam:
+      check-exported: false  # Don't check exported functions (API contracts)
+
+issues:
+  # Exclude specific checks for certain paths
+  exclude-rules:
+    # Test files - relax some checks
+    - path: _test\.go
+      linters:
+        - errcheck      # Errors in tests can be ignored
+        - gosec         # Security checks less critical in tests
+        - dupl          # Duplicate code in tests is acceptable
+        - unparam       # Unused parameters in test helpers
+
+    # Business types directory - public API
+    - path: business/types/
+      linters:
+        - unused        # Public API may have unused exports
+        - deadcode      # Public API may have unused code
+
+    # Generated code
+    - path: \.pb\.go$
+      linters:
+        - all
+
+    # Vendor directory
+    - path: vendor/
+      linters:
+        - all
+
+  # Don't hide multiple issues in the same function
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  # Show all issues
+  exclude-use-default: false

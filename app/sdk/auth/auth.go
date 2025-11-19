@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/francowini/rafiki/business/domain/userbus"
-	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/open-policy-agent/opa/v1/rego"
+
+	"github.com/francowini/rafiki/business/domain/userbus"
+	"github.com/francowini/rafiki/foundation/logger"
 )
 
 // Specific error variables for auth failures.
@@ -167,7 +168,7 @@ func (a *Auth) Authorize(ctx context.Context, claims Claims, userID uuid.UUID, r
 
 // opaPolicyEvaluation asks opa to evaluate the token against the specified token
 // policy and public key.
-func (a *Auth) opaPolicyEvaluation(ctx context.Context, regoScript string, rule string, input any, baseError error) error {
+func (a *Auth) opaPolicyEvaluation(ctx context.Context, regoScript, rule string, input any, baseError error) error {
 	query := fmt.Sprintf("x = data.%s.%s", opaPackage, rule)
 
 	q, err := rego.New(

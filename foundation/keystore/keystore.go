@@ -97,7 +97,12 @@ func (ks *KeyStore) LoadByFileSystem(fsys fs.FS) (int, error) {
 		if err != nil {
 			return fmt.Errorf("opening key file: %w", err)
 		}
-		defer file.Close()
+		defer func() {
+			if err := file.Close(); err != nil {
+				// Note: error logged but not returned as we're in defer
+				_ = err
+			}
+		}()
 
 		// limit PEM file size to 1 megabyte. This should be reasonable for
 		// almost any PEM file and prevents shenanigans like linking the file

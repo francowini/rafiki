@@ -6,6 +6,9 @@ import (
 	"embed"
 	"net/http"
 
+	"github.com/jmoiron/sqlx"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/mid"
 	"github.com/francowini/rafiki/business/domain/momentbus"
@@ -13,8 +16,6 @@ import (
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/web"
-	"github.com/jmoiron/sqlx"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // StaticSite represents a static site to run.
@@ -39,7 +40,7 @@ func WithCORS(origins []string) func(opts *Options) {
 }
 
 // WithFileServer provides configuration options for file server.
-func WithFileServer(react bool, static embed.FS, dir string, path string) func(opts *Options) {
+func WithFileServer(react bool, static embed.FS, dir, path string) func(opts *Options) {
 	return func(opts *Options) {
 		opts.sites = append(opts.sites, StaticSite{
 			react:      react,

@@ -24,7 +24,7 @@ type By struct {
 }
 
 // NewBy constructs a new By value with no checks.
-func NewBy(field string, direction string) By {
+func NewBy(field, direction string) By {
 	if _, exists := directions[direction]; !exists {
 		return By{
 			Field:     field,

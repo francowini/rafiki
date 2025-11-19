@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -19,6 +18,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+
+	"github.com/francowini/rafiki/foundation/logger"
 )
 
 const defaultTraceID = "00000000000000000000000000000000"

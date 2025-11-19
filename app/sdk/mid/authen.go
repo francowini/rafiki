@@ -8,20 +8,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/errs"
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/types/role"
 	"github.com/francowini/rafiki/foundation/web"
-	"github.com/golang-jwt/jwt/v4"
-	"github.com/google/uuid"
 )
 
 // Bearer processes JWT authentication logic.
 func Bearer(ath *auth.Auth) web.MidFunc {
 	m := func(next web.HandlerFunc) web.HandlerFunc {
 		h := func(ctx context.Context, r *http.Request) web.Encoder {
-			claims, err := ath.Authenticate(ctx, r.Header.Get("authorization"))
+			claims, err := ath.Authenticate(ctx, r.Header.Get("Authorization"))
 			if err != nil {
 				return errs.New(errs.Unauthenticated, err)
 			}
@@ -51,7 +52,7 @@ func Bearer(ath *auth.Auth) web.MidFunc {
 func Basic(ath *auth.Auth, userBus userbus.ExtBusiness) web.MidFunc {
 	m := func(next web.HandlerFunc) web.HandlerFunc {
 		h := func(ctx context.Context, r *http.Request) web.Encoder {
-			email, pass, ok := parseBasicAuth(r.Header.Get("authorization"))
+			email, pass, ok := parseBasicAuth(r.Header.Get("Authorization"))
 			if !ok {
 				return errs.Newf(errs.Unauthenticated, "invalid Basic auth")
 			}

@@ -3,9 +3,10 @@ package checkapp
 import (
 	"net/http"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/web"
-	"github.com/jmoiron/sqlx"
 )
 
 // Config contains all the mandatory systems required by handlers.

@@ -6,13 +6,14 @@ import (
 	"net/mail"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/viccon/sturdyc"
+
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
-	"github.com/google/uuid"
-	"github.com/viccon/sturdyc"
 )
 
 // Store manages the set of APIs for user data and caching.

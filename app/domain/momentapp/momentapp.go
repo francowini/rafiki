@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/app/sdk/errs"
 	"github.com/francowini/rafiki/app/sdk/mid"
 	"github.com/francowini/rafiki/app/sdk/query"
@@ -12,7 +14,6 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/foundation/web"
-	"github.com/google/uuid"
 )
 
 type app struct {

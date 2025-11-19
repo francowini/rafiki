@@ -13,7 +13,7 @@ type Page struct {
 }
 
 // Parse parses the strings and validates the values are in reason.
-func Parse(page string, rowsPerPage string) (Page, error) {
+func Parse(page, rowsPerPage string) (Page, error) {
 	number := 1
 	if page != "" {
 		var err error
@@ -53,7 +53,7 @@ func Parse(page string, rowsPerPage string) (Page, error) {
 }
 
 // MustParse creates a paging value for testing.
-func MustParse(page string, rowsPerPage string) Page {
+func MustParse(page, rowsPerPage string) Page {
 	pg, err := Parse(page, rowsPerPage)
 	if err != nil {
 		panic(err)

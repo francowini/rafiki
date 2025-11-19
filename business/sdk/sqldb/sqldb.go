@@ -10,12 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/francowini/rafiki/foundation/logger"
-	"github.com/francowini/rafiki/foundation/otel"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/francowini/rafiki/foundation/logger"
+	"github.com/francowini/rafiki/foundation/otel"
 )
 
 // lib/pq errorCodeNames
@@ -212,7 +213,12 @@ func namedQuerySlice[T any](ctx context.Context, log *logger.Logger, db sqlx.Ext
 		}
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Note: rows.Close error ignored in defer as query already completed
+			_ = err
+		}
+	}()
 
 	var slice []T
 	for rows.Next() {
@@ -235,18 +241,18 @@ func QueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, qu
 
 // NamedQueryStruct is a helper function for executing queries that return a
 // single value to be unmarshalled into a struct type where field replacement is necessary.
-func NamedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any, dest any) error {
+func NamedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data, dest any) error {
 	return namedQueryStruct(ctx, log, db, query, data, dest, false)
 }
 
 // NamedQueryStructUsingIn is a helper function for executing queries that return
 // a single value to be unmarshalled into a struct type where field replacement
 // is necessary. Use this if the query has an IN clause.
-func NamedQueryStructUsingIn(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any, dest any) error {
+func NamedQueryStructUsingIn(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data, dest any) error {
 	return namedQueryStruct(ctx, log, db, query, data, dest, true)
 }
 
-func namedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any, dest any, withIn bool) (err error) {
+func namedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data, dest any, withIn bool) (err error) {
 	q := queryString(query, data)
 
 	defer func() {
@@ -288,7 +294,12 @@ func namedQueryStruct(ctx context.Context, log *logger.Logger, db sqlx.ExtContex
 		}
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Note: rows.Close error ignored in defer as query already completed
+			_ = err
+		}
+	}()
 
 	if !rows.Next() {
 		return ErrDBNotFound

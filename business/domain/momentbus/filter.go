@@ -1,9 +1,10 @@
 package momentbus
 
 import (
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
-	"github.com/google/uuid"
 )
 
 // QueryFilter holds the available fields a query can be filtered on.

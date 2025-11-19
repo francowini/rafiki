@@ -6,12 +6,13 @@ import (
 	"context"
 	"net/mail"
 
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/otel"
-	"github.com/google/uuid"
 )
 
 // Extension provides a wrapper for otel functionality around the userbus.

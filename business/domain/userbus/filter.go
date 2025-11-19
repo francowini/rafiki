@@ -4,8 +4,9 @@ import (
 	"net/mail"
 	"time"
 
-	"github.com/francowini/rafiki/business/types/name"
 	"github.com/google/uuid"
+
+	"github.com/francowini/rafiki/business/types/name"
 )
 
 // QueryFilter holds the available fields a query can be filtered on.

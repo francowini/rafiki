@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/business/domain/momentbus"
 	"github.com/francowini/rafiki/business/types/content"
 	"github.com/francowini/rafiki/business/types/intensity"
-	"github.com/google/uuid"
 )
 
 type moment struct {

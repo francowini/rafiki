@@ -5,12 +5,13 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/errs"
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/web"
-	"github.com/google/uuid"
 )
 
 // isError tests if the Encoder has an error inside of it.
