@@ -103,7 +103,7 @@ This project uses automated code quality tools:
 - **CodeRabbit Pro**: AI-powered code review on all PRs
 - **golangci-lint**: Go linting and formatting (backend)
 - **Prettier + ESLint**: TypeScript/React linting and formatting (frontend)
-- **Branch Protection**: Main branch requires PR reviews and passing checks
+- **Branch Protection**: Main branch blocks direct pushes (must use PRs)
 - **Pre-commit Hooks**: Auto-formatting before commits (Phase 3)
 - **GitHub Actions**: Automated testing and linting on PRs (Phase 2)
 
@@ -115,8 +115,7 @@ This project uses automated code quality tools:
 2. Make changes and commit (pre-commit hooks will auto-format)
 3. Push and create PR: `gh pr create`
 4. CodeRabbit reviews automatically
-5. Get 1 approval from team member
-6. Merge when all checks pass
+5. Merge when ready (no approval required, but CodeRabbit feedback is helpful)
 
 ### Comprehensive Development Guides
 

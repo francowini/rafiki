@@ -50,18 +50,17 @@ cat << 'EOF' > /tmp/branch-protection.json
 {
   "required_status_checks": null,
   "enforce_admins": false,
-  "required_pull_request_reviews": {
-    "dismiss_stale_reviews": true,
-    "require_code_owner_reviews": false,
-    "required_approving_review_count": 1,
-    "require_last_push_approval": false
+  "required_pull_request_reviews": null,
+  "restrictions": {
+    "users": [],
+    "teams": [],
+    "apps": []
   },
-  "restrictions": null,
   "required_linear_history": true,
   "allow_force_pushes": false,
   "allow_deletions": false,
   "block_creations": false,
-  "required_conversation_resolution": true,
+  "required_conversation_resolution": false,
   "lock_branch": false,
   "allow_fork_syncing": true
 }
@@ -81,10 +80,9 @@ echo ""
 echo "✅ Branch protection configured successfully!"
 echo ""
 echo "Configuration applied:"
-echo "  - Required pull request reviews: 1 approval"
-echo "  - Dismiss stale reviews: enabled"
+echo "  - Direct pushes to main: BLOCKED (must use PRs)"
+echo "  - PR reviews required: NO (can merge without approval)"
 echo "  - Required linear history: enabled"
-echo "  - Required conversation resolution: enabled"
 echo "  - Force pushes: disabled"
 echo "  - Branch deletion: disabled"
 echo ""

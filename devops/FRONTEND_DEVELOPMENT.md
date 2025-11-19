@@ -146,9 +146,9 @@ npm run check
    - Push updates to same branch
    - CodeRabbit re-reviews automatically
 
-6. **Get approval & merge**:
-   - Requires 1 approval from team member
-   - All CI checks must pass (Phase 2)
+6. **Merge**:
+   - No approval required (but CodeRabbit feedback is helpful)
+   - All CI checks must pass when enabled (Phase 2)
    - Merge creates linear history (no merge commits)
 
 ### Commit Message Format
