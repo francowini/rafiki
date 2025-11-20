@@ -121,7 +121,8 @@ goimports -w -local github.com/francowini/rafiki .
 
 5. **Address feedback and merge**:
    - Fix any issues found
-   - No approval required (but CodeRabbit feedback is helpful)
+   - Requires 1 approval (you can approve your own PRs)
+   - Click "Approve" in GitHub PR, then merge
    - All CI checks must pass when enabled (Phase 2)
 
 ### Commit Message Format

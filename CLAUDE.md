@@ -115,7 +115,8 @@ This project uses automated code quality tools:
 2. Make changes and commit (pre-commit hooks will auto-format)
 3. Push and create PR: `gh pr create`
 4. CodeRabbit reviews automatically
-5. Merge when ready (no approval required, but CodeRabbit feedback is helpful)
+5. Approve your PR (click "Approve" in GitHub)
+6. Merge when approved (you can approve your own PRs)
 
 ### Comprehensive Development Guides
 
