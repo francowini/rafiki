@@ -54,3 +54,4 @@ zarf/keys/*.pem
 zarf/genhash/genhash
 zarf/genhash/genhash-linux
 .vercel
+tmp
