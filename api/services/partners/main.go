@@ -92,7 +92,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 			MaxIdleConns int    `conf:"default:0"`
 			MaxOpenConns int    `conf:"default:0"`
 			DisableTLS   bool   `conf:"default:true"`
-			SSLMode      string
+			SSLMode      string `conf:"default:disable"`
 		}
 		Encryption struct {
 			Key string `conf:"required,mask"`
