@@ -87,10 +87,12 @@ func run(ctx context.Context, log *logger.Logger) error {
 			User         string `conf:"default:postgres"`
 			Password     string `conf:"default:postgres,mask"`
 			Host         string `conf:"default:database-service"`
+			Port         string `conf:"default:5432"`
 			Name         string `conf:"default:postgres"`
 			MaxIdleConns int    `conf:"default:0"`
 			MaxOpenConns int    `conf:"default:0"`
 			DisableTLS   bool   `conf:"default:true"`
+			SSLMode      string
 		}
 		Encryption struct {
 			Key string `conf:"required,mask"`
@@ -145,10 +147,12 @@ func run(ctx context.Context, log *logger.Logger) error {
 		User:         cfg.DB.User,
 		Password:     cfg.DB.Password,
 		Host:         cfg.DB.Host,
+		Port:         cfg.DB.Port,
 		Name:         cfg.DB.Name,
 		MaxIdleConns: cfg.DB.MaxIdleConns,
 		MaxOpenConns: cfg.DB.MaxOpenConns,
 		DisableTLS:   cfg.DB.DisableTLS,
+		SSLMode:      cfg.DB.SSLMode,
 	})
 	if err != nil {
 		return fmt.Errorf("connecting to db: %w", err)
