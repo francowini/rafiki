@@ -38,36 +38,18 @@ type Config struct {
 	User         string
 	Password     string
 	Host         string
-	Port         string
 	Name         string
 	Schema       string
 	MaxIdleConns int
 	MaxOpenConns int
 	DisableTLS   bool
-	SSLMode      string
 }
 
 // Open knows how to open a database connection based on the configuration.
 func Open(cfg Config) (*sqlx.DB, error) {
-	// Determine SSL mode with backward compatibility
 	sslMode := "require"
-	if cfg.SSLMode != "" {
-		// Explicit SSLMode takes precedence
-		sslMode = cfg.SSLMode
-	} else if cfg.DisableTLS {
-		// Fall back to DisableTLS for backward compatibility
+	if cfg.DisableTLS {
 		sslMode = "disable"
-	}
-
-	// Validate SSL mode
-	validSSLModes := map[string]bool{
-		"disable":     true,
-		"require":     true,
-		"verify-ca":   true,
-		"verify-full": true,
-	}
-	if !validSSLModes[sslMode] {
-		return nil, fmt.Errorf("invalid sslmode: %s (must be one of: disable, require, verify-ca, verify-full)", sslMode)
 	}
 
 	q := make(url.Values)
@@ -77,16 +59,10 @@ func Open(cfg Config) (*sqlx.DB, error) {
 		q.Set("search_path", cfg.Schema)
 	}
 
-	// Construct host with port
-	host := cfg.Host
-	if cfg.Port != "" {
-		host = fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
-	}
-
 	u := url.URL{
 		Scheme:   "postgres",
 		User:     url.UserPassword(cfg.User, cfg.Password),
-		Host:     host,
+		Host:     cfg.Host,
 		Path:     cfg.Name,
 		RawQuery: q.Encode(),
 	}

@@ -89,11 +89,7 @@ fi
 
 # Stop existing containers (use same files as up command)
 print_info "Stopping existing containers..."
-if [ -n "${POSTGRES_HOST}" ]; then
-    docker compose -f docker-compose.yml -f docker-compose.external-db.yml -f docker-compose.prod.yml --profile production down --remove-orphans || true
-else
-    docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production down --remove-orphans || true
-fi
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production down --remove-orphans || true
 
 # Pull latest changes (if using git deployment)
 if [ -d .git ]; then
@@ -103,15 +99,7 @@ fi
 
 # Build and start services with production profile (includes nginx + certbot)
 print_info "Building and starting services with production profile..."
-
-# Check if using external database (POSTGRES_HOST is set)
-if [ -n "${POSTGRES_HOST}" ]; then
-    print_info "Using external database at: ${POSTGRES_HOST}"
-    docker compose -f docker-compose.yml -f docker-compose.external-db.yml -f docker-compose.prod.yml --profile production up -d --build
-else
-    print_info "Using local Docker PostgreSQL"
-    docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production up -d --build
-fi
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production up -d --build
 
 # Wait for services to start
 print_info "Waiting for services to start..."
@@ -119,13 +107,7 @@ sleep 5
 
 # Check if containers are running
 print_info "Verifying containers are running..."
-COMPOSE_FILES="-f docker-compose.yml"
-if [ -n "${POSTGRES_HOST}" ]; then
-    COMPOSE_FILES="${COMPOSE_FILES} -f docker-compose.external-db.yml"
-fi
-COMPOSE_FILES="${COMPOSE_FILES} -f docker-compose.prod.yml"
-
-if ! docker compose ${COMPOSE_FILES} --profile production ps | grep -q "Up"; then
+if ! docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production ps | grep -q "Up"; then
     print_error "Containers failed to start!"
     print_error "Check logs with: docker compose --profile production logs"
     exit 1
@@ -157,7 +139,7 @@ fi
 
 # Show running services
 print_info "Services are running:"
-docker compose ${COMPOSE_FILES} --profile production ps
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production ps
 
 print_info ""
 print_info "========================================="

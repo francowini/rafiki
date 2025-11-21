@@ -86,9 +86,7 @@ sudo ./devops/deploy.sh
 - **One-Time Setup**: JWT keys, ADMIN user, and .env file are created ONCE only
 - **Regular Deployments**: Only run `make deploy` or `./devops/deploy.sh`
 - **Database Migrations**: Run automatically on every deployment (idempotent)
-- **External Database**: Optional - use PlanetScale/Neon/RDS instead of local PostgreSQL (saves ~256MB RAM)
 - **Full Guide**: See [devops/DEPLOYMENT_GUIDE.md](devops/DEPLOYMENT_GUIDE.md)
-- **External DB Setup**: See [devops/EXTERNAL_DATABASE_GUIDE.md](devops/EXTERNAL_DATABASE_GUIDE.md)
 
 ### Service Endpoints
 - API: `https://api.rafiki.lat` (production via nginx)
