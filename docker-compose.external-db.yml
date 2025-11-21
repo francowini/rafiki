@@ -22,7 +22,13 @@ services:
         condition: service_healthy
       # postgres dependency removed - using external database
 
-  # Disable local PostgreSQL service (don't start it)
+  # Disable local PostgreSQL service by scaling to 0 replicas
   postgres:
-    profiles:
-      - disabled  # This prevents postgres from starting
+    deploy:
+      replicas: 0
+    # Override healthcheck to always pass (since service won't actually run)
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 1s
+      timeout: 1s
+      retries: 1
