@@ -91,8 +91,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 			Name         string `conf:"default:postgres"`
 			MaxIdleConns int    `conf:"default:0"`
 			MaxOpenConns int    `conf:"default:0"`
-			DisableTLS   bool   `conf:"default:true"`
-			SSLMode      string `conf:"default:disable"`
+			DisableTLS   bool   `conf:"default:false"`
+			SSLMode      string `conf:"default:require,env:DB_SSLMODE"`
 		}
 		Encryption struct {
 			Key string `conf:"required,mask"`

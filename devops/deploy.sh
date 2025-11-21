@@ -54,13 +54,6 @@ fi
 # Change to project root directory for docker compose commands
 cd "$PROJECT_ROOT"
 
-# Create required directories for Tempo with proper permissions
-print_info "Ensuring required directories exist with proper permissions..."
-mkdir -p zarf/compose/tempo-data/wal
-mkdir -p zarf/compose/tempo-data/blocks
-mkdir -p zarf/compose/tempo-data/generator
-chmod -R 777 zarf/compose/tempo-data
-
 # Create required directories for Certbot (SSL certificates)
 print_info "Ensuring certbot directories exist..."
 mkdir -p certbot/www

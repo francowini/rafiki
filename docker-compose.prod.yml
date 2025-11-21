@@ -10,19 +10,7 @@ services:
     volumes:
       - /var/lib/rafiki/keys:/app/zarf/keys:ro  # Read-only mount
 
-    environment:
-      # Production-specific environment variables
-      # CORS is already configured in docker-compose.yml for app.rafiki.lat
-      # Add other production overrides here if needed
-      - PARTNER_TEMPO_PROBABILITY=0.1  # 10% sampling in production (vs 100% in dev)
-
     restart: unless-stopped
 
   postgres:
-    restart: unless-stopped
-
-  tempo:
-    restart: unless-stopped
-
-  grafana:
     restart: unless-stopped

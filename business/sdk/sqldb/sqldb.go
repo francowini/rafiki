@@ -104,10 +104,10 @@ func Open(cfg Config) (*sqlx.DB, error) {
 // StatusCheck returns nil if it can successfully talk to the database. It
 // returns a non-nil error otherwise.
 func StatusCheck(ctx context.Context, db *sqlx.DB) error {
-	// If the user doesn't give us a deadline set 1 second.
+	// If the user doesn't give us a deadline set 10 seconds for external databases.
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Second)
+		ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 	}
 

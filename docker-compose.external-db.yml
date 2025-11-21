@@ -7,10 +7,8 @@ services:
   partner-service:
     # Remove dependency on local postgres since we're using external DB
     # Database configuration is read from .env via docker-compose.yml (PARTNER_DB_* variables)
-    depends_on:
-      tempo:
-        condition: service_healthy
-      # postgres dependency removed - using external database
+    depends_on: []
+    # postgres dependency removed - using external database
 
   # Disable local PostgreSQL service by scaling to 0 replicas
   postgres:

@@ -28,86 +28,6 @@ services:
           cpus: '0.5'
 
   # ==================================================================
-  # Tempo - Distributed Tracing Backend
-  # ==================================================================
-  tempo:
-    image: grafana/tempo:2.8.1
-    container_name: rafiki-tempo
-    restart: unless-stopped
-    command: ["-config.file=/etc/tempo.yaml"]
-    volumes:
-      - ./zarf/compose/tempo-data:/tmp/tempo
-      - ./zarf/compose/tempo-config.yaml:/etc/tempo.yaml:ro
-    ports:
-      - "3200:3200"   # Tempo query API
-      - "4317:4317"   # OTLP gRPC (traces in)
-      # 4318 disabled to save memory - gRPC only
-    networks:
-      rafiki-network:
-        ipv4_address: 10.10.0.20
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3200/ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.5'
-        reservations:
-          memory: 128M
-
-  # ==================================================================
-  # Grafana - Observability Visualization
-  # ==================================================================
-  grafana:
-    image: grafana/grafana:12.2.0
-    container_name: rafiki-grafana
-    restart: unless-stopped
-    environment:
-      # Development Mode Configuration
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
-
-      # Features
-      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
-      - GF_SERVER_HTTP_PORT=3100
-
-      # Disable unnecessary features to save memory
-      - GF_ANALYTICS_REPORTING_ENABLED=false
-      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
-      - GF_SNAPSHOTS_EXTERNAL_ENABLED=false
-      - GF_ALERTING_ENABLED=false
-      - GF_UNIFIED_ALERTING_ENABLED=false
-    volumes:
-      - ./zarf/compose/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
-      - grafana_data:/var/lib/grafana
-    ports:
-      - "3100:3100"
-    networks:
-      rafiki-network:
-        ipv4_address: 10.10.0.21
-    depends_on:
-      tempo:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/api/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.3'
-        reservations:
-          memory: 128M
-
-  # ==================================================================
   # Rafiki Partner Service (Main Application)
   # ==================================================================
   partner-service:
@@ -128,12 +48,7 @@ services:
       - PARTNER_DB_PASSWORD=${PARTNER_DB_PASSWORD:-${POSTGRES_PASSWORD}}
       - PARTNER_DB_NAME=${PARTNER_DB_NAME:-${POSTGRES_DB}}
       - PARTNER_DB_SSLMODE=${PARTNER_DB_SSLMODE:-disable}
-      - PARTNER_DB_DISABLETLS=${PARTNER_DB_DISABLETLS:-true}
-
-      # OTEL/Tempo Configuration
-      - PARTNER_TEMPO_HOST=tempo:4317
-      - PARTNER_TEMPO_SERVICENAME=rafiki-service
-      - PARTNER_TEMPO_PROBABILITY=1.0
+      - PARTNER_DB_DISABLETLS=${PARTNER_DB_DISABLETLS:-false}
 
       # Web Server Configuration
       - PARTNER_WEB_APIHOST=0.0.0.0:3000
@@ -142,7 +57,7 @@ services:
       - PARTNER_WEB_WRITETIMEOUT=10s
       - PARTNER_WEB_IDLETIMEOUT=120s
       - PARTNER_WEB_SHUTDOWNTIMEOUT=20s
-      - PARTNER_WEB_CORSALLOWEDORIGINS=https://app.rafiki.lat,https://*.vercel.app
+      - PARTNER_WEB_CORSALLOWEDORIGINS=${PARTNER_WEB_CORSALLOWEDORIGINS:-https://app.rafiki.lat,https://*.vercel.app}
 
       # Go Runtime Configuration
       - GOMAXPROCS=2
@@ -153,8 +68,6 @@ services:
       - PARTNER_ENCRYPTION_KEY=${PARTNER_ENCRYPTION_KEY}
     depends_on:
       postgres:
-        condition: service_healthy
-      tempo:
         condition: service_healthy
     volumes:
       # Mount JWT keys for authentication (development keys)
@@ -223,8 +136,6 @@ services:
 # ==================================================================
 volumes:
   postgres_data:
-    driver: local
-  grafana_data:
     driver: local
 
 # ==================================================================

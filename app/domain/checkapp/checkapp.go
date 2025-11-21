@@ -34,7 +34,7 @@ func newApp(build string, log *logger.Logger, db *sqlx.DB) *app {
 // Do not respond by just returning an error because further up in the call
 // stack it will interpret that as a non-trusted error.
 func (a *app) readiness(ctx context.Context, r *http.Request) web.Encoder {
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	if err := sqldb.StatusCheck(ctx, a.db); err != nil {
