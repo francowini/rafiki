@@ -147,6 +147,9 @@ services:
       - GOMAXPROCS=2
       - GOMEMLIMIT=128MiB
       - GOGC=100
+
+      # Encryption Configuration
+      - PARTNER_ENCRYPTION_KEY=${PARTNER_ENCRYPTION_KEY}
     depends_on:
       postgres:
         condition: service_healthy

@@ -9,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/francowini/rafiki/business/domain/thinkbus"
+	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
@@ -17,15 +18,17 @@ import (
 
 // Store manages the set of APIs for think database access
 type Store struct {
-	log *logger.Logger
-	db  sqlx.ExtContext
+	log       *logger.Logger
+	db        sqlx.ExtContext
+	encryptor encrypt.Encryptor
 }
 
 // NewStore constructs the api for data access
-func NewStore(log *logger.Logger, db *sqlx.DB) *Store {
+func NewStore(log *logger.Logger, db *sqlx.DB, encryptor encrypt.Encryptor) *Store {
 	return &Store{
-		log: log,
-		db:  db,
+		log:       log,
+		db:        db,
+		encryptor: encryptor,
 	}
 }
 
@@ -37,7 +40,12 @@ func (s *Store) Create(ctx context.Context, think thinkbus.Think) error {
 	VALUES
 		(:think_id, :user_id, :category, :content, :date_created, :date_updated)`
 
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBThink(think)); err != nil {
+	dbThink, err := toDBThinkEncrypted(think, s.encryptor)
+	if err != nil {
+		return fmt.Errorf("encrypt: %w", err)
+	}
+
+	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, dbThink); err != nil {
 		return fmt.Errorf("namedexeccontext: %w", err)
 	}
 
@@ -72,7 +80,7 @@ func (s *Store) Query(ctx context.Context, userID uuid.UUID, orderBy order.By, p
 		return nil, fmt.Errorf("namedqueryslice: %w", err)
 	}
 
-	return toBusThinks(dbThinks)
+	return toBusThinkDecryptedSlice(dbThinks, s.encryptor)
 }
 
 // Count returns the total number of thinks
@@ -126,5 +134,5 @@ func (s *Store) QueryByID(ctx context.Context, thinkID, userID uuid.UUID) (think
 		return thinkbus.Think{}, fmt.Errorf("namedquerystruct: %w", err)
 	}
 
-	return toBusThink(dbThink)
+	return toBusThinkDecrypted(dbThink, s.encryptor)
 }

@@ -9,21 +9,24 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/francowini/rafiki/business/domain/momentbus"
+	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
 // Store manages the set of APIs for moment database access.
 type Store struct {
-	log *logger.Logger
-	db  sqlx.ExtContext
+	log       *logger.Logger
+	db        sqlx.ExtContext
+	encryptor encrypt.Encryptor
 }
 
 // NewStore constructs the api for data access.
-func NewStore(log *logger.Logger, db *sqlx.DB) *Store {
+func NewStore(log *logger.Logger, db *sqlx.DB, encryptor encrypt.Encryptor) *Store {
 	return &Store{
-		log: log,
-		db:  db,
+		log:       log,
+		db:        db,
+		encryptor: encryptor,
 	}
 }
 
@@ -40,7 +43,12 @@ func (s *Store) Create(ctx context.Context, moment momentbus.Moment) error {
 		:intensity, :date_created, :date_updated
 	)`
 
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBMoment(moment)); err != nil {
+	dbMoment, err := toDBMomentEncrypted(moment, s.encryptor)
+	if err != nil {
+		return fmt.Errorf("encrypt: %w", err)
+	}
+
+	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, dbMoment); err != nil {
 		if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
 			return fmt.Errorf("namedexeccontext: %w", momentbus.ErrUniqueEntry)
 		}
@@ -66,7 +74,12 @@ func (s *Store) Update(ctx context.Context, moment momentbus.Moment) error {
 	WHERE
 		moment_id = :moment_id AND user_id = :user_id`
 
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBMoment(moment)); err != nil {
+	dbMoment, err := toDBMomentEncrypted(moment, s.encryptor)
+	if err != nil {
+		return fmt.Errorf("encrypt: %w", err)
+	}
+
+	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, dbMoment); err != nil {
 		if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
 			return fmt.Errorf("namedexeccontext: %w", momentbus.ErrUniqueEntry)
 		}
@@ -82,7 +95,13 @@ func (s *Store) Delete(ctx context.Context, moment momentbus.Moment) error {
 	DELETE FROM moments
 	WHERE moment_id = :moment_id`
 
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBMoment(moment)); err != nil {
+	data := struct {
+		ID string `db:"moment_id"`
+	}{
+		ID: moment.ID.String(),
+	}
+
+	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
 		return fmt.Errorf("namedexeccontext: %w", err)
 	}
 
@@ -119,7 +138,7 @@ func (s *Store) Query(ctx context.Context, filter momentbus.QueryFilter) ([]mome
 		return nil, fmt.Errorf("namedqueryslice: %w", err)
 	}
 
-	return toBusMoments(dbMoms)
+	return toBusMomentsDecrypted(dbMoms, s.encryptor)
 }
 
 // QueryByID retrieves a single moment by its ID.
@@ -146,7 +165,7 @@ func (s *Store) QueryByID(ctx context.Context, momentID uuid.UUID) (momentbus.Mo
 		return momentbus.Moment{}, fmt.Errorf("namedquerystruct: %w", err)
 	}
 
-	return toBusMoment(dbMom)
+	return toBusMomentDecrypted(dbMom, s.encryptor)
 }
 
 // Count returns the total number of moments that match the filter.
