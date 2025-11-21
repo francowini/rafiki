@@ -86,9 +86,9 @@ else
     print_info "Found $KEY_COUNT JWT key(s) in $KEYS_DIR"
 fi
 
-# Stop existing containers
+# Stop existing containers (use same files as up command)
 print_info "Stopping existing containers..."
-docker compose --profile production down || true
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production down --remove-orphans || true
 
 # Pull latest changes (if using git deployment)
 if [ -d .git ]; then
