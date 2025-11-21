@@ -212,7 +212,8 @@ services:
       - ./certbot/conf:/etc/letsencrypt:rw
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     networks:
-      - rafiki-network
+      rafiki-network:
+        ipv4_address: 10.10.0.31
     profiles:
       - production
 
