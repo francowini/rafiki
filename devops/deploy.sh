@@ -67,7 +67,8 @@ mkdir -p certbot/www
 mkdir -p certbot/conf
 
 # Check for JWT keys (required for authentication)
-KEYS_DIR="/opt/rafiki/keys"
+# Keys stored OUTSIDE repo in /var/lib/rafiki/keys to prevent accidental deletion by git clean
+KEYS_DIR="/var/lib/rafiki/keys"
 if [ ! -d "$KEYS_DIR" ] || [ -z "$(ls -A $KEYS_DIR/*.pem 2>/dev/null)" ]; then
     print_warn "JWT keys not found in $KEYS_DIR"
     print_warn "Authentication will not work without keys!"

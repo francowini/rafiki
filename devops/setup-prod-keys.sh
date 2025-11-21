@@ -39,8 +39,8 @@ fi
 print_header "Production JWT Keys Setup"
 echo ""
 
-# Configuration
-KEYS_DIR="/opt/rafiki/keys"
+# Configuration - Keys stored OUTSIDE repo to prevent accidental deletion
+KEYS_DIR="/var/lib/rafiki/keys"
 
 # Check if keys already exist
 if [ -d "$KEYS_DIR" ] && [ -n "$(ls -A $KEYS_DIR/*.pem 2>/dev/null)" ]; then

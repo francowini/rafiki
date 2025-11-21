@@ -5,10 +5,10 @@ version: '3.8'
 
 services:
   partner-service:
-    # Mount production keys from external directory
-    # Store your production keys in /opt/rafiki/keys on the server
+    # Mount production keys from OUTSIDE the repo to prevent accidental deletion
+    # Keys are stored in /var/lib/rafiki/keys (not affected by git clean)
     volumes:
-      - /opt/rafiki/keys:/app/zarf/keys:ro  # Read-only mount
+      - /var/lib/rafiki/keys:/app/zarf/keys:ro  # Read-only mount
 
     environment:
       # Production-specific environment variables
