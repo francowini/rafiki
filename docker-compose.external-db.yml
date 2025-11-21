@@ -6,14 +6,15 @@ version: '3.8'
 services:
   partner-service:
     environment:
-      # Override database host to use external database
-      - PARTNER_DB_HOST=${POSTGRES_HOST}
-      - PARTNER_DB_PORT=${POSTGRES_PORT:-5432}
-      - PARTNER_DB_USER=${POSTGRES_USER}
-      - PARTNER_DB_PASSWORD=${POSTGRES_PASSWORD}
-      - PARTNER_DB_NAME=${POSTGRES_DB}
-      - PARTNER_DB_SSLMODE=${POSTGRES_SSLMODE:-require}  # Enable SSL for external DB
-      - PARTNER_DB_DISABLETLS=${POSTGRES_DISABLETLS:-false}
+      # Override database configuration to use external database
+      # These variables are read directly from .env file with PARTNER_DB_* prefix
+      - PARTNER_DB_HOST=${PARTNER_DB_HOST}
+      - PARTNER_DB_PORT=${PARTNER_DB_PORT:-5432}
+      - PARTNER_DB_USER=${PARTNER_DB_USER}
+      - PARTNER_DB_PASSWORD=${PARTNER_DB_PASSWORD}
+      - PARTNER_DB_NAME=${PARTNER_DB_NAME}
+      - PARTNER_DB_SSLMODE=${PARTNER_DB_SSLMODE:-require}  # Enable SSL for external DB
+      - PARTNER_DB_DISABLETLS=${PARTNER_DB_DISABLETLS:-false}
 
     # Remove dependency on local postgres since we're using external DB
     depends_on:
