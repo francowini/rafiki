@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"expvar"
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/domain/userbus/stores/userdb"
+	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/migrate"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/keystore"
@@ -89,6 +91,9 @@ func run(ctx context.Context, log *logger.Logger) error {
 			MaxIdleConns int    `conf:"default:0"`
 			MaxOpenConns int    `conf:"default:0"`
 			DisableTLS   bool   `conf:"default:true"`
+		}
+		Encryption struct {
+			Key string `conf:"required,mask"`
 		}
 		Tempo struct {
 			Host        string  `conf:"default:tempo:4317"`
@@ -167,12 +172,38 @@ func run(ctx context.Context, log *logger.Logger) error {
 	log.Info(ctx, "startup", "status", "database migrations completed")
 
 	// -------------------------------------------------------------------------
+	// Initialize Encryption Support
+
+	log.Info(ctx, "startup", "status", "initializing encryption")
+
+	if len(cfg.Encryption.Key) != 64 {
+		return fmt.Errorf("encryption key must be 64 hex characters (32 bytes), got %d characters", len(cfg.Encryption.Key))
+	}
+
+	encryptionKey, err := hex.DecodeString(cfg.Encryption.Key)
+	if err != nil {
+		return fmt.Errorf("decode encryption key (must be valid hex): %w", err)
+	}
+
+	encryptor, err := encrypt.NewAESEncryptor(encryptionKey)
+	if err != nil {
+		return fmt.Errorf("create encryptor: %w", err)
+	}
+
+	// Clear key from memory after encryptor is created
+	for i := range encryptionKey {
+		encryptionKey[i] = 0
+	}
+
+	log.Info(ctx, "startup", "status", "encryption initialized", "algorithm", "AES-256-GCM")
+
+	// -------------------------------------------------------------------------
 	// Create Business Packages
 
-	thinkStore := thinkdb.NewStore(log, db)
+	thinkStore := thinkdb.NewStore(log, db, encryptor)
 	thinkBus := thinkbus.NewBusiness(log, thinkStore)
 
-	momentStore := momentdb.NewStore(log, db)
+	momentStore := momentdb.NewStore(log, db, encryptor)
 	momentBus := momentbus.NewBusiness(log, momentStore)
 
 	// -------------------------------------------------------------------------

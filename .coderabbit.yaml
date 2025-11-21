@@ -24,6 +24,8 @@ reviews:
     - "!**/*_generated.go"
     - "!**/go.sum"
     - "!**/package-lock.json"
+    - "!docs/**"
+
 
   # Tool integrations for linting
   tools:
