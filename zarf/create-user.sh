@@ -93,10 +93,31 @@ SQL="INSERT INTO users (
 
 echo -e "${BLUE}Inserting user into database...${NC}"
 
-# Execute SQL
-docker exec -i rafiki-postgres psql -U rafiki -d rafiki -c "$SQL"
+# Load environment variables if .env exists
+if [ -f ".env" ]; then
+    source .env 2>/dev/null || true
+elif [ -f "/opt/rafiki/.env" ]; then
+    source /opt/rafiki/.env 2>/dev/null || true
+fi
 
-if [ $? -eq 0 ]; then
+# Check if using external database (PlanetScale/Neon/etc)
+if [ -n "$PARTNER_DB_HOST" ]; then
+    echo -e "${YELLOW}Using external database: $PARTNER_DB_HOST${NC}"
+
+    # Build connection string
+    DB_URL="postgresql://${PARTNER_DB_USER}:${PARTNER_DB_PASSWORD}@${PARTNER_DB_HOST}:${PARTNER_DB_PORT}/${PARTNER_DB_NAME}?sslmode=${PARTNER_DB_SSLMODE:-require}"
+
+    # Execute SQL using psql
+    psql "$DB_URL" -c "$SQL"
+    DB_RESULT=$?
+else
+    # Use local docker postgres
+    echo -e "${YELLOW}Using local Docker PostgreSQL${NC}"
+    docker exec -i rafiki-postgres psql -U rafiki -d rafiki -c "$SQL"
+    DB_RESULT=$?
+fi
+
+if [ $DB_RESULT -eq 0 ]; then
     echo ""
     echo -e "${GREEN}✓ User created successfully!${NC}"
     echo ""
@@ -107,8 +128,13 @@ if [ $? -eq 0 ]; then
 
     # Show user in database
     echo -e "${BLUE}Verifying in database:${NC}"
-    docker exec -i rafiki-postgres psql -U rafiki -d rafiki -c \
-        "SELECT user_id, name, email, roles, enabled FROM users WHERE email='$EMAIL';"
+
+    if [ -n "$PARTNER_DB_HOST" ]; then
+        psql "$DB_URL" -c "SELECT user_id, name, email, roles, enabled FROM users WHERE email='$EMAIL';"
+    else
+        docker exec -i rafiki-postgres psql -U rafiki -d rafiki -c \
+            "SELECT user_id, name, email, roles, enabled FROM users WHERE email='$EMAIL';"
+    fi
 else
     echo -e "${RED}Failed to create user${NC}"
     exit 1
