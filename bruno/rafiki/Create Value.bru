@@ -1,0 +1,66 @@
+meta {
+  name: Create Value
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{base-url}}/v1/values
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+body:json {
+  {
+    "content": "Live with integrity and authenticity",
+    "facet": "personal_growth",
+    "displayOrder": 1
+  }
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return value object", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("id");
+    expect(data).to.have.property("content");
+    expect(data).to.have.property("facet");
+    expect(data).to.have.property("displayOrder");
+  });
+
+  // Save value ID for other requests
+  const data = res.getBody();
+  if (data.id) {
+    bru.setEnvVar("value-id", data.id);
+    console.log("Value ID saved:", data.id);
+  }
+}
+
+docs {
+  # Create Value
+
+  Creates a new personal value with facet categorization.
+
+  **Max 10 values per user**
+
+  ## Facets
+  - health
+  - relationships
+  - career
+  - personal_growth
+  - family
+  - creativity
+  - community
+  - spirituality
+
+  ## Validation
+  - content: 3-200 characters
+  - displayOrder: 1-10
+}

@@ -1,0 +1,39 @@
+meta {
+  name: Get Value by ID
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{base-url}}/v1/values/{{value-id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return value object", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("id");
+    expect(data).to.have.property("content");
+    expect(data).to.have.property("facet");
+    expect(data).to.have.property("displayOrder");
+    expect(data).to.have.property("dateCreated");
+    expect(data).to.have.property("dateUpdated");
+  });
+}
+
+docs {
+  # Get Value by ID
+
+  Returns a single value by its ID.
+
+  Requires authentication and user must own the value.
+}
