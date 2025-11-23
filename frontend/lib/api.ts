@@ -7,6 +7,11 @@ import {
   MomentListResponse,
   NewMoment,
   UpdateMoment,
+  Value,
+  ValueListResponse,
+  NewValue,
+  UpdateValue,
+  Facet,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -163,6 +168,57 @@ export const api = {
      */
     delete: async (id: string): Promise<void> => {
       return fetchAPI<void>(`/v1/moments/${id}`, {
+        method: 'DELETE',
+      });
+    },
+  },
+
+  values: {
+    /**
+     * Get all values for the current user, sorted by display_order
+     */
+    getAll: async (params?: { facet?: Facet }): Promise<ValueListResponse> => {
+      const queryParams = new URLSearchParams();
+      if (params?.facet) queryParams.set('facet', params.facet);
+
+      const query = queryParams.toString();
+      const endpoint = `/v1/values${query ? `?${query}` : ''}`;
+
+      return fetchAPI<ValueListResponse>(endpoint);
+    },
+
+    /**
+     * Get a single value by ID
+     */
+    getById: async (id: string): Promise<Value> => {
+      return fetchAPI<Value>(`/v1/values/${id}`);
+    },
+
+    /**
+     * Create a new value
+     */
+    create: async (data: NewValue): Promise<Value> => {
+      return fetchAPI<Value>('/v1/values', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    /**
+     * Update an existing value
+     */
+    update: async (id: string, data: UpdateValue): Promise<Value> => {
+      return fetchAPI<Value>(`/v1/values/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+
+    /**
+     * Delete a value
+     */
+    delete: async (id: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/values/${id}`, {
         method: 'DELETE',
       });
     },

@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth-context';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { QuickStatsCard } from '@/components/dashboard/QuickStatsCard';
 import { FeatureCard } from '@/components/dashboard/FeatureCard';
+import { ValuesPreview } from '@/components/dashboard/ValuesPreview';
 import { Brain, Target, Heart, Compass, Activity, Clock } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -48,10 +49,21 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Values Preview Section */}
+      <ValuesPreview />
+
       {/* Feature Navigation Section */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Journey</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FeatureCard
+            title="Values"
+            description="Define and track your core values and principles"
+            icon={Heart}
+            href="/values"
+            color="red"
+            available
+          />
           <FeatureCard
             title="Thinks"
             description="Capture and organize your thoughts, ideas, and insights"
@@ -59,14 +71,6 @@ export default function DashboardPage() {
             href="/thinks"
             color="blue"
             available
-          />
-          <FeatureCard
-            title="Values"
-            description="Define and track your core values and principles"
-            icon={Heart}
-            href="/values"
-            color="red"
-            available={false}
           />
           <FeatureCard
             title="Goals"

@@ -95,3 +95,46 @@ export interface MomentListResponse {
   page: number;
   rowsPerPage: number;
 }
+
+// ============================================================================
+// Value Types
+// ============================================================================
+
+export const FACETS = [
+  'health',
+  'relationships',
+  'career',
+  'personal_growth',
+  'family',
+  'creativity',
+  'community',
+  'spirituality',
+] as const;
+
+export type Facet = (typeof FACETS)[number];
+
+export interface Value {
+  id: string;
+  content: string;
+  facet: Facet;
+  displayOrder: number;
+  dateCreated: string; // ISO 8601
+  dateUpdated: string; // ISO 8601
+}
+
+export interface NewValue {
+  content: string;
+  facet: Facet;
+  displayOrder: number;
+}
+
+export interface UpdateValue {
+  content?: string;
+  facet?: Facet;
+  displayOrder?: number;
+}
+
+export interface ValueListResponse {
+  items: Value[];
+  total: number;
+}

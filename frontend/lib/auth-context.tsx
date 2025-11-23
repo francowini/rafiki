@@ -167,7 +167,7 @@ function decodeJWT(token: string): DecodedJWT {
     );
 
     return JSON.parse(jsonPayload);
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Invalid token format');
   }
 }
