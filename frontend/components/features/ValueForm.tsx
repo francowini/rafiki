@@ -199,7 +199,7 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
           value={watch('displayOrder').toString()}
           onValueChange={(value) => setValue('displayOrder', parseInt(value))}
         >
-          <SelectTrigger>
+          <SelectTrigger id="displayOrder">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

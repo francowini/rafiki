@@ -87,29 +87,48 @@ export default function ValuesPage() {
             <p className="text-muted-foreground mt-1">Define what matters most in your life</p>
           </div>
 
-          <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <SheetTrigger asChild>
-              <Button size="lg" className="bg-rose-600 hover:bg-rose-700">
-                <Plus className="h-5 w-5 mr-2" />
-                New value
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle className="text-xl">Define a value</SheetTitle>
-                <SheetDescription>
-                  What do you care about? What guides your decisions and actions?
-                </SheetDescription>
-              </SheetHeader>
-              <div className="mt-6">
-                <ValueForm
-                  existingValuesCount={valuesCount}
-                  onSuccess={handleCreateSuccess}
-                  onCancel={() => setIsFormOpen(false)}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <Sheet
+              open={isFormOpen}
+              onOpenChange={(open) => {
+                // Only allow opening if under the limit
+                if (open && valuesCount >= 10) {
+                  return;
+                }
+                setIsFormOpen(open);
+              }}
+            >
+              <SheetTrigger asChild>
+                <Button
+                  size="lg"
+                  disabled={valuesCount >= 10}
+                  aria-disabled={valuesCount >= 10}
+                  className="bg-rose-600 hover:bg-rose-700"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  New value
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle className="text-xl">Define a value</SheetTitle>
+                  <SheetDescription>
+                    What do you care about? What guides your decisions and actions?
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-6">
+                  <ValueForm
+                    existingValuesCount={valuesCount}
+                    onSuccess={handleCreateSuccess}
+                    onCancel={() => setIsFormOpen(false)}
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+            {valuesCount >= 10 && (
+              <p className="text-sm text-muted-foreground italic">Maximum of 10 values reached</p>
+            )}
+          </div>
         </div>
 
         {/* Info Alert */}
