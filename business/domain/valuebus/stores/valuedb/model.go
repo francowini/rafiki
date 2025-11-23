@@ -9,6 +9,7 @@ import (
 
 	"github.com/francowini/rafiki/business/domain/valuebus"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
+	"github.com/francowini/rafiki/business/types/displayorder"
 	"github.com/francowini/rafiki/business/types/facet"
 	"github.com/francowini/rafiki/business/types/valuecontent"
 )
@@ -37,7 +38,7 @@ func toDBValueEncrypted(bus valuebus.Value, enc encrypt.Encryptor) (value, error
 		UserID:       bus.UserID,
 		Content:      content,
 		Facet:        bus.Facet.String(),
-		DisplayOrder: bus.DisplayOrder,
+		DisplayOrder: bus.DisplayOrder.Value(),
 		DateCreated:  bus.DateCreated.UTC(),
 		DateUpdated:  bus.DateUpdated.UTC(),
 	}, nil
@@ -62,12 +63,18 @@ func toBusValueDecrypted(db value, enc encrypt.Encryptor) (valuebus.Value, error
 		return valuebus.Value{}, fmt.Errorf("parse facet: %w", err)
 	}
 
+	// Parse display order
+	displayOrder, err := displayorder.Parse(db.DisplayOrder)
+	if err != nil {
+		return valuebus.Value{}, fmt.Errorf("parse display order: %w", err)
+	}
+
 	return valuebus.Value{
 		ID:           db.ID,
 		UserID:       db.UserID,
 		Content:      content,
 		Facet:        facetVal,
-		DisplayOrder: db.DisplayOrder,
+		DisplayOrder: displayOrder,
 		DateCreated:  db.DateCreated.In(time.Local),
 		DateUpdated:  db.DateUpdated.In(time.Local),
 	}, nil

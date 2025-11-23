@@ -34,6 +34,10 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
+	if err := appValue.Validate(); err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
 	nv, err := toBusNewValue(ctx, appValue)
 	if err != nil {
 		return errs.New(errs.InvalidArgument, err)
@@ -47,7 +51,7 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		if errors.Is(err, valuebus.ErrDuplicateOrder) {
 			return errs.New(errs.InvalidArgument, err)
 		}
-		return errs.Newf(errs.Internal, "create: value[%+v]: %s", value, err)
+		return errs.Newf(errs.Internal, "create: userID[%s]: %s", nv.UserID, err)
 	}
 
 	return toAppValue(value)
@@ -57,6 +61,10 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 	var appValue UpdateValue
 	if err := web.Decode(r, &appValue); err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	if err := appValue.Validate(); err != nil {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
@@ -79,10 +87,10 @@ func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	if value.UserID != userID {
-		return errs.New(errs.Unauthenticated, errors.New("user not authorized"))
+		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
 	}
 
-	uv, err := toBusUpdateValue(ctx, appValue)
+	uv, err := toBusUpdateValue(appValue)
 	if err != nil {
 		return errs.New(errs.InvalidArgument, err)
 	}
@@ -119,7 +127,7 @@ func (a *app) delete(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	if value.UserID != userID {
-		return errs.New(errs.Unauthenticated, errors.New("user not authorized"))
+		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
 	}
 
 	if err := a.valueBus.Delete(ctx, value); err != nil {
@@ -140,7 +148,7 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 
 	pg, err := page.Parse(qp.Page, qp.Rows)
 	if err != nil {
-		return errs.NewFieldErrors("page", err)
+		return errs.NewFieldErrors("pagination", err)
 	}
 
 	orderBy, err := order.Parse(orderByFields, qp.OrderBy, valuebus.DefaultOrderBy)
@@ -197,7 +205,7 @@ func (a *app) queryByID(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	if value.UserID != userID {
-		return errs.New(errs.Unauthenticated, errors.New("user not authorized"))
+		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
 	}
 
 	return toAppValue(value)

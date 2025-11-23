@@ -27,12 +27,28 @@ tests {
     expect(res.status).to.equal(200);
   });
 
-  test("should return value object", function() {
+  test("should return value object with correct properties", function() {
     const data = res.getBody();
     expect(data).to.have.property("id");
     expect(data).to.have.property("content");
     expect(data).to.have.property("facet");
     expect(data).to.have.property("displayOrder");
+  });
+
+  test("should return values matching request payload", function() {
+    const data = res.getBody();
+    const requestBody = req.getBody();
+
+    // Verify returned values match what was sent
+    expect(data.content).to.equal(requestBody.content);
+    expect(data.facet).to.equal(requestBody.facet);
+    expect(data.displayOrder).to.equal(requestBody.displayOrder);
+  });
+
+  test("should return valid UUID for id", function() {
+    const data = res.getBody();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    expect(data.id).to.match(uuidRegex);
   });
 
   // Save value ID for other requests

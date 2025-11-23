@@ -68,27 +68,15 @@ COMMENT ON COLUMN moments.intensity IS 'Distress intensity on 0-10 scale';
 
 
 -- Version: 1.04
--- Description: Create facet_type ENUM and values table for personal values tracking
-
--- Create ENUM type for life facets
-CREATE TYPE facet_type AS ENUM (
-    'health',
-    'relationships',
-    'career',
-    'personal_growth',
-    'family',
-    'creativity',
-    'community',
-    'spirituality'
-);
+-- Description: Create values table for personal values tracking
 
 -- Create values table
 CREATE TABLE values (
     value_id       UUID        NOT NULL,
     user_id        UUID        NOT NULL,
-    content        TEXT        NOT NULL,
-    facet          facet_type  NOT NULL,
-    display_order  INTEGER     NOT NULL,
+    content        TEXT        NOT NULL CHECK (char_length(content) BETWEEN 3 AND 200),
+    facet          TEXT        NOT NULL,
+    display_order  INTEGER     NOT NULL CHECK (display_order BETWEEN 1 AND 10),
     date_created   TIMESTAMP   NOT NULL,
     date_updated   TIMESTAMP   NOT NULL,
 
@@ -98,7 +86,6 @@ CREATE TABLE values (
 
 -- Performance indexes
 CREATE INDEX values_user_id_idx ON values(user_id);
-CREATE INDEX values_user_order_idx ON values(user_id, display_order ASC);
 CREATE INDEX values_facet_idx ON values(facet);
 
 -- Unique constraint to prevent duplicate display_order per user

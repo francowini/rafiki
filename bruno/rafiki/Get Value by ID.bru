@@ -28,6 +28,12 @@ tests {
     expect(data).to.have.property("dateCreated");
     expect(data).to.have.property("dateUpdated");
   });
+
+  test("should return the requested value by ID", function() {
+    const data = res.getBody();
+    const expectedId = bru.getEnvVar("value-id");
+    expect(data.id).to.equal(expectedId);
+  });
 }
 
 docs {

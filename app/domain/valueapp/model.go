@@ -9,6 +9,7 @@ import (
 	"github.com/francowini/rafiki/app/sdk/errs"
 	"github.com/francowini/rafiki/app/sdk/mid"
 	"github.com/francowini/rafiki/business/domain/valuebus"
+	"github.com/francowini/rafiki/business/types/displayorder"
 	"github.com/francowini/rafiki/business/types/facet"
 	"github.com/francowini/rafiki/business/types/valuecontent"
 )
@@ -76,7 +77,7 @@ func toAppValue(value valuebus.Value) Value {
 		ID:           value.ID.String(),
 		Content:      value.Content.String(),
 		Facet:        value.Facet.String(),
-		DisplayOrder: value.DisplayOrder,
+		DisplayOrder: value.DisplayOrder.Value(),
 		DateCreated:  value.DateCreated.Format("2006-01-02T15:04:05Z07:00"),
 		DateUpdated:  value.DateUpdated.Format("2006-01-02T15:04:05Z07:00"),
 	}
@@ -113,6 +114,12 @@ func toBusNewValue(ctx context.Context, nv NewValue) (valuebus.NewValue, error) 
 		errors.Add("facet", err)
 	}
 
+	// Parse display order
+	displayOrderVal, err := displayorder.Parse(nv.DisplayOrder)
+	if err != nil {
+		errors.Add("displayOrder", err)
+	}
+
 	if len(errors) > 0 {
 		return valuebus.NewValue{}, fmt.Errorf("validate: %w", errors.ToError())
 	}
@@ -121,11 +128,11 @@ func toBusNewValue(ctx context.Context, nv NewValue) (valuebus.NewValue, error) 
 		UserID:       userID,
 		Content:      content,
 		Facet:        facetVal,
-		DisplayOrder: nv.DisplayOrder,
+		DisplayOrder: displayOrderVal,
 	}, nil
 }
 
-func toBusUpdateValue(ctx context.Context, uv UpdateValue) (valuebus.UpdateValue, error) {
+func toBusUpdateValue(uv UpdateValue) (valuebus.UpdateValue, error) {
 	var errors errs.FieldErrors
 	var bus valuebus.UpdateValue
 
@@ -148,7 +155,12 @@ func toBusUpdateValue(ctx context.Context, uv UpdateValue) (valuebus.UpdateValue
 	}
 
 	if uv.DisplayOrder != nil {
-		bus.DisplayOrder = uv.DisplayOrder
+		displayOrderVal, err := displayorder.Parse(*uv.DisplayOrder)
+		if err != nil {
+			errors.Add("displayOrder", err)
+		} else {
+			bus.DisplayOrder = &displayOrderVal
+		}
 	}
 
 	if len(errors) > 0 {

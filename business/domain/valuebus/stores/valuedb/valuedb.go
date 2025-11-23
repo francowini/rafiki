@@ -103,6 +103,12 @@ func (s *Store) Delete(ctx context.Context, value valuebus.Value) error {
 
 // Query retrieves values based on filter criteria.
 func (s *Store) Query(ctx context.Context, filter valuebus.QueryFilter) ([]valuebus.Value, error) {
+	// Security guard: Require UserID to prevent accidental full-table queries across all users.
+	// Values are personal and should always be scoped to a specific user.
+	if filter.UserID == nil {
+		return nil, valuebus.ErrMissingUserID
+	}
+
 	data := map[string]any{
 		"offset":        (filter.Page.Number() - 1) * filter.Page.RowsPerPage(),
 		"rows_per_page": filter.Page.RowsPerPage(),
@@ -156,6 +162,12 @@ func (s *Store) QueryByID(ctx context.Context, valueID uuid.UUID) (valuebus.Valu
 
 // Count returns the total number of values matching the filter.
 func (s *Store) Count(ctx context.Context, filter valuebus.QueryFilter) (int, error) {
+	// Security guard: Require UserID to prevent accidental full-table counts across all users.
+	// Values are personal and should always be scoped to a specific user.
+	if filter.UserID == nil {
+		return 0, valuebus.ErrMissingUserID
+	}
+
 	data := map[string]any{}
 	whereClause := buildWhereClause(filter, data)
 

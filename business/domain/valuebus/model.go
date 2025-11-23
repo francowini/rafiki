@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/francowini/rafiki/business/types/displayorder"
 	"github.com/francowini/rafiki/business/types/facet"
 	"github.com/francowini/rafiki/business/types/valuecontent"
 )
@@ -16,6 +17,7 @@ var (
 	ErrNotFound       = errors.New("value not found")
 	ErrMaxValues      = errors.New("maximum 10 values allowed per user")
 	ErrDuplicateOrder = errors.New("display order already exists for this user")
+	ErrMissingUserID  = errors.New("userID is required for querying values")
 )
 
 // Value represents a personal value with facet categorization.
@@ -24,7 +26,7 @@ type Value struct {
 	UserID       uuid.UUID
 	Content      valuecontent.ValueContent
 	Facet        facet.Facet
-	DisplayOrder int
+	DisplayOrder displayorder.DisplayOrder
 	DateCreated  time.Time
 	DateUpdated  time.Time
 }
@@ -34,7 +36,7 @@ type NewValue struct {
 	UserID       uuid.UUID
 	Content      valuecontent.ValueContent
 	Facet        facet.Facet
-	DisplayOrder int
+	DisplayOrder displayorder.DisplayOrder
 }
 
 // UpdateValue contains information needed to update a value.
@@ -42,5 +44,5 @@ type NewValue struct {
 type UpdateValue struct {
 	Content      *valuecontent.ValueContent
 	Facet        *facet.Facet
-	DisplayOrder *int
+	DisplayOrder *displayorder.DisplayOrder
 }

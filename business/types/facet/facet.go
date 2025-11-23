@@ -5,6 +5,9 @@ import (
 	"fmt"
 )
 
+// Set of known facets - must be initialized before predefined variables
+var facets = make(map[string]Facet)
+
 // Predefined facet values
 var (
 	Health         = newFacet("health")
@@ -16,8 +19,6 @@ var (
 	Community      = newFacet("community")
 	Spirituality   = newFacet("spirituality")
 )
-
-var facets = make(map[string]Facet)
 
 // Facet represents a validated life domain category.
 type Facet struct {
