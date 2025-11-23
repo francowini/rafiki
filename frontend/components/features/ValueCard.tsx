@@ -7,6 +7,18 @@ import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 import { getFacetConfig } from '@/lib/value-utils';
 
+// Gradient backgrounds based on facet
+const gradientMap: Record<string, string> = {
+  health: 'bg-gradient-to-br from-emerald-50 to-white',
+  relationships: 'bg-gradient-to-br from-blue-50 to-white',
+  career: 'bg-gradient-to-br from-amber-50 to-white',
+  personal_growth: 'bg-gradient-to-br from-purple-50 to-white',
+  family: 'bg-gradient-to-br from-pink-50 to-white',
+  creativity: 'bg-gradient-to-br from-orange-50 to-white',
+  community: 'bg-gradient-to-br from-green-50 to-white',
+  spirituality: 'bg-gradient-to-br from-indigo-50 to-white',
+};
+
 interface ValueCardProps {
   value: Value;
   rank: number; // 1-based ranking (1 = most important)
@@ -17,18 +29,6 @@ interface ValueCardProps {
 export function ValueCard({ value, rank, onEdit, onDelete }: ValueCardProps) {
   const facetConfig = getFacetConfig(value.facet);
   const isTopValue = rank === 1;
-
-  // Gradient backgrounds based on facet
-  const gradientMap: Record<string, string> = {
-    health: 'bg-gradient-to-br from-emerald-50 to-white',
-    relationships: 'bg-gradient-to-br from-blue-50 to-white',
-    career: 'bg-gradient-to-br from-amber-50 to-white',
-    personal_growth: 'bg-gradient-to-br from-purple-50 to-white',
-    family: 'bg-gradient-to-br from-pink-50 to-white',
-    creativity: 'bg-gradient-to-br from-orange-50 to-white',
-    community: 'bg-gradient-to-br from-green-50 to-white',
-    spirituality: 'bg-gradient-to-br from-indigo-50 to-white',
-  };
 
   const gradientClass = gradientMap[value.facet] || 'bg-white';
 
@@ -86,6 +86,7 @@ export function ValueCard({ value, rank, onEdit, onDelete }: ValueCardProps) {
               size="sm"
               variant="outline"
               onClick={onDelete}
+              aria-label="Delete value"
               className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
             >
               <Trash2 className="h-4 w-4" />
@@ -95,7 +96,18 @@ export function ValueCard({ value, rank, onEdit, onDelete }: ValueCardProps) {
 
         {/* Metadata (small timestamp) */}
         <p className="text-xs text-muted-foreground">
-          Updated {new Date(value.dateUpdated).toLocaleDateString()}
+          Updated{' '}
+          {(() => {
+            try {
+              const date = new Date(value.dateUpdated);
+              if (isNaN(date.getTime())) {
+                return 'recently';
+              }
+              return date.toLocaleDateString();
+            } catch {
+              return 'recently';
+            }
+          })()}
         </p>
       </CardContent>
     </Card>

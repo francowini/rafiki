@@ -100,15 +100,18 @@ export interface MomentListResponse {
 // Value Types
 // ============================================================================
 
-export type Facet =
-  | 'health'
-  | 'relationships'
-  | 'career'
-  | 'personal_growth'
-  | 'family'
-  | 'creativity'
-  | 'community'
-  | 'spirituality';
+export const FACETS = [
+  'health',
+  'relationships',
+  'career',
+  'personal_growth',
+  'family',
+  'creativity',
+  'community',
+  'spirituality',
+] as const;
+
+export type Facet = (typeof FACETS)[number];
 
 export interface Value {
   id: string;

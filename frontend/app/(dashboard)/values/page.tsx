@@ -26,6 +26,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Info } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ValuesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -34,6 +35,8 @@ export default function ValuesPage() {
   const [valueToDelete, setValueToDelete] = useState<Value | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [valuesCount, setValuesCount] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   const handleCreateSuccess = () => {
     setIsFormOpen(false);
@@ -54,12 +57,23 @@ export default function ValuesPage() {
   const handleDelete = async () => {
     if (!valueToDelete) return;
 
+    setIsDeleting(true);
     try {
       await api.values.delete(valueToDelete.id);
+      toast({
+        title: 'Value deleted',
+        description: 'Your value has been successfully deleted.',
+      });
       setValueToDelete(null);
       setRefresh((prev) => prev + 1);
-    } catch (err) {
-      console.error('Error deleting value:', err);
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error deleting value',
+        description: err.message || 'Failed to delete value. Please try again.',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -148,12 +162,13 @@ export default function ValuesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Delete
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

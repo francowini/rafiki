@@ -1,4 +1,4 @@
-import { Facet } from './types';
+import { Facet, FACETS } from './types';
 
 export interface FacetConfig {
   label: string;
@@ -89,8 +89,8 @@ export function getFacetConfig(facet: Facet): FacetConfig {
 /**
  * Get all facets as array
  */
-export function getAllFacets(): Facet[] {
-  return Object.keys(FACET_CONFIG) as Facet[];
+export function getAllFacets(): readonly Facet[] {
+  return FACETS;
 }
 
 /**

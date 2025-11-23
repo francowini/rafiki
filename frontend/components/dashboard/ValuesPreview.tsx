@@ -5,13 +5,15 @@ import { api } from '@/lib/api';
 import { Value } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getFacetConfig } from '@/lib/value-utils';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export function ValuesPreview() {
   const [values, setValues] = useState<Value[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchValues = async () => {
@@ -19,8 +21,9 @@ export function ValuesPreview() {
         const response = await api.values.getAll();
         // Show top 3 values
         setValues(response.items.slice(0, 3));
-      } catch (err) {
-        console.error('Failed to load values preview:', err);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load values preview');
       } finally {
         setIsLoading(false);
       }
@@ -29,7 +32,38 @@ export function ValuesPreview() {
     fetchValues();
   }, []);
 
-  if (isLoading || values.length === 0) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Your Core Values</CardTitle>
+          <CardDescription>What matters most to you</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-rose-600" />
+          <span className="ml-2 text-sm text-muted-foreground">Loading values...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Your Core Values</CardTitle>
+          <CardDescription>What matters most to you</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (values.length === 0) {
     return null;
   }
 

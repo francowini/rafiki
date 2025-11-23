@@ -32,7 +32,7 @@ export function ValueList({
       try {
         const response = await api.values.getAll();
         // Sort by displayOrder (already sorted by backend, but double-check)
-        const sortedValues = response.items.sort((a, b) => a.displayOrder - b.displayOrder);
+        const sortedValues = [...response.items].sort((a, b) => a.displayOrder - b.displayOrder);
         setValues(sortedValues);
 
         // Notify parent of values count

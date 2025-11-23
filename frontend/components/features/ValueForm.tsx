@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { api } from '@/lib/api';
-import { NewValue, Value, Facet } from '@/lib/types';
+import { NewValue, Value, Facet, FACETS } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -24,17 +24,8 @@ const valueSchema = z.object({
     .string()
     .min(3, 'Value must be at least 3 characters')
     .max(200, 'Value must be less than 200 characters'),
-  facet: z.enum([
-    'health',
-    'relationships',
-    'career',
-    'personal_growth',
-    'family',
-    'creativity',
-    'community',
-    'spirituality',
-  ] as const),
-  displayOrder: z.number().min(1).max(10),
+  facet: z.enum(FACETS),
+  displayOrder: z.number().int().min(1).max(10),
 });
 
 type ValueFormData = z.infer<typeof valueSchema>;
@@ -52,7 +43,9 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
   const isEditMode = !!value;
 
   // Calculate next display order
-  const nextDisplayOrder = isEditMode ? value.displayOrder : existingValuesCount + 1;
+  const nextDisplayOrder = isEditMode
+    ? (value?.displayOrder ?? existingValuesCount + 1)
+    : existingValuesCount + 1;
 
   const {
     register,
@@ -71,11 +64,12 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
 
   // Reset form when value changes (edit mode)
   useEffect(() => {
+    setError(null);
     if (value) {
       reset({
         content: value.content,
         facet: value.facet,
-        displayOrder: value.displayOrder,
+        displayOrder: value?.displayOrder ?? nextDisplayOrder,
       });
     } else {
       reset({
@@ -170,7 +164,7 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
           Life area
         </Label>
         <Select value={selectedFacet} onValueChange={(value) => setValue('facet', value as Facet)}>
-          <SelectTrigger>
+          <SelectTrigger id="facet">
             <SelectValue placeholder="Select a life area" />
           </SelectTrigger>
           <SelectContent>
