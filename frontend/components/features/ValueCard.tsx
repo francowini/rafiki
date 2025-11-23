@@ -18,12 +18,24 @@ export function ValueCard({ value, rank, onEdit, onDelete }: ValueCardProps) {
   const facetConfig = getFacetConfig(value.facet);
   const isTopValue = rank === 1;
 
+  // Gradient backgrounds based on facet
+  const gradientMap: Record<string, string> = {
+    health: 'bg-gradient-to-br from-emerald-50 to-white',
+    relationships: 'bg-gradient-to-br from-blue-50 to-white',
+    career: 'bg-gradient-to-br from-amber-50 to-white',
+    personal_growth: 'bg-gradient-to-br from-purple-50 to-white',
+    family: 'bg-gradient-to-br from-pink-50 to-white',
+    creativity: 'bg-gradient-to-br from-orange-50 to-white',
+    community: 'bg-gradient-to-br from-green-50 to-white',
+    spirituality: 'bg-gradient-to-br from-indigo-50 to-white',
+  };
+
+  const gradientClass = gradientMap[value.facet] || 'bg-white';
+
   return (
     <Card
-      className={`transition-all hover:shadow-md ${
-        isTopValue
-          ? 'ring-2 ring-rose-500 bg-gradient-to-br from-rose-50 to-white'
-          : 'hover:border-rose-200'
+      className={`transition-all hover:shadow-md ${gradientClass} ${
+        isTopValue ? 'ring-2 ring-rose-500' : 'hover:border-rose-200'
       }`}
     >
       <CardHeader className="pb-3">
