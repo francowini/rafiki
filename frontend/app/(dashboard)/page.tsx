@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth-context';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { QuickStatsCard } from '@/components/dashboard/QuickStatsCard';
 import { FeatureCard } from '@/components/dashboard/FeatureCard';
+import { ValuesPreview } from '@/components/dashboard/ValuesPreview';
 import { Brain, Target, Heart, Compass, Activity, Clock } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -48,6 +49,9 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Values Preview Section */}
+      <ValuesPreview />
+
       {/* Feature Navigation Section */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Journey</h2>
@@ -66,7 +70,7 @@ export default function DashboardPage() {
             icon={Heart}
             href="/values"
             color="red"
-            available={false}
+            available
           />
           <FeatureCard
             title="Goals"

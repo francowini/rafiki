@@ -80,8 +80,8 @@ export function MomentList({
         <div className="mx-auto max-w-md space-y-4">
           <h3 className="text-lg font-medium text-muted-foreground">No moments recorded</h3>
           <p className="text-sm text-muted-foreground">
-            When you're ready, this space is here for you. Record your difficult moments to better
-            understand them and find patterns.
+            When you&apos;re ready, this space is here for you. Record your difficult moments to
+            better understand them and find patterns.
           </p>
         </div>
       </div>
