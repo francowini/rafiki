@@ -1,0 +1,49 @@
+meta {
+  name: Filter Values by Facet
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{base-url}}/v1/values?facet=personal_growth
+  body: none
+  auth: bearer
+}
+
+params:query {
+  facet: personal_growth
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return only personal_growth values", function() {
+    const data = res.getBody();
+    expect(data.items).to.be.an("array");
+    data.items.forEach(item => {
+      expect(item.facet).to.equal("personal_growth");
+    });
+  });
+}
+
+docs {
+  # Filter Values by Facet
+
+  Returns only values matching the specified facet.
+
+  ## Available Facets
+  - health
+  - relationships
+  - career
+  - personal_growth
+  - family
+  - creativity
+  - community
+  - spirituality
+}

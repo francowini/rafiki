@@ -65,3 +65,34 @@ CREATE INDEX moments_intensity_idx ON moments(intensity);
 COMMENT ON TABLE moments IS 'Tracks emotional/difficult moments for psychological self-observation';
 COMMENT ON COLUMN moments.moment_date IS 'When the observed moment actually occurred (user can backdate)';
 COMMENT ON COLUMN moments.intensity IS 'Distress intensity on 0-10 scale';
+
+
+-- Version: 1.04
+-- Description: Create values table for personal values tracking
+
+-- Create values table
+CREATE TABLE values (
+    value_id       UUID        NOT NULL,
+    user_id        UUID        NOT NULL,
+    content        TEXT        NOT NULL,
+    facet          TEXT        NOT NULL,
+    display_order  INTEGER     NOT NULL CHECK (display_order BETWEEN 1 AND 10),
+    date_created   TIMESTAMP   NOT NULL,
+    date_updated   TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (value_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Performance indexes
+CREATE INDEX values_user_id_idx ON values(user_id);
+CREATE INDEX values_facet_idx ON values(facet);
+
+-- Unique constraint to prevent duplicate display_order per user
+CREATE UNIQUE INDEX values_user_order_unique_idx ON values(user_id, display_order);
+
+-- Documentation
+COMMENT ON TABLE values IS 'Stores user core personal values with life facet categorization (max 10 per user)';
+COMMENT ON COLUMN values.content IS 'Encrypted value statement (plaintext validated as 3-200 chars in business layer)';
+COMMENT ON COLUMN values.facet IS 'Life domain categorization based on ACT therapy';
+COMMENT ON COLUMN values.display_order IS 'User-controlled priority ranking (1=highest)';

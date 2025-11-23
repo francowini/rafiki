@@ -25,6 +25,8 @@ import (
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/domain/userbus/stores/userdb"
+	"github.com/francowini/rafiki/business/domain/valuebus"
+	"github.com/francowini/rafiki/business/domain/valuebus/stores/valuedb"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/migrate"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
@@ -210,6 +212,9 @@ func run(ctx context.Context, log *logger.Logger) error {
 	momentStore := momentdb.NewStore(log, db, encryptor)
 	momentBus := momentbus.NewBusiness(log, momentStore)
 
+	valueStore := valuedb.NewStore(log, db, encryptor)
+	valueBus := valuebus.NewBusiness(log, valueStore)
+
 	// -------------------------------------------------------------------------
 	// Initialize authentication support
 
@@ -296,6 +301,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 		BusConfig: mux.BusConfig{
 			ThinkBus:  thinkBus,
 			MomentBus: momentBus,
+			ValueBus:  valueBus,
 			UserBus:   userBus,
 			Auth:      authInstance,
 		},

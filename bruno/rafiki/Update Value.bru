@@ -1,0 +1,47 @@
+meta {
+  name: Update Value
+  type: http
+  seq: 13
+}
+
+put {
+  url: {{base-url}}/v1/values/{{value-id}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+body:json {
+  {
+    "content": "UPDATED: Live with complete integrity and authenticity",
+    "displayOrder": 1
+  }
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return updated value", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("id");
+    expect(data.content).to.include("UPDATED");
+  });
+}
+
+docs {
+  # Update Value
+
+  Updates an existing value. All fields are optional.
+
+  You can update:
+  - content (3-200 characters)
+  - facet
+  - displayOrder (1-10)
+
+  Only the owner can update their values.
+}

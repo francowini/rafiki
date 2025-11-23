@@ -14,6 +14,7 @@ import (
 	"github.com/francowini/rafiki/business/domain/momentbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/userbus"
+	"github.com/francowini/rafiki/business/domain/valuebus"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/web"
 )
@@ -54,6 +55,7 @@ func WithFileServer(react bool, static embed.FS, dir, path string) func(opts *Op
 type BusConfig struct {
 	ThinkBus  *thinkbus.Business
 	MomentBus *momentbus.Business
+	ValueBus  *valuebus.Business
 	UserBus   userbus.ExtBusiness
 	Auth      *auth.Auth
 }

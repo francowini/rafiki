@@ -6,6 +6,7 @@ import (
 	"github.com/francowini/rafiki/app/domain/checkapp"
 	"github.com/francowini/rafiki/app/domain/momentapp"
 	"github.com/francowini/rafiki/app/domain/thinkapp"
+	"github.com/francowini/rafiki/app/domain/valueapp"
 	"github.com/francowini/rafiki/app/sdk/mux"
 	"github.com/francowini/rafiki/foundation/web"
 )
@@ -40,5 +41,10 @@ func (add) Add(app *web.App, cfg mux.Config) {
 	momentapp.Routes(app, momentapp.Config{
 		MomentBus: cfg.BusConfig.MomentBus,
 		Auth:      cfg.BusConfig.Auth,
+	})
+
+	valueapp.Routes(app, valueapp.Config{
+		ValueBus: cfg.BusConfig.ValueBus,
+		Auth:     cfg.BusConfig.Auth,
 	})
 }

@@ -1,0 +1,47 @@
+meta {
+  name: Get All Values
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{base-url}}/v1/values
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  rows: 10
+  orderBy: display_order,ASC
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return paginated results", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("items");
+    expect(data).to.have.property("total");
+    expect(data).to.have.property("page");
+    expect(data.items).to.be.an("array");
+  });
+}
+
+docs {
+  # Get All Values
+
+  Returns all values for the authenticated user, ordered by display_order.
+
+  ## Query Parameters
+  - page: Page number (default: 1)
+  - rows: Items per page (default: 10)
+  - orderBy: Sort field and direction (e.g., display_order,ASC)
+  - facet: Filter by facet (optional)
+}
