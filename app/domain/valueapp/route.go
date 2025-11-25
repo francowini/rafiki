@@ -11,7 +11,7 @@ import (
 
 // Config contains all dependencies needed for route setup.
 type Config struct {
-	ValueBus *valuebus.Business
+	ValueBus valuebus.ExtBusiness
 	Auth     *auth.Auth
 }
 

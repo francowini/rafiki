@@ -55,7 +55,7 @@ func WithFileServer(react bool, static embed.FS, dir, path string) func(opts *Op
 type BusConfig struct {
 	ThinkBus  *thinkbus.Business
 	MomentBus *momentbus.Business
-	ValueBus  *valuebus.Business
+	ValueBus  valuebus.ExtBusiness
 	UserBus   userbus.ExtBusiness
 	Auth      *auth.Auth
 }

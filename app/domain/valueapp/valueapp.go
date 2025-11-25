@@ -18,10 +18,10 @@ import (
 )
 
 type app struct {
-	valueBus *valuebus.Business
+	valueBus valuebus.ExtBusiness
 }
 
-func newApp(valueBus *valuebus.Business) *app {
+func newApp(valueBus valuebus.ExtBusiness) *app {
 	return &app{
 		valueBus: valueBus,
 	}
@@ -50,6 +50,9 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		}
 		if errors.Is(err, valuebus.ErrDuplicateOrder) {
 			return errs.New(errs.InvalidArgument, err)
+		}
+		if errors.Is(err, valuebus.ErrUserDisabled) {
+			return errs.New(errs.PermissionDenied, err)
 		}
 		return errs.Newf(errs.Internal, "create: userID[%s]: %s", nv.UserID, err)
 	}
@@ -157,9 +160,7 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	filter := valuebus.QueryFilter{
-		UserID:  &userID,
-		Page:    pg,
-		OrderBy: orderBy,
+		UserID: &userID,
 	}
 
 	// Filter by facet if provided
@@ -171,7 +172,7 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 		filter.Facet = &facetVal
 	}
 
-	values, err := a.valueBus.Query(ctx, filter)
+	values, err := a.valueBus.Query(ctx, filter, orderBy, pg)
 	if err != nil {
 		return errs.Newf(errs.Internal, "query: %s", err)
 	}

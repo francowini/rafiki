@@ -18,6 +18,7 @@ var (
 	ErrMaxValues      = errors.New("maximum 10 values allowed per user")
 	ErrDuplicateOrder = errors.New("display order already exists for this user")
 	ErrMissingUserID  = errors.New("userID is required for querying values")
+	ErrUserDisabled   = errors.New("user disabled")
 )
 
 // Value represents a personal value with facet categorization.

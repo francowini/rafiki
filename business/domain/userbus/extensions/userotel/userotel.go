@@ -60,6 +60,14 @@ func (ext *Extension) Update(ctx context.Context, actorID uuid.UUID, usr userbus
 	return usr, nil
 }
 
+// Delete applies otel to the user delete process.
+func (ext *Extension) Delete(ctx context.Context, usr userbus.User) error {
+	ctx, span := otel.AddSpan(ctx, "business.userbus.delete")
+	defer span.End()
+
+	return ext.bus.Delete(ctx, usr)
+}
+
 // Query applies otel to the user query process.
 func (ext *Extension) Query(ctx context.Context, filter userbus.QueryFilter, orderBy order.By, page page.Page) ([]userbus.User, error) {
 	ctx, span := otel.AddSpan(ctx, "business.userbus.query")
