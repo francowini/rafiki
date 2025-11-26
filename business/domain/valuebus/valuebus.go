@@ -134,17 +134,26 @@ func (b *Business) Create(ctx context.Context, nv NewValue) (Value, error) {
 		return Value{}, ErrUserDisabled
 	}
 
-	// Enforce 10 values max per user
-	filter := QueryFilter{
-		UserID: &nv.UserID,
-	}
-	count, err := b.storer.Count(ctx, filter)
+	// Get all values for this user to check count and duplicate display_order
+	filter := QueryFilter{UserID: &nv.UserID}
+	orderBy := order.By{Field: OrderByDisplayOrder, Direction: order.ASC}
+	pg := page.MustParse("1", fmt.Sprintf("%d", MaxValuesPerUser))
+
+	existingValues, err := b.storer.Query(ctx, filter, orderBy, pg)
 	if err != nil {
-		return Value{}, fmt.Errorf("count: %w", err)
+		return Value{}, fmt.Errorf("query existing values: %w", err)
 	}
 
-	if count >= MaxValuesPerUser {
+	// Enforce max values per user
+	if len(existingValues) >= MaxValuesPerUser {
 		return Value{}, ErrMaxValues
+	}
+
+	// Check for duplicate display_order (constraint removed from DB, enforced here)
+	for _, existing := range existingValues {
+		if existing.DisplayOrder.Value() == nv.DisplayOrder.Value() {
+			return Value{}, ErrDuplicateOrder
+		}
 	}
 
 	now := time.Now()
@@ -177,7 +186,31 @@ func (b *Business) Update(ctx context.Context, value Value, uv UpdateValue) (Val
 	}
 
 	if uv.DisplayOrder != nil {
-		value.DisplayOrder = *uv.DisplayOrder
+		newOrder := *uv.DisplayOrder
+
+		// Check for duplicate display_order if changing (constraint removed from DB, enforced here)
+		if newOrder.Value() != value.DisplayOrder.Value() {
+			filter := QueryFilter{UserID: &value.UserID}
+			orderBy := order.By{Field: OrderByDisplayOrder, Direction: order.ASC}
+			pg := page.MustParse("1", fmt.Sprintf("%d", MaxValuesPerUser))
+
+			existingValues, err := b.storer.Query(ctx, filter, orderBy, pg)
+			if err != nil {
+				return Value{}, fmt.Errorf("query existing values: %w", err)
+			}
+
+			for _, existing := range existingValues {
+				// Skip self - we're allowed to keep our own display_order
+				if existing.ID == value.ID {
+					continue
+				}
+				if existing.DisplayOrder.Value() == newOrder.Value() {
+					return Value{}, ErrDuplicateOrder
+				}
+			}
+		}
+
+		value.DisplayOrder = newOrder
 	}
 
 	value.DateUpdated = time.Now()
