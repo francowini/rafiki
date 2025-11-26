@@ -101,6 +101,17 @@ COMMENT ON COLUMN values.display_order IS 'User-controlled priority ranking (1=h
 -- Version: 1.05
 -- Description: Remove unique constraint on display_order to allow atomic reordering
 
--- Drop the unique index that prevents atomic batch reordering
--- The display_order validation (1-10 range, no duplicates in final state) is enforced in the business layer
+-- Drop the unique index that prevents atomic batch reordering within a transaction.
+--
+-- Trade-off: DB no longer enforces unique (user_id, display_order), so:
+-- 1. Business layer validates display_order range (1-10) via displayorder.Parse
+-- 2. Business layer validates no duplicate orders in final state via request validation
+-- 3. Reorder API validates duplicate orders in request payload
+-- 4. Concurrent reorder requests for same user could theoretically race, but:
+--    - Each reorder is transactional (all-or-nothing)
+--    - Conflicts would result in one transaction failing, not corrupt data
+--    - UI shows optimistic update and refreshes on error
+--
+-- This enables atomic batch reordering where swapping positions (e.g., 1↔2)
+-- would otherwise violate the unique constraint during the intermediate state.
 DROP INDEX IF EXISTS values_user_order_unique_idx;

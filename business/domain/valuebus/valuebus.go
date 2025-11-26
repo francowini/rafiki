@@ -53,6 +53,7 @@ type Business struct {
 	userBus    userbus.ExtBusiness
 	delegate   *delegate.Delegate
 	storer     Storer
+	beginner   sqldb.Beginner
 	extensions []Extension
 }
 
@@ -62,6 +63,7 @@ func NewBusiness(
 	userBus userbus.ExtBusiness,
 	dlg *delegate.Delegate,
 	storer Storer,
+	beginner sqldb.Beginner,
 	extensions ...Extension,
 ) ExtBusiness {
 	b := &Business{
@@ -69,6 +71,7 @@ func NewBusiness(
 		userBus:    userBus,
 		delegate:   dlg,
 		storer:     storer,
+		beginner:   beginner,
 		extensions: extensions,
 	}
 
@@ -112,6 +115,7 @@ func (b *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 		userBus:    userBus,
 		delegate:   b.delegate,
 		storer:     storer,
+		beginner:   b.beginner,
 		extensions: b.extensions,
 	}
 
@@ -139,7 +143,7 @@ func (b *Business) Create(ctx context.Context, nv NewValue) (Value, error) {
 		return Value{}, fmt.Errorf("count: %w", err)
 	}
 
-	if count >= 10 {
+	if count >= MaxValuesPerUser {
 		return Value{}, ErrMaxValues
 	}
 
@@ -234,7 +238,7 @@ func (b *Business) Count(ctx context.Context, filter QueryFilter) (int, error) {
 	return count, nil
 }
 
-// Reorder atomically updates display order for multiple values.
+// Reorder atomically updates display order for multiple values within a transaction.
 // Invalid/non-existent value IDs are silently ignored.
 // Returns updated values sorted by display order.
 func (b *Business) Reorder(ctx context.Context, userID uuid.UUID, rr ReorderRequest) ([]Value, error) {
@@ -251,7 +255,7 @@ func (b *Business) Reorder(ctx context.Context, userID uuid.UUID, rr ReorderRequ
 	// Get current values for the user
 	filter := QueryFilter{UserID: &userID}
 	orderBy := order.By{Field: OrderByDisplayOrder, Direction: order.ASC}
-	pg := page.MustParse("1", "10")
+	pg := page.MustParse("1", fmt.Sprintf("%d", MaxValuesPerUser))
 
 	currentValues, err := b.storer.Query(ctx, filter, orderBy, pg)
 	if err != nil {
@@ -280,15 +284,39 @@ func (b *Business) Reorder(ctx context.Context, userID uuid.UUID, rr ReorderRequ
 		return currentValues, nil
 	}
 
-	// Atomic batch update
-	if err := b.storer.BatchUpdate(ctx, valuesToUpdate); err != nil {
-		if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
-			return nil, ErrDuplicateOrder
+	// Begin transaction for atomic batch update
+	tx, err := b.beginner.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+
+	// Ensure transaction is rolled back on error
+	committed := false
+	defer func() {
+		if !committed {
+			//nolint:errcheck // Rollback error cannot be handled in defer after earlier error
+			tx.Rollback()
 		}
+	}()
+
+	// Create transaction-bound storer
+	txStorer, err := b.storer.NewWithTx(tx)
+	if err != nil {
+		return nil, fmt.Errorf("new tx storer: %w", err)
+	}
+
+	// Atomic batch update within transaction
+	if err := txStorer.BatchUpdate(ctx, valuesToUpdate); err != nil {
 		return nil, fmt.Errorf("batch update: %w", err)
 	}
 
-	// Return updated values
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit transaction: %w", err)
+	}
+	committed = true
+
+	// Return updated values (query outside transaction)
 	updatedValues, err := b.storer.Query(ctx, filter, orderBy, pg)
 	if err != nil {
 		return nil, fmt.Errorf("query updated values: %w", err)

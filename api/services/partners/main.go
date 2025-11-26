@@ -225,7 +225,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	// Create child domains with parent injection
 	valueStore := valuedb.NewStore(log, db, encryptor)
-	valueBus := valuebus.NewBusiness(log, userBus, dlg, valueStore)
+	valueBeginner := sqldb.NewBeginner(db)
+	valueBus := valuebus.NewBusiness(log, userBus, dlg, valueStore, valueBeginner)
 
 	// -------------------------------------------------------------------------
 	// Initialize authentication support

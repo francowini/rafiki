@@ -209,24 +209,42 @@ func (rr ReorderRequest) Validate() error {
 }
 
 // toBusReorderRequest converts app layer to business domain type.
+// Collects all validation errors instead of failing on first error.
 func toBusReorderRequest(appReorder ReorderRequest) (valuebus.ReorderRequest, error) {
-	items := make([]valuebus.ReorderItem, len(appReorder.Items))
+	var fieldErrors errs.FieldErrors
+	items := make([]valuebus.ReorderItem, 0, len(appReorder.Items))
 
 	for i, item := range appReorder.Items {
-		valueID, err := uuid.Parse(item.ID)
+		var valueID uuid.UUID
+		var displayOrderVal displayorder.DisplayOrder
+		itemValid := true
+
+		id, err := uuid.Parse(item.ID)
 		if err != nil {
-			return valuebus.ReorderRequest{}, fmt.Errorf("parse value id: %w", err)
+			fieldErrors.Add(fmt.Sprintf("items[%d].id", i), err)
+			itemValid = false
+		} else {
+			valueID = id
 		}
 
-		displayOrderVal, err := displayorder.Parse(item.DisplayOrder)
+		order, err := displayorder.Parse(item.DisplayOrder)
 		if err != nil {
-			return valuebus.ReorderRequest{}, fmt.Errorf("parse display order: %w", err)
+			fieldErrors.Add(fmt.Sprintf("items[%d].displayOrder", i), err)
+			itemValid = false
+		} else {
+			displayOrderVal = order
 		}
 
-		items[i] = valuebus.ReorderItem{
-			ID:           valueID,
-			DisplayOrder: displayOrderVal,
+		if itemValid {
+			items = append(items, valuebus.ReorderItem{
+				ID:           valueID,
+				DisplayOrder: displayOrderVal,
+			})
 		}
+	}
+
+	if len(fieldErrors) > 0 {
+		return valuebus.ReorderRequest{}, fmt.Errorf("validate: %w", fieldErrors.ToError())
 	}
 
 	return valuebus.ReorderRequest{Items: items}, nil
