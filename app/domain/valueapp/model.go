@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/app/sdk/errs"
 	"github.com/francowini/rafiki/app/sdk/mid"
 	"github.com/francowini/rafiki/business/domain/valuebus"
@@ -168,4 +170,64 @@ func toBusUpdateValue(uv UpdateValue) (valuebus.UpdateValue, error) {
 	}
 
 	return bus, nil
+}
+
+// ===== Reorder types =====
+
+// ReorderRequest represents a batch reorder request.
+type ReorderRequest struct {
+	Items []ReorderItem `json:"items" validate:"required,min=1,max=10,dive"`
+}
+
+// ReorderItem represents a single item to be reordered.
+type ReorderItem struct {
+	ID           string `json:"id" validate:"required,uuid"`
+	DisplayOrder int    `json:"displayOrder" validate:"required,min=1,max=10"`
+}
+
+// Decode implements the decoder interface.
+func (rr *ReorderRequest) Decode(data []byte) error {
+	return json.Unmarshal(data, rr)
+}
+
+// Validate checks the data for correctness.
+func (rr ReorderRequest) Validate() error {
+	if err := errs.Check(rr); err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
+
+	// Check for duplicate displayOrders in request
+	seen := make(map[int]bool)
+	for _, item := range rr.Items {
+		if seen[item.DisplayOrder] {
+			return fmt.Errorf("duplicate displayOrder: %d", item.DisplayOrder)
+		}
+		seen[item.DisplayOrder] = true
+	}
+
+	return nil
+}
+
+// toBusReorderRequest converts app layer to business domain type.
+func toBusReorderRequest(appReorder ReorderRequest) (valuebus.ReorderRequest, error) {
+	items := make([]valuebus.ReorderItem, len(appReorder.Items))
+
+	for i, item := range appReorder.Items {
+		valueID, err := uuid.Parse(item.ID)
+		if err != nil {
+			return valuebus.ReorderRequest{}, fmt.Errorf("parse value id: %w", err)
+		}
+
+		displayOrderVal, err := displayorder.Parse(item.DisplayOrder)
+		if err != nil {
+			return valuebus.ReorderRequest{}, fmt.Errorf("parse display order: %w", err)
+		}
+
+		items[i] = valuebus.ReorderItem{
+			ID:           valueID,
+			DisplayOrder: displayOrderVal,
+		}
+	}
+
+	return valuebus.ReorderRequest{Items: items}, nil
 }

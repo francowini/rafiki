@@ -47,3 +47,14 @@ type UpdateValue struct {
 	Facet        *facet.Facet
 	DisplayOrder *displayorder.DisplayOrder
 }
+
+// ReorderItem represents a value ID with its new display order.
+type ReorderItem struct {
+	ID           uuid.UUID
+	DisplayOrder displayorder.DisplayOrder
+}
+
+// ReorderRequest contains items to be reordered.
+type ReorderRequest struct {
+	Items []ReorderItem
+}

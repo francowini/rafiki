@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -132,6 +133,42 @@ func (s *Store) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
 
 	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
 		return fmt.Errorf("namedexeccontext: %w", err)
+	}
+
+	return nil
+}
+
+// BatchUpdate updates multiple values atomically.
+// All updates happen within the caller's transaction context.
+func (s *Store) BatchUpdate(ctx context.Context, values []valuebus.Value) error {
+	if len(values) == 0 {
+		return nil
+	}
+
+	const q = `
+	UPDATE values SET
+		display_order = :display_order,
+		date_updated = :date_updated
+	WHERE
+		value_id = :value_id`
+
+	for _, value := range values {
+		data := struct {
+			ValueID      string    `db:"value_id"`
+			DisplayOrder int       `db:"display_order"`
+			DateUpdated  time.Time `db:"date_updated"`
+		}{
+			ValueID:      value.ID.String(),
+			DisplayOrder: value.DisplayOrder.Value(),
+			DateUpdated:  value.DateUpdated.UTC(),
+		}
+
+		if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
+			if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
+				return valuebus.ErrDuplicateOrder
+			}
+			return fmt.Errorf("namedexeccontext: %w", err)
+		}
 	}
 
 	return nil

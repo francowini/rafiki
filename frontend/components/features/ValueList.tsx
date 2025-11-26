@@ -49,30 +49,30 @@ export function ValueList({
     }),
   );
 
+  // Fetch values from server
+  const fetchValues = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await api.values.getAll();
+      const sortedValues = [...response.items].sort((a, b) => a.displayOrder - b.displayOrder);
+      setValues(sortedValues);
+      onValuesCountChange?.(sortedValues.length);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load values';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onValuesCountChange]);
+
+  // Initial fetch + refetch on refresh trigger
   useEffect(() => {
-    const fetchValues = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await api.values.getAll();
-        const sortedValues = [...response.items].sort(
-          (a, b) => a.displayOrder - b.displayOrder,
-        );
-        setValues(sortedValues);
-        onValuesCountChange?.(sortedValues.length);
-      } catch (err: unknown) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to load values';
-        setError(errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchValues();
-  }, [refresh, onValuesCountChange]);
+  }, [refresh, fetchValues]);
 
+  // Handle drag end - reorder values
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
@@ -84,10 +84,10 @@ export function ValueList({
 
       if (oldIndex === -1 || newIndex === -1) return;
 
-      // Keep original for rollback
+      // Keep original for comparison
       const originalValues = [...values];
 
-      // Optimistic update
+      // Optimistic update - show new order immediately
       const newValues = arrayMove(values, oldIndex, newIndex);
       const updatedValues = newValues.map((value, index) => ({
         ...value,
@@ -95,18 +95,16 @@ export function ValueList({
       }));
       setValues(updatedValues);
 
-      // Save to backend (pass both original and new arrays)
-      const rollbackValues = await handleValueReorder(
-        originalValues,
-        updatedValues,
-      );
+      // Save to backend
+      const result = await handleValueReorder(originalValues, updatedValues);
 
-      // Rollback if error
-      if (rollbackValues) {
-        setValues(rollbackValues);
+      // If result is 'refresh', auto-refresh from server
+      if (result === 'refresh') {
+        await fetchValues();
       }
+      // If result is null, save was successful - keep optimistic update
     },
-    [values, handleValueReorder],
+    [values, handleValueReorder, fetchValues],
   );
 
   if (isLoading) {
@@ -133,47 +131,27 @@ export function ValueList({
   });
 
   return (
-    <div className="relative">
-      {/* Loading overlay during save */}
-      {isUpdating && (
-        <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-50 rounded-lg">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-6 w-6 animate-spin text-rose-600" />
-            <p className="text-sm text-muted-foreground">Saving order...</p>
-          </div>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={values.map((v) => v.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-3">
+          {slots.map(({ slotNumber, value }) => {
+            if (!value) {
+              return <EmptySlot key={`empty-${slotNumber}`} slotNumber={slotNumber} />;
+            }
+
+            return (
+              <ValueDragItem
+                key={value.id}
+                value={value}
+                rank={slotNumber}
+                onEdit={onValueEdit}
+                onDelete={onValueDelete}
+                isDisabled={isUpdating}
+              />
+            );
+          })}
         </div>
-      )}
-
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={values.map((v) => v.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-3">
-            {slots.map(({ slotNumber, value }) => {
-              if (!value) {
-                return (
-                  <EmptySlot key={`empty-${slotNumber}`} slotNumber={slotNumber} />
-                );
-              }
-
-              return (
-                <ValueDragItem
-                  key={value.id}
-                  value={value}
-                  rank={slotNumber}
-                  onEdit={onValueEdit}
-                  onDelete={onValueDelete}
-                />
-              );
-            })}
-          </div>
-        </SortableContext>
-      </DndContext>
-    </div>
+      </SortableContext>
+    </DndContext>
   );
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/displayorder"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
@@ -23,6 +24,7 @@ type Storer interface {
 	Update(ctx context.Context, value Value) error
 	Delete(ctx context.Context, value Value) error
 	DeleteByUserID(ctx context.Context, userID uuid.UUID) error
+	BatchUpdate(ctx context.Context, values []Value) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Value, error)
 	QueryByID(ctx context.Context, valueID uuid.UUID) (Value, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
@@ -35,6 +37,7 @@ type ExtBusiness interface {
 	Create(ctx context.Context, nv NewValue) (Value, error)
 	Update(ctx context.Context, value Value, uv UpdateValue) (Value, error)
 	Delete(ctx context.Context, value Value) error
+	Reorder(ctx context.Context, userID uuid.UUID, rr ReorderRequest) ([]Value, error)
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Value, error)
 	QueryByID(ctx context.Context, valueID uuid.UUID) (Value, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
@@ -229,4 +232,67 @@ func (b *Business) Count(ctx context.Context, filter QueryFilter) (int, error) {
 	}
 
 	return count, nil
+}
+
+// Reorder atomically updates display order for multiple values.
+// Invalid/non-existent value IDs are silently ignored.
+// Returns updated values sorted by display order.
+func (b *Business) Reorder(ctx context.Context, userID uuid.UUID, rr ReorderRequest) ([]Value, error) {
+	// Validate parent user exists and is enabled
+	usr, err := b.userBus.QueryByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("user.querybyid: %s: %w", userID, err)
+	}
+
+	if !usr.Enabled {
+		return nil, ErrUserDisabled
+	}
+
+	// Get current values for the user
+	filter := QueryFilter{UserID: &userID}
+	orderBy := order.By{Field: OrderByDisplayOrder, Direction: order.ASC}
+	pg := page.MustParse("1", "10")
+
+	currentValues, err := b.storer.Query(ctx, filter, orderBy, pg)
+	if err != nil {
+		return nil, fmt.Errorf("query current values: %w", err)
+	}
+
+	// Build update map from request
+	updateMap := make(map[string]displayorder.DisplayOrder)
+	for _, item := range rr.Items {
+		updateMap[item.ID.String()] = item.DisplayOrder
+	}
+
+	// Prepare values to update (only user's values that are in request)
+	now := time.Now()
+	valuesToUpdate := make([]Value, 0, len(currentValues))
+	for _, current := range currentValues {
+		if newOrder, found := updateMap[current.ID.String()]; found {
+			current.DisplayOrder = newOrder
+			current.DateUpdated = now
+			valuesToUpdate = append(valuesToUpdate, current)
+		}
+	}
+
+	// Silent ignore: if no matching values, return current state
+	if len(valuesToUpdate) == 0 {
+		return currentValues, nil
+	}
+
+	// Atomic batch update
+	if err := b.storer.BatchUpdate(ctx, valuesToUpdate); err != nil {
+		if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
+			return nil, ErrDuplicateOrder
+		}
+		return nil, fmt.Errorf("batch update: %w", err)
+	}
+
+	// Return updated values
+	updatedValues, err := b.storer.Query(ctx, filter, orderBy, pg)
+	if err != nil {
+		return nil, fmt.Errorf("query updated values: %w", err)
+	}
+
+	return updatedValues, nil
 }
