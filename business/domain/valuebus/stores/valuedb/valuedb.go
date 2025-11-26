@@ -164,9 +164,6 @@ func (s *Store) BatchUpdate(ctx context.Context, values []valuebus.Value) error 
 		}
 
 		if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
-			if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
-				return valuebus.ErrDuplicateOrder
-			}
 			return fmt.Errorf("namedexeccontext: %w", err)
 		}
 	}

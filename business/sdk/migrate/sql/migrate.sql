@@ -96,3 +96,11 @@ COMMENT ON TABLE values IS 'Stores user core personal values with life facet cat
 COMMENT ON COLUMN values.content IS 'Encrypted value statement (plaintext validated as 3-200 chars in business layer)';
 COMMENT ON COLUMN values.facet IS 'Life domain categorization based on ACT therapy';
 COMMENT ON COLUMN values.display_order IS 'User-controlled priority ranking (1=highest)';
+
+
+-- Version: 1.05
+-- Description: Remove unique constraint on display_order to allow atomic reordering
+
+-- Drop the unique index that prevents atomic batch reordering
+-- The display_order validation (1-10 range, no duplicates in final state) is enforced in the business layer
+DROP INDEX IF EXISTS values_user_order_unique_idx;
