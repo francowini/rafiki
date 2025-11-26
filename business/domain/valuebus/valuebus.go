@@ -295,9 +295,16 @@ func (b *Business) Reorder(ctx context.Context, userID uuid.UUID, rr ReorderRequ
 		return nil, fmt.Errorf("query current values: %w", err)
 	}
 
-	// Build update map from request
+	// Build update map from request and validate no duplicate display_orders in request
 	updateMap := make(map[string]displayorder.DisplayOrder)
+	seenOrders := make(map[int]string) // order -> first ID that claimed it
 	for _, item := range rr.Items {
+		orderVal := item.DisplayOrder.Value()
+		if existingID, exists := seenOrders[orderVal]; exists && existingID != item.ID.String() {
+			// Two different IDs want the same display_order
+			return nil, ErrDuplicateOrder
+		}
+		seenOrders[orderVal] = item.ID.String()
 		updateMap[item.ID.String()] = item.DisplayOrder
 	}
 
@@ -315,6 +322,24 @@ func (b *Business) Reorder(ctx context.Context, userID uuid.UUID, rr ReorderRequ
 	// Silent ignore: if no matching values, return current state
 	if len(valuesToUpdate) == 0 {
 		return currentValues, nil
+	}
+
+	// Validate final state: no duplicate display_orders after applying updates
+	// Build map of final display_orders (updated values + unchanged values)
+	finalOrders := make(map[int]uuid.UUID) // order -> value ID
+	for _, current := range currentValues {
+		var finalOrder int
+		if newOrder, isUpdated := updateMap[current.ID.String()]; isUpdated {
+			finalOrder = newOrder.Value()
+		} else {
+			finalOrder = current.DisplayOrder.Value()
+		}
+
+		if existingID, exists := finalOrders[finalOrder]; exists && existingID != current.ID {
+			// Two different values would end up with the same display_order
+			return nil, ErrDuplicateOrder
+		}
+		finalOrders[finalOrder] = current.ID
 	}
 
 	// Begin transaction for atomic batch update
