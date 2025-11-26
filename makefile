@@ -27,8 +27,9 @@ version:
 # Docker Compose - Local Development
 # ==============================================================================
 
+# up: Always rebuilds to ensure latest code is running
 up:
-	docker compose up -d
+	docker compose up -d --build --force-recreate
 
 down:
 	docker compose down
@@ -50,6 +51,17 @@ restart:
 
 ps:
 	docker compose ps
+
+# dev-status: Show what code version is running
+dev-status:
+	@echo "🔍 Container status:"
+	@docker compose ps
+	@echo ""
+	@echo "📅 Container created at:"
+	@docker inspect --format='{{.Created}}' $$(docker compose ps -q partner-service 2>/dev/null) 2>/dev/null || echo "Container not running"
+	@echo ""
+	@echo "🏷️  Current git commit:"
+	@git log --oneline -1
 
 # ==============================================================================
 # Health Check Commands
@@ -160,7 +172,7 @@ clean-all: clean
 # Help
 # ==============================================================================
 
-.PHONY: run help version up down logs logs-all build rebuild restart ps \
+.PHONY: run help version up down logs logs-all build rebuild restart ps dev-status \
         curl-ready curl-live health \
         deploy deploy-logs deploy-status deploy-health deploy-restart ssh \
         db-shell db-shell-prod create-user create-user-prod \
