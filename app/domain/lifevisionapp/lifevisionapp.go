@@ -38,7 +38,12 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.New(errs.InvalidArgument, err)
 	}
 
-	nlv, err := toBusNewLifeVision(appLifeVision)
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
+	nlv, err := toBusNewLifeVision(appLifeVision, userID)
 	if err != nil {
 		return errs.New(errs.InvalidArgument, err)
 	}
@@ -47,6 +52,9 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 	if err != nil {
 		if errors.Is(err, valuebus.ErrNotFound) {
 			return errs.New(errs.NotFound, errors.New("value not found"))
+		}
+		if errors.Is(err, lifevisionbus.ErrNotValueOwner) {
+			return errs.New(errs.PermissionDenied, errors.New("user does not own the specified value"))
 		}
 		return errs.Newf(errs.Internal, "create: valueID[%s]: %s", nlv.ValueID, err)
 	}

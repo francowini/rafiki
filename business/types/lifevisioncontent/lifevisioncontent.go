@@ -4,6 +4,7 @@ package lifevisioncontent
 import (
 	"errors"
 	"strings"
+	"unicode/utf8"
 )
 
 // LifeVisionContent represents validated life vision content (10-500 characters).
@@ -18,7 +19,12 @@ var (
 	ErrTooLong  = errors.New("life vision content must be at most 500 characters")
 )
 
-// String returns the string value of the content.
+// Value returns the string value of the life vision content.
+func (c LifeVisionContent) Value() string {
+	return c.value
+}
+
+// String returns the string representation.
 func (c LifeVisionContent) String() string {
 	return c.value
 }
@@ -52,11 +58,14 @@ func Parse(value string) (LifeVisionContent, error) {
 		return LifeVisionContent{}, ErrEmpty
 	}
 
-	if len(value) < 10 {
+	// Use rune count for proper UTF-8 character validation
+	runeCount := utf8.RuneCountInString(value)
+
+	if runeCount < 10 {
 		return LifeVisionContent{}, ErrTooShort
 	}
 
-	if len(value) > 500 {
+	if runeCount > 500 {
 		return LifeVisionContent{}, ErrTooLong
 	}
 

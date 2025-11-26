@@ -14,6 +14,7 @@ import (
 var (
 	ErrNotFound      = errors.New("life vision not found")
 	ErrMissingUserID = errors.New("userID is required for querying life visions")
+	ErrNotValueOwner = errors.New("user does not own the specified value")
 )
 
 // LifeVision represents an aspirational state of being.
@@ -28,6 +29,7 @@ type LifeVision struct {
 
 // NewLifeVision contains information needed to create a new life vision.
 type NewLifeVision struct {
+	UserID  uuid.UUID // Authenticated user (for ownership validation)
 	ValueID uuid.UUID
 	Content lifevisioncontent.LifeVisionContent
 }

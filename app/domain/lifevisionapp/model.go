@@ -87,7 +87,7 @@ func toAppLifeVisions(lvs []lifevisionbus.LifeVision) []LifeVision {
 
 // ===== App → Business conversions =====
 
-func toBusNewLifeVision(nlv NewLifeVision) (lifevisionbus.NewLifeVision, error) {
+func toBusNewLifeVision(nlv NewLifeVision, userID uuid.UUID) (lifevisionbus.NewLifeVision, error) {
 	var errors errs.FieldErrors
 
 	// Parse value ID
@@ -107,6 +107,7 @@ func toBusNewLifeVision(nlv NewLifeVision) (lifevisionbus.NewLifeVision, error) 
 	}
 
 	return lifevisionbus.NewLifeVision{
+		UserID:  userID,
 		ValueID: valueID,
 		Content: content,
 	}, nil

@@ -3,6 +3,7 @@ package lifevisiondb
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -219,13 +220,5 @@ func buildWhereClause(filter lifevisionbus.QueryFilter, data map[string]any) str
 		return ""
 	}
 
-	whereClause := " WHERE "
-	for i, condition := range conditions {
-		if i > 0 {
-			whereClause += " AND "
-		}
-		whereClause += condition
-	}
-
-	return whereClause
+	return " WHERE " + strings.Join(conditions, " AND ")
 }

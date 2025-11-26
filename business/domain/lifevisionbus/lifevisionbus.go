@@ -92,10 +92,15 @@ func (b *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 
 // Create adds a new life vision.
 func (b *Business) Create(ctx context.Context, nlv NewLifeVision) (LifeVision, error) {
-	// Validate parent value exists and get user ownership
+	// Validate parent value exists
 	value, err := b.valueBus.QueryByID(ctx, nlv.ValueID)
 	if err != nil {
 		return LifeVision{}, fmt.Errorf("value.querybyid: valueID[%s]: %w", nlv.ValueID, err)
+	}
+
+	// Security: Verify authenticated user owns the value
+	if value.UserID != nlv.UserID {
+		return LifeVision{}, ErrNotValueOwner
 	}
 
 	now := time.Now()
