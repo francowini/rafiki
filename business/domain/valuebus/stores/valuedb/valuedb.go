@@ -10,6 +10,8 @@ import (
 
 	"github.com/francowini/rafiki/business/domain/valuebus"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
+	"github.com/francowini/rafiki/business/sdk/order"
+	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
 )
@@ -28,6 +30,21 @@ func NewStore(log *logger.Logger, db *sqlx.DB, encryptor encrypt.Encryptor) *Sto
 		db:        db,
 		encryptor: encryptor,
 	}
+}
+
+// NewWithTx constructs a new Store value replacing the sqlx DB
+// value with a sqlx DB value that is currently inside a transaction.
+func (s *Store) NewWithTx(tx sqldb.CommitRollbacker) (valuebus.Storer, error) {
+	ec, err := sqldb.GetExtContext(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Store{
+		log:       s.log,
+		db:        ec,
+		encryptor: s.encryptor,
+	}, nil
 }
 
 // Create inserts a new value into the database.
@@ -101,8 +118,27 @@ func (s *Store) Delete(ctx context.Context, value valuebus.Value) error {
 	return nil
 }
 
+// DeleteByUserID removes all values for a specific user.
+func (s *Store) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
+	const q = `
+	DELETE FROM values
+	WHERE user_id = :user_id`
+
+	data := struct {
+		UserID string `db:"user_id"`
+	}{
+		UserID: userID.String(),
+	}
+
+	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
+		return fmt.Errorf("namedexeccontext: %w", err)
+	}
+
+	return nil
+}
+
 // Query retrieves values based on filter criteria.
-func (s *Store) Query(ctx context.Context, filter valuebus.QueryFilter) ([]valuebus.Value, error) {
+func (s *Store) Query(ctx context.Context, filter valuebus.QueryFilter, orderBy order.By, page page.Page) ([]valuebus.Value, error) {
 	// Security guard: Require UserID to prevent accidental full-table queries across all users.
 	// Values are personal and should always be scoped to a specific user.
 	if filter.UserID == nil {
@@ -110,12 +146,12 @@ func (s *Store) Query(ctx context.Context, filter valuebus.QueryFilter) ([]value
 	}
 
 	data := map[string]any{
-		"offset":        (filter.Page.Number() - 1) * filter.Page.RowsPerPage(),
-		"rows_per_page": filter.Page.RowsPerPage(),
+		"offset":        (page.Number() - 1) * page.RowsPerPage(),
+		"rows_per_page": page.RowsPerPage(),
 	}
 
 	whereClause := buildWhereClause(filter, data)
-	orderByClause, err := orderByClause(filter.OrderBy)
+	orderByClause, err := orderByClause(orderBy)
 	if err != nil {
 		return nil, err
 	}

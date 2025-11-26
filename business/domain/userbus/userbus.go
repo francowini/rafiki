@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/francowini/rafiki/business/sdk/delegate"
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
@@ -30,6 +31,7 @@ type Storer interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (Storer, error)
 	Create(ctx context.Context, usr User) error
 	Update(ctx context.Context, usr User) error
+	Delete(ctx context.Context, usr User) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]User, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, userID uuid.UUID) (User, error)
@@ -42,6 +44,7 @@ type ExtBusiness interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error)
 	Create(ctx context.Context, actorID uuid.UUID, nu NewUser) (User, error)
 	Update(ctx context.Context, actorID uuid.UUID, usr User, uu UpdateUser) (User, error)
+	Delete(ctx context.Context, usr User) error
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]User, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, userID uuid.UUID) (User, error)
@@ -55,15 +58,17 @@ type Extension func(ExtBusiness) ExtBusiness
 
 // Business manages the set of APIs for user access.
 type Business struct {
-	log    *logger.Logger
-	storer Storer
+	log      *logger.Logger
+	delegate *delegate.Delegate
+	storer   Storer
 }
 
 // NewBusiness constructs a user business API for use.
-func NewBusiness(log *logger.Logger, storer Storer, extensions ...Extension) ExtBusiness {
+func NewBusiness(log *logger.Logger, dlg *delegate.Delegate, storer Storer, extensions ...Extension) ExtBusiness {
 	b := ExtBusiness(&Business{
-		log:    log,
-		storer: storer,
+		log:      log,
+		delegate: dlg,
+		storer:   storer,
 	})
 
 	for i := len(extensions) - 1; i >= 0; i-- {
@@ -85,8 +90,9 @@ func (b *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 	}
 
 	bus := Business{
-		log:    b.log,
-		storer: storer,
+		log:      b.log,
+		delegate: b.delegate,
+		storer:   storer,
 	}
 
 	return &bus, nil
@@ -157,6 +163,25 @@ func (b *Business) Update(ctx context.Context, actorID uuid.UUID, usr User, uu U
 	}
 
 	return usr, nil
+}
+
+// Delete removes a user from the system.
+func (b *Business) Delete(ctx context.Context, usr User) error {
+	if err := b.storer.Delete(ctx, usr); err != nil {
+		return fmt.Errorf("delete: %w", err)
+	}
+
+	// Publish event for child domains to handle cascade deletes.
+	// Note: We log errors instead of returning them because the database
+	// deletion (including CASCADE) has already succeeded at this point.
+	// Returning an error would mislead callers into thinking the deletion failed.
+	if b.delegate != nil {
+		if err := b.delegate.Call(ctx, ActionDeletedData(usr.ID)); err != nil {
+			b.log.Error(ctx, "delegate call failed for deleted user", "user_id", usr.ID, "err", err)
+		}
+	}
+
+	return nil
 }
 
 // Query retrieves a list of existing users.

@@ -27,6 +27,7 @@ import (
 	"github.com/francowini/rafiki/business/domain/userbus/stores/userdb"
 	"github.com/francowini/rafiki/business/domain/valuebus"
 	"github.com/francowini/rafiki/business/domain/valuebus/stores/valuedb"
+	"github.com/francowini/rafiki/business/sdk/delegate"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/migrate"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
@@ -204,16 +205,27 @@ func run(ctx context.Context, log *logger.Logger) error {
 	log.Info(ctx, "startup", "status", "encryption initialized", "algorithm", "AES-256-GCM")
 
 	// -------------------------------------------------------------------------
+	// Create Delegate for Cross-Domain Events
+
+	dlg := delegate.New(log)
+
+	// -------------------------------------------------------------------------
 	// Create Business Packages
 
+	// Independent domains (no parent needed)
 	thinkStore := thinkdb.NewStore(log, db, encryptor)
 	thinkBus := thinkbus.NewBusiness(log, thinkStore)
 
 	momentStore := momentdb.NewStore(log, db, encryptor)
 	momentBus := momentbus.NewBusiness(log, momentStore)
 
+	// Create userbus first (root domain) - needs delegate for publishing events
+	userStore := userdb.NewStore(log, db)
+	userBus := userbus.NewBusiness(log, dlg, userStore)
+
+	// Create child domains with parent injection
 	valueStore := valuedb.NewStore(log, db, encryptor)
-	valueBus := valuebus.NewBusiness(log, valueStore)
+	valueBus := valuebus.NewBusiness(log, userBus, dlg, valueStore)
 
 	// -------------------------------------------------------------------------
 	// Initialize authentication support
@@ -239,11 +251,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	log.Info(ctx, "startup", "keys_loaded", keysLoaded)
 
-	// Initialize UserBus (required for authentication)
-	userStore := userdb.NewStore(log, db)
-	userBus := userbus.NewBusiness(log, userStore)
-
-	// Initialize Auth
+	// Initialize Auth (userBus already created above)
 	authInstance := auth.New(auth.Config{
 		Log:       log,
 		UserBus:   userBus,

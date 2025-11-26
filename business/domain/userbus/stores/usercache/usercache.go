@@ -75,6 +75,17 @@ func (s *Store) Update(ctx context.Context, usr userbus.User) error {
 	return nil
 }
 
+// Delete removes a user from the database.
+func (s *Store) Delete(ctx context.Context, usr userbus.User) error {
+	if err := s.storer.Delete(ctx, usr); err != nil {
+		return err
+	}
+
+	s.deleteCache(usr)
+
+	return nil
+}
+
 // Query retrieves a list of existing users from the database.
 func (s *Store) Query(ctx context.Context, filter userbus.QueryFilter, orderBy order.By, page page.Page) ([]userbus.User, error) {
 	return s.storer.Query(ctx, filter, orderBy, page)
