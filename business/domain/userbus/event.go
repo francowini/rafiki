@@ -25,7 +25,7 @@ func ActionDeletedData(userID uuid.UUID) delegate.Data {
 		UserID: userID,
 	}
 
-	rawParams, _ := json.Marshal(params)
+	rawParams, _ := json.Marshal(params) //nolint:errcheck // ActionDeletedParms is a simple struct that cannot fail to marshal
 
 	return delegate.Data{
 		Domain:    DomainName,

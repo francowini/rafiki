@@ -75,7 +75,9 @@ func InitTracing(log *logger.Logger, cfg Config) (trace.TracerProvider, func(ctx
 		)
 
 		teardown = func(ctx context.Context) {
-			tp.Shutdown(ctx)
+			if err := tp.Shutdown(ctx); err != nil {
+				log.Error(ctx, "otel shutdown", "err", err)
+			}
 		}
 
 		traceProvider = tp

@@ -26,7 +26,9 @@ func init() {
 	translator, _ = ut.New(en.New(), en.New()).GetTranslator("en")
 
 	// Register the english error messages for use.
-	en_translations.RegisterDefaultTranslations(validate, translator)
+	if err := en_translations.RegisterDefaultTranslations(validate, translator); err != nil {
+		panic("failed to register english translations: " + err.Error())
+	}
 
 	// Use JSON tag names for errors instead of Go struct names.
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {

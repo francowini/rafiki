@@ -18,6 +18,7 @@ var (
 // Category represents valid think categories (enum)
 type Category string
 
+// Think category constants.
 const (
 	CategoryPersonal   Category = "personal"
 	CategoryWork       Category = "work"

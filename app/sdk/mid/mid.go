@@ -79,10 +79,6 @@ func GetUserID(ctx context.Context) (uuid.UUID, error) {
 	return v, nil
 }
 
-func setUser(ctx context.Context, usr userbus.User) context.Context {
-	return context.WithValue(ctx, userKey, usr)
-}
-
 // GetUser returns the user from the context.
 func GetUser(ctx context.Context) (userbus.User, error) {
 	v, ok := ctx.Value(userKey).(userbus.User)
@@ -91,10 +87,6 @@ func GetUser(ctx context.Context) (userbus.User, error) {
 	}
 
 	return v, nil
-}
-
-func setTran(ctx context.Context, tx sqldb.CommitRollbacker) context.Context {
-	return context.WithValue(ctx, trKey, tx)
 }
 
 // GetTran retrieves the value that can manage a transaction.

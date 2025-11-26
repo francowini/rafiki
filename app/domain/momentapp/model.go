@@ -177,6 +177,7 @@ func toBusNewMoment(ctx context.Context, nm NewMoment) (momentbus.NewMoment, err
 	}, nil
 }
 
+//nolint:unparam // ctx kept for API consistency with other toBus* functions
 func toBusUpdateMoment(ctx context.Context, um UpdateMoment) (momentbus.UpdateMoment, error) {
 	var errors errs.FieldErrors
 	var bus momentbus.UpdateMoment

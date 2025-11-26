@@ -50,9 +50,7 @@ func main() {
 		},
 	}
 
-	traceIDFn := func(ctx context.Context) string {
-		return otel.GetTraceID(ctx)
-	}
+	traceIDFn := otel.GetTraceID
 
 	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "RAFIKI", traceIDFn, events)
 
@@ -316,10 +314,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 		},
 	}
 
-	webAPI := mux.WebAPI(cfgMux,
+	webAPI, err := mux.WebAPI(cfgMux,
 		buildRoutes(),
 		mux.WithCORS(cfg.Web.CORSAllowedOrigins),
 	)
+	if err != nil {
+		return fmt.Errorf("constructing web api: %w", err)
+	}
 
 	api := http.Server{
 		Addr:         cfg.Web.APIHost,

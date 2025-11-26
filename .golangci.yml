@@ -102,7 +102,7 @@ linters:
         - name: exported
           arguments:
             - disableStutteringCheck
-        - name: package-comments
+        # package-comments disabled: internal packages with descriptive names don't need boilerplate
         - name: indent-error-flow
         - name: error-return
         - name: error-naming
@@ -120,12 +120,17 @@ linters:
         - paramTypeCombine  # Prefer explicit parameter types
         - hugeParam         # We pass large structs by value intentionally
         - rangeValCopy      # Sometimes necessary for immutability
+        - unnamedResult     # Interface implementations (Encode) don't benefit from named results
+        - importShadow      # Idiomatic patterns like "page page.Page" are intentional
+        - ifElseChain       # Cosmetic change, especially in vendored code
+        - commentedOutCode  # False positives on documentation comments
 
     # staticcheck - advanced static analysis
     staticcheck:
       checks:
         - all
         - -SA1019  # Using deprecated code is sometimes necessary
+        - -ST1000  # Package comments not required for internal packages
 
     # depguard - prevent use of deprecated packages
     depguard:
@@ -166,6 +171,13 @@ issues:
       linters:
         - unused        # Public API may have unused exports
         - deadcode      # Public API may have unused code
+
+    # Vendored dbarray code from lib/pq - don't modify vendored code
+    - path: ".*dbarray.*"
+      linters:
+        - errcheck      # Vendored code patterns
+        - gocritic      # Vendored code style
+        - unparam       # Vendored code signatures
 
     # Generated code
     - path: \.pb\.go$
