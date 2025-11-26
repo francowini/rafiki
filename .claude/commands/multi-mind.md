@@ -139,22 +139,111 @@ Each subagent operates independently with access to Read, Glob, Grep, and analys
 - **Frontend**: Next.js application, React components, TypeScript, API integration, implementing designs
 - **DevOps**: Infrastructure (Hetzner + Vercel), deployment scripts, containerization, server configuration
 
-### Round 2: Final Synthesis & Documentation
+### Round 2: Synthesis, Architecture Validation & Alignment Check
 
-**After the user answers all questions from Round 1**, launch a second round to synthesize findings and generate comprehensive documentation.
+**After the user answers all questions from Round 1**, launch a second round with FIVE agents (the original four plus the Architecture Validator).
 
-Each agent should:
+Each original agent should:
 1. Incorporate user's answers from Round 1
 2. Refine their recommendations based on the clarifications
 3. Generate detailed implementation specifications
 4. Coordinate with other specialists' findings
-5. **Contribute to the final markdown documentation**
+
+**Agent 5: Architecture Validator** (NEW - CRITICAL)
+- Prompt: "As an Architecture Validator, analyze ALL proposals from Round 1 against the architecture rules in `devs/business-model-dependencies.md`. Focus on:
+
+  **Read the architecture document first:**
+  - Read `devs/business-model-dependencies.md` completely
+
+  **Validate each proposal against these rules:**
+
+  1. **Domain Type Classification**
+     - Is the proposed domain correctly classified (Root/Child/Support/Query)?
+     - Does it fit the existing hierarchy: userbus (root) → momentbus, valuebus, thinkbus (children)
+
+  2. **One-Directional Import Rule**
+     - Do proposed imports follow Child → Parent only?
+     - Are there any reverse dependencies (parent importing child)?
+     - Are there sibling imports (child importing another child)?
+
+  3. **Interface-Based Contracts**
+     - Do proposals use `ExtBusiness` interfaces, not concrete types?
+     - Are dependencies injected via constructor?
+
+  4. **Delegate Pattern for Events**
+     - If modifying parent: Does it publish events via delegate?
+     - If modifying child: Does it subscribe to parent events?
+     - Is cascade delete handled via delegate (not direct calls)?
+
+  5. **Strong Type Usage**
+     - Do new models use types from `business/types/` (not primitives)?
+     - Are validation rules in the type, not scattered in business logic?
+
+  6. **Query Domain Pattern** (if applicable)
+     - Are multi-model reads using database views?
+     - Is the query domain read-only (no Create/Update/Delete)?
+
+  **Output Format:**
+  ```
+  === ARCHITECTURE ALIGNMENT CHECK ===
+
+  --- PROPOSAL ANALYSIS ---
+  [For each backend/domain proposal from Round 1]
+
+  --- ALIGNMENT STATUS ---
+  [ALIGNED | NOT ALIGNED | NEEDS CLARIFICATION]
+
+  --- VIOLATIONS FOUND ---
+  1. [Specific violation with reference to architecture doc section]
+  2. [...]
+
+  --- QUESTIONS FOR USER (if NOT ALIGNED) ---
+  1. [Question about how to resolve the misalignment]
+  2. [...]
+
+  --- RECOMMENDATIONS ---
+  1. [How to fix each violation to comply with architecture]
+  ```
+
+  Use Read tool to examine `devs/business-model-dependencies.md` and all proposed domain code."
+
+**CRITICAL: Round 3 Trigger**
+- If Architecture Validator returns **NOT ALIGNED** or has **QUESTIONS**, Round 3 is MANDATORY
+- DO NOT proceed to final documentation if architecture is not aligned
+- Present all architecture questions to the user for resolution
 
 The moderator should:
-- Collect all Round 2 outputs
+- Collect all Round 2 outputs INCLUDING Architecture Validator
+- **CHECK Architecture Validator status**
+- If NOT ALIGNED → Trigger Round 3 (do not generate final docs yet)
+- If ALIGNED → Proceed to synthesis and documentation
+
+### Round 3: Architecture Resolution (MANDATORY if Round 2 has misalignment)
+
+**This round is AUTOMATICALLY triggered if Architecture Validator found issues.**
+
+1. Present Architecture Validator's questions/concerns to the user
+2. Wait for user answers on how to resolve each misalignment
+3. Re-run Architecture Validator with the proposed resolutions
+4. Only proceed to final documentation when architecture is ALIGNED
+
+**Agent: Architecture Validator (Re-check)**
+- Prompt: "Based on user's answers to resolve architecture misalignments, verify:
+  1. Are the proposed resolutions compliant with `devs/business-model-dependencies.md`?
+  2. Do any new issues arise from the resolutions?
+  3. Final alignment status: [ALIGNED | STILL NOT ALIGNED]
+
+  If STILL NOT ALIGNED, provide specific remaining issues for another round."
+
+### Final Documentation (only after Architecture ALIGNED)
+
+The moderator should:
+- Confirm Architecture Validator shows ALIGNED status
+- Collect all outputs from previous rounds
 - Synthesize into a cohesive implementation plan
 - **Generate comprehensive markdown documentation in `docs/` folder**
 - Include design specs, API contracts, implementation steps, and deployment instructions
+- Include Architecture Compliance section confirming alignment
 
 **If user requests additional rounds**: Continue the same pattern with more specific questions and refinements before final documentation.
 
@@ -176,64 +265,122 @@ The moderator should:
 
 ## Output Protocol
 
+The ONLY output of multi-mind is implementation documentation in `docs/` folder.
+
 ```
-=== RAFIKI HABITS TRACKER ANALYSIS: [Topic] ===
-Specialists: Backend Engineer + UX/UI Designer + Frontend Engineer + DevOps Engineer
-
 --- ROUND 1: ANALYSIS & QUESTIONS ---
-🔧 BACKEND ENGINEER
-Analysis: [Go code analysis, API design, database considerations, business types]
-Questions: [Specific questions about API contracts, database schema, validation rules]
-
-🎨 UX/UI DESIGNER
-Analysis: [Screen layout proposals, component options, user flow analysis]
-Questions: [Layout preferences, feature priorities, interaction patterns, design constraints]
-
-💻 FRONTEND ENGINEER
-Analysis: [Next.js/React patterns, component strategy, API integration approach]
-Questions: [State management, error handling, client/server decisions, implementation concerns]
-
-🚀 DEVOPS ENGINEER
-Analysis: [Infrastructure analysis, deployment strategy (Hetzner + Vercel)]
-Questions: [Deployment timing, environment configs, monitoring needs, migration strategy]
+Each specialist analyzes and asks clarifying questions.
 
 --- USER ANSWERS ---
-[User responds to all questions from Round 1]
+User responds to questions.
 
---- ROUND 2: FINAL SYNTHESIS & DOCUMENTATION ---
-🎯 IMPLEMENTATION PLAN
-[Step-by-step plan incorporating user answers, coordinating all specialists]
+--- ROUND 2: REFINED PROPOSALS + ARCHITECTURE CHECK ---
+Specialists refine based on answers.
+Architecture Validator checks BACKEND proposals only.
 
-🎨 DESIGN SPECIFICATIONS
-[Detailed screen layouts, shadcn components, interaction patterns based on user preferences]
+--- ROUND 3 (if architecture NOT ALIGNED) ---
+User resolves architecture questions.
+Re-validate until ALIGNED.
 
-💻 BACKEND IMPLEMENTATION
-[Specific Go code, database schema, API endpoints, business types, based on user answers]
+--- FINAL OUTPUT: DOCUMENTATION FILES ---
+Generate ONLY the docs that have changes:
 
-🖼️ FRONTEND IMPLEMENTATION
-[Component structure, shadcn integration, TypeScript types, styling based on design specs]
-
-🛠️ DEVOPS IMPLEMENTATION
-[Deployment steps, environment configuration, based on user preferences]
-
-📝 DOCUMENTATION (docs/)
-[Generate comprehensive markdown in docs/[feature-name]-implementation.md with all specs]
-
---- ADDITIONAL ROUNDS (if requested) ---
-[Repeat pattern: more questions → user answers → refined documentation]
+docs/[feature-name]-backend.md    (if backend changes)
+docs/[feature-name]-frontend.md   (if frontend changes)
+docs/[feature-name]-devops.md     (if devops changes)
 ```
+
+**IMPORTANT**:
+- Do NOT generate frontend doc if no frontend changes needed
+- Do NOT generate devops doc if no infrastructure/deployment changes
+- Architecture Validator ONLY checks backend code (not frontend/devops)
 
 ## Documentation Output
 
-**IMPORTANT:** After completing the analysis, always generate comprehensive documentation in the `docs/` folder:
+Generate ONLY the documentation files that are needed for the feature. Each file must be complete and self-contained for implementation.
 
-1. Create a detailed implementation plan document (e.g., `docs/[feature-name]-implementation-plan.md`)
-2. Include all findings from both rounds of analysis
-3. Provide step-by-step implementation instructions
-4. Document dependencies, deployment strategy, and rollback procedures
-5. Include code examples, configuration snippets, and command references
-6. Include design specifications with shadcn component examples
-7. Include API endpoint specifications with request/response examples
+### Backend Documentation: `docs/[feature-name]-backend.md`
+
+**Generate only if backend changes are needed.**
+
+```markdown
+# [Feature Name] - Backend Implementation
+
+## Overview
+[Brief description of what this feature does]
+
+## Architecture Compliance
+- Domain Type: [Root | Child | Support | Query]
+- Parent Domain: [if child domain]
+- Imports: [list of domain imports]
+- Status: ALIGNED with business-model-dependencies.md
+
+## Database Schema
+[SQL migrations needed]
+
+## Business Types
+[New types in business/types/ if any]
+
+## Domain Model
+[model.go contents]
+
+## Business Logic
+[*bus.go key methods]
+
+## API Endpoints
+[Endpoint specs with request/response examples]
+
+## Delegate Events
+[If cascade operations needed]
+```
+
+### Frontend Documentation: `docs/[feature-name]-frontend.md`
+
+**Generate only if frontend changes are needed.**
+
+```markdown
+# [Feature Name] - Frontend Implementation
+
+## Overview
+[Brief description]
+
+## Components
+[List of components to create/modify]
+
+## shadcn/ui Components Used
+[Specific shadcn components and their props]
+
+## API Integration
+[API calls and response handling]
+
+## State Management
+[Hooks and state approach]
+
+## File Structure
+[Files to create/modify with paths]
+```
+
+### DevOps Documentation: `docs/[feature-name]-devops.md`
+
+**Generate only if deployment/infrastructure changes are needed.**
+
+```markdown
+# [Feature Name] - DevOps Changes
+
+## Overview
+[What infrastructure changes are needed]
+
+## Environment Variables
+[New env vars if any]
+
+## Database Migrations
+[Migration commands]
+
+## Deployment Steps
+[Additional deployment steps if any]
+```
+
+**SKIP** any documentation file if that area has no changes for this feature.
 
 ## Project Phase Context
 
@@ -256,17 +403,20 @@ Questions: [Deployment timing, environment configs, monitoring needs, migration 
 - Don't over-specify task durations - let the developer work at their pace
 
 ## Success Metrics
-- **Round 1**: All agents ask meaningful clarifying questions
+- **Round 1**: All four agents ask meaningful clarifying questions
 - **User engagement**: User provides clear answers to guide implementation
-- **Round 2**: Agents incorporate user feedback into detailed, actionable specs
+- **Round 2**: Agents incorporate user feedback + Architecture Validator checks compliance
+- **Architecture Gate**: Round 3 triggered if architecture is NOT ALIGNED (mandatory)
+- **Round 3** (if needed): User resolves architecture questions, validator re-checks
 - Each round produces genuinely new insights (not repetition)
-- All four specialists (Backend, UX/UI, Frontend, DevOps) provide distinct value
-- Implementation plan is actionable and comprehensive
+- All five specialists (Backend, UX/UI, Frontend, DevOps, Architecture) provide distinct value
+- Implementation plan is actionable, comprehensive, AND architecture-compliant
 - Dependencies between design, backend, frontend, and devops work are clearly identified
 - API contracts match UI requirements and are well-documented
 - Design specifications include exact shadcn components and layouts
 - Frontend implementation is feasible with available components
 - Deployment strategy is simple and uses existing tools
+- **Architecture compliance confirmed** before final documentation
 - **Comprehensive documentation generated in docs/ folder**
 
-Execute the four-agent analysis (Backend Engineer, UX/UI Designer, Frontend Engineer, DevOps Engineer) in rounds, with user interaction between rounds to produce a coordinated, user-validated implementation plan.
+Execute the five-agent analysis (Backend Engineer, UX/UI Designer, Frontend Engineer, DevOps Engineer, Architecture Validator) in rounds, with user interaction between rounds and mandatory architecture alignment before final documentation.
