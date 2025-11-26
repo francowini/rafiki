@@ -208,7 +208,7 @@ func (a *App) HandlerFunc(method, group, path string, handlerFunc HandlerFunc, m
 // RawHandlerFunc sets a raw handler function for a given HTTP method and path
 // pair to the application server mux.
 func (a *App) RawHandlerFunc(method, group, path string, rawHandlerFunc http.HandlerFunc, mw ...MidFunc) {
-	handlerFunc := func(ctx context.Context, r *http.Request) Encoder {
+	handlerFunc := func(ctx context.Context, r *http.Request) Encoder { //nolint:unparam // Encoder is always nil for raw handlers by design
 		r = r.WithContext(ctx)
 		rawHandlerFunc(GetWriter(ctx), r)
 		return nil
@@ -257,7 +257,7 @@ func (a *App) FileServerReact(static embed.FS, dir, path string) error {
 			}
 
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Write(p)
+			w.Write(p) //nolint:errcheck // HTTP response write errors are unrecoverable
 			return
 		}
 

@@ -34,7 +34,7 @@ func New(log *logger.Logger) *Delegate {
 }
 
 // Register adds a function to be called for a specified domain and action.
-func (d *Delegate) Register(domainType string, actionType string, fn Func) {
+func (d *Delegate) Register(domainType, actionType string, fn Func) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 

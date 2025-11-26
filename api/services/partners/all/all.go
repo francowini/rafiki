@@ -11,16 +11,17 @@ import (
 	"github.com/francowini/rafiki/foundation/web"
 )
 
-// Routes constructs the add value which provides the implementation of
+// Routes constructs the Add value which provides the implementation of
 // of RouteAdder for specifying what routes to bind to this instance.
-func Routes() add {
-	return add{}
+func Routes() Add {
+	return Add{}
 }
 
-type add struct{}
+// Add implements the RouterAdder interface for binding all routes.
+type Add struct{}
 
 // Add implements the RouterAdder interface.
-func (add) Add(app *web.App, cfg mux.Config) {
+func (Add) Add(app *web.App, cfg mux.Config) {
 	checkapp.Routes(app, checkapp.Config{
 		Build: cfg.Build,
 		Log:   cfg.Log,

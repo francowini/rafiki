@@ -52,6 +52,7 @@ func WithFileServer(react bool, static embed.FS, dir, path string) func(opts *Op
 	}
 }
 
+// BusConfig contains the business layer dependencies for route handlers.
 type BusConfig struct {
 	ThinkBus  *thinkbus.Business
 	MomentBus *momentbus.Business
@@ -100,9 +101,9 @@ func WebAPI(cfg Config, routeAdder RouteAdder, options ...func(opts *Options)) h
 
 	for _, site := range opts.sites {
 		if site.react {
-			app.FileServerReact(site.static, site.staticDir, site.staticPath)
+			app.FileServerReact(site.static, site.staticDir, site.staticPath) //nolint:errcheck // Static files are embedded, paths are validated at compile time
 		} else {
-			app.FileServer(site.static, site.staticDir, site.staticPath)
+			app.FileServer(site.static, site.staticDir, site.staticPath) //nolint:errcheck // Static files are embedded, paths are validated at compile time
 		}
 	}
 

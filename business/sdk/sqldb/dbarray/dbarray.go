@@ -380,11 +380,11 @@ func (Generic) evaluateDestination(rt reflect.Type) (reflect.Type, func([]byte, 
 
 	// TODO calculate the assign function for other types
 	// TODO repeat this section on the element type of arrays or slices (multidimensional)
-	{
+	{ //nolint:gocritic // Vendored code from lib/pq - unnecessaryBlock is part of original structure
 		if reflect.PointerTo(rt).Implements(typeSQLScanner) {
 			// dest is always addressable because it is an element of a slice.
 			assign = func(src []byte, dest reflect.Value) (err error) {
-				ss := dest.Addr().Interface().(sql.Scanner)
+				ss := dest.Addr().Interface().(sql.Scanner) //nolint:errcheck // Vendored code from lib/pq
 				if src == nil {
 					err = ss.Scan(nil)
 				} else {
@@ -795,6 +795,7 @@ func appendArrayQuotedBytes(b, v []byte) []byte {
 	return append(b, '"')
 }
 
+//nolint:unparam // Vendored code from lib/pq - error is always nil by design
 func appendValue(b []byte, v driver.Value) ([]byte, error) {
 	return append(b, encode(nil, v, 0)...), nil
 }
@@ -859,7 +860,7 @@ Element:
 			}
 		default:
 			for start := i; i < len(src); i++ {
-				if bytes.HasPrefix(src[i:], del) || src[i] == '}' {
+				if bytes.HasPrefix(src[i:], del) || src[i] == '}' { //nolint:gocritic // Vendored code from lib/pq - nestingReduce would change logic flow
 					elem := src[start:i]
 					if len(elem) == 0 {
 						return nil, nil, fmt.Errorf("database: unable to parse array; unexpected %q at offset %d", src[i], i)

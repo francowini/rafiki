@@ -31,15 +31,14 @@ func (log *Logger) BuildInfo(ctx context.Context) {
 		values = append(values, key, value)
 	}
 
-	values = append(values, "goversion", info.GoVersion)
-	values = append(values, "modversion", info.Main.Version)
+	values = append(values, "goversion", info.GoVersion, "modversion", info.Main.Version)
 
 	log.Info(ctx, "build info", values...)
 }
 
 // quoteKey reports whether key is required to be quoted.
 func quoteKey(key string) bool {
-	return len(key) == 0 || strings.ContainsAny(key, "= \t\r\n\"`")
+	return key == "" || strings.ContainsAny(key, "= \t\r\n\"`")
 }
 
 // quoteValue reports whether value is required to be quoted.

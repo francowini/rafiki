@@ -23,7 +23,7 @@ func Mux() *http.ServeMux {
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	mux.Handle("/debug/vars/", expvar.Handler())
 
-	statsviz.Register(mux)
+	statsviz.Register(mux) //nolint:errcheck // Registration failure would panic anyway during startup
 
 	return mux
 }

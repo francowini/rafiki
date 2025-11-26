@@ -41,7 +41,7 @@ func main() {
 		}
 
 		// If a service filter was provided, check.
-		if service != "" && strings.ToLower(m["service"].(string)) != service {
+		if service != "" && strings.ToLower(m["service"].(string)) != service { //nolint:errcheck // Service key always exists in valid log entries
 			continue
 		}
 

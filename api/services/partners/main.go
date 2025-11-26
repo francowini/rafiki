@@ -50,9 +50,7 @@ func main() {
 		},
 	}
 
-	traceIDFn := func(ctx context.Context) string {
-		return otel.GetTraceID(ctx)
-	}
+	traceIDFn := otel.GetTraceID
 
 	log = logger.NewWithEvents(os.Stdout, logger.LevelInfo, "RAFIKI", traceIDFn, events)
 

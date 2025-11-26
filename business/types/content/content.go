@@ -28,6 +28,7 @@ func (c Content) MarshalText() ([]byte, error) {
 
 // =============================================================================
 
+// ErrContentEmpty is returned when content is empty.
 var ErrContentEmpty = errors.New("content cannot be empty")
 
 // Parse parses the string value and returns a content if the value complies
