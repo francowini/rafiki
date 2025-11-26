@@ -4,6 +4,7 @@ package all
 import (
 	"github.com/francowini/rafiki/app/domain/authapp"
 	"github.com/francowini/rafiki/app/domain/checkapp"
+	"github.com/francowini/rafiki/app/domain/lifevisionapp"
 	"github.com/francowini/rafiki/app/domain/momentapp"
 	"github.com/francowini/rafiki/app/domain/thinkapp"
 	"github.com/francowini/rafiki/app/domain/valueapp"
@@ -47,5 +48,10 @@ func (Add) Add(app *web.App, cfg mux.Config) {
 	valueapp.Routes(app, valueapp.Config{
 		ValueBus: cfg.BusConfig.ValueBus,
 		Auth:     cfg.BusConfig.Auth,
+	})
+
+	lifevisionapp.Routes(app, lifevisionapp.Config{
+		LifeVisionBus: cfg.BusConfig.LifeVisionBus,
+		Auth:          cfg.BusConfig.Auth,
 	})
 }

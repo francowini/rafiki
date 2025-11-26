@@ -19,6 +19,8 @@ import (
 	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/debug"
 	"github.com/francowini/rafiki/app/sdk/mux"
+	"github.com/francowini/rafiki/business/domain/lifevisionbus"
+	"github.com/francowini/rafiki/business/domain/lifevisionbus/stores/lifevisiondb"
 	"github.com/francowini/rafiki/business/domain/momentbus"
 	"github.com/francowini/rafiki/business/domain/momentbus/stores/momentdb"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
@@ -226,6 +228,10 @@ func run(ctx context.Context, log *logger.Logger) error {
 	valueBeginner := sqldb.NewBeginner(db)
 	valueBus := valuebus.NewBusiness(log, userBus, dlg, valueStore, valueBeginner)
 
+	// Create life vision domain (child of value)
+	lifeVisionStore := lifevisiondb.NewStore(log, db, encryptor)
+	lifeVisionBus := lifevisionbus.NewBusiness(log, valueBus, dlg, lifeVisionStore)
+
 	// -------------------------------------------------------------------------
 	// Initialize authentication support
 
@@ -306,11 +312,12 @@ func run(ctx context.Context, log *logger.Logger) error {
 		DB:     db,
 		Tracer: tracer,
 		BusConfig: mux.BusConfig{
-			ThinkBus:  thinkBus,
-			MomentBus: momentBus,
-			ValueBus:  valueBus,
-			UserBus:   userBus,
-			Auth:      authInstance,
+			ThinkBus:      thinkBus,
+			MomentBus:     momentBus,
+			ValueBus:      valueBus,
+			LifeVisionBus: lifeVisionBus,
+			UserBus:       userBus,
+			Auth:          authInstance,
 		},
 	}
 

@@ -1,0 +1,73 @@
+meta {
+  name: Create Life Vision
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{base-url}}/v1/lifevisions
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+body:json {
+  {
+    "valueId": "{{value-id}}",
+    "content": "I am living each day with purpose and gratitude, fully present in every moment"
+  }
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return life vision object with correct properties", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("id");
+    expect(data).to.have.property("valueId");
+    expect(data).to.have.property("content");
+    expect(data).to.have.property("dateCreated");
+    expect(data).to.have.property("dateUpdated");
+  });
+
+  test("should return values matching request payload", function() {
+    const data = res.getBody();
+    const requestBody = req.getBody();
+
+    expect(data.valueId).to.equal(requestBody.valueId);
+    expect(data.content).to.equal(requestBody.content);
+  });
+
+  test("should return valid UUID for id", function() {
+    const data = res.getBody();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    expect(data.id).to.match(uuidRegex);
+  });
+
+  // Save life vision ID for other requests
+  const data = res.getBody();
+  if (data.id) {
+    bru.setEnvVar("lifevision-id", data.id);
+    console.log("Life Vision ID saved:", data.id);
+  }
+}
+
+docs {
+  # Create Life Vision
+
+  Creates a new life vision linked to a value.
+
+  ## Validation
+  - content: 10-500 characters
+  - valueId: must be a valid UUID of a value owned by the user
+
+  ## Notes
+  - Life visions are aspirational states of being
+  - Each life vision belongs to exactly one value
+  - User ID is inherited from the parent value
+}
