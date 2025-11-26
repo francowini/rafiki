@@ -171,10 +171,13 @@ func (b *Business) Delete(ctx context.Context, usr User) error {
 		return fmt.Errorf("delete: %w", err)
 	}
 
-	// Publish event for child domains to handle cascade deletes
+	// Publish event for child domains to handle cascade deletes.
+	// Note: We log errors instead of returning them because the database
+	// deletion (including CASCADE) has already succeeded at this point.
+	// Returning an error would mislead callers into thinking the deletion failed.
 	if b.delegate != nil {
 		if err := b.delegate.Call(ctx, ActionDeletedData(usr.ID)); err != nil {
-			return fmt.Errorf("delegate call: %w", err)
+			b.log.Error(ctx, "delegate call failed for deleted user", "user_id", usr.ID, "err", err)
 		}
 	}
 

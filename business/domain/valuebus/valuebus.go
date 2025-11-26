@@ -61,7 +61,7 @@ func NewBusiness(
 	storer Storer,
 	extensions ...Extension,
 ) ExtBusiness {
-	b := Business{
+	b := &Business{
 		log:        log,
 		userBus:    userBus,
 		delegate:   dlg,
@@ -69,9 +69,15 @@ func NewBusiness(
 		extensions: extensions,
 	}
 
+	// Only register delegate functions on the root business instance.
 	b.registerDelegateFunctions()
 
-	extBus := ExtBusiness(&b)
+	return applyExtensions(b, extensions)
+}
+
+// applyExtensions wraps the business with the provided extensions.
+func applyExtensions(b *Business, extensions []Extension) ExtBusiness {
+	extBus := ExtBusiness(b)
 
 	for i := len(extensions) - 1; i >= 0; i-- {
 		ext := extensions[i]
@@ -96,9 +102,17 @@ func (b *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 		return nil, err
 	}
 
-	nb := NewBusiness(b.log, userBus, b.delegate, storer, b.extensions...)
+	// Create business without re-registering delegate functions
+	// to avoid duplicate handler registration on the shared delegate.
+	nb := &Business{
+		log:        b.log,
+		userBus:    userBus,
+		delegate:   b.delegate,
+		storer:     storer,
+		extensions: b.extensions,
+	}
 
-	return nb, nil
+	return applyExtensions(nb, b.extensions), nil
 }
 
 // Create adds a new value to the system.
