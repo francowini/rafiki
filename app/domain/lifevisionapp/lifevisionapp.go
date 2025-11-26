@@ -105,6 +105,9 @@ func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 		if errors.Is(err, valuebus.ErrNotFound) {
 			return errs.New(errs.NotFound, errors.New("value not found"))
 		}
+		if errors.Is(err, lifevisionbus.ErrNotValueOwner) {
+			return errs.New(errs.PermissionDenied, errors.New("user does not own the specified value"))
+		}
 		return errs.Newf(errs.Internal, "update: %s", err)
 	}
 

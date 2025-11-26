@@ -7,9 +7,10 @@ This document catalogs critical errors discovered during code review that should
 ## Table of Contents
 
 1. [Security: Child Entity Ownership Validation](#1-security-child-entity-ownership-validation)
-2. [String Length: UTF-8 Rune Count vs Byte Count](#2-string-length-utf-8-rune-count-vs-byte-count)
-3. [Strong Types: Missing Value() Method](#3-strong-types-missing-value-method)
-4. [SQL: WHERE Clause Building](#4-sql-where-clause-building)
+2. [Error Handling: Sentinel vs Generic Errors](#2-error-handling-sentinel-vs-generic-errors)
+3. [String Length: UTF-8 Rune Count vs Byte Count](#3-string-length-utf-8-rune-count-vs-byte-count)
+4. [Strong Types: Missing Value() Method](#4-strong-types-missing-value-method)
+5. [SQL: WHERE Clause Building](#5-sql-where-clause-building)
 
 ---
 
@@ -98,7 +99,86 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 
 ---
 
-## 2. String Length: UTF-8 Rune Count vs Byte Count
+## 2. Error Handling: Sentinel vs Generic Errors
+
+### Severity: 🟠 Major (Error Handling Bug)
+
+### Problem
+
+When the business layer encounters a permission error (e.g., user doesn't own the parent entity), returning a generic `fmt.Errorf()` message instead of a sentinel error prevents the app layer from properly detecting and handling the error with the correct HTTP status code.
+
+### Bad Example
+
+```go
+// ❌ BAD: Generic error message - app layer can't detect this
+func (b *Business) Update(ctx context.Context, entity Entity, upd UpdateEntity) (Entity, error) {
+    if upd.ParentID != nil {
+        parent, err := b.parentBus.QueryByID(ctx, *upd.ParentID)
+        if err != nil {
+            return Entity{}, err
+        }
+
+        // Generic error - app layer will return 500 Internal Error
+        if parent.UserID != entity.UserID {
+            return Entity{}, fmt.Errorf("cannot move entity to parent owned by different user")
+        }
+    }
+    // ...
+}
+```
+
+### Good Example
+
+```go
+// ✅ GOOD: Sentinel error - app layer can detect with errors.Is()
+var ErrNotParentOwner = errors.New("user does not own the specified parent")
+
+func (b *Business) Update(ctx context.Context, entity Entity, upd UpdateEntity) (Entity, error) {
+    if upd.ParentID != nil {
+        parent, err := b.parentBus.QueryByID(ctx, *upd.ParentID)
+        if err != nil {
+            return Entity{}, err
+        }
+
+        // Sentinel error - app layer can return 403 PermissionDenied
+        if parent.UserID != entity.UserID {
+            return Entity{}, ErrNotParentOwner
+        }
+    }
+    // ...
+}
+```
+
+### App Layer Pattern
+
+```go
+func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
+    // ...
+    entity, err = a.entityBus.Update(ctx, entity, upd)
+    if err != nil {
+        if errors.Is(err, parentbus.ErrNotFound) {
+            return errs.New(errs.NotFound, errors.New("parent not found"))
+        }
+        // Can now properly detect permission error
+        if errors.Is(err, entitybus.ErrNotParentOwner) {
+            return errs.New(errs.PermissionDenied, errors.New("user does not own the specified parent"))
+        }
+        return errs.Newf(errs.Internal, "update: %s", err)
+    }
+    // ...
+}
+```
+
+### Checklist
+
+- [ ] All permission violations return sentinel errors (defined in model.go)
+- [ ] Sentinel errors are defined with `errors.New()` for `errors.Is()` compatibility
+- [ ] App layer handles ALL sentinel errors with appropriate HTTP status codes
+- [ ] Both Create AND Update operations validate ownership when changing parent references
+
+---
+
+## 3. String Length: UTF-8 Rune Count vs Byte Count
 
 ### Severity: 🟠 Major (Data Validation Bug)
 
@@ -163,7 +243,7 @@ func TestUTF8Validation(t *testing.T) {
 
 ---
 
-## 3. Strong Types: Missing Value() Method
+## 4. Strong Types: Missing Value() Method
 
 ### Severity: 🟡 Minor (API Inconsistency)
 
@@ -233,7 +313,7 @@ func MustParse(value string) MyType { ... }
 
 ---
 
-## 4. SQL: WHERE Clause Building
+## 5. SQL: WHERE Clause Building
 
 ### Severity: 🟢 Low (Code Quality)
 

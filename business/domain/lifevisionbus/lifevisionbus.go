@@ -134,9 +134,9 @@ func (b *Business) Update(ctx context.Context, lifeVision LifeVision, ulv Update
 			return LifeVision{}, fmt.Errorf("value.querybyid: valueID[%s]: %w", *ulv.ValueID, err)
 		}
 
-		// Ensure the new value belongs to the same user
+		// Security: Verify authenticated user owns the new value
 		if value.UserID != lifeVision.UserID {
-			return LifeVision{}, fmt.Errorf("cannot move life vision to value owned by different user")
+			return LifeVision{}, ErrNotValueOwner
 		}
 
 		lifeVision.ValueID = *ulv.ValueID
