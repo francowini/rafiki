@@ -4,6 +4,7 @@ package mux
 
 import (
 	"embed"
+	"fmt"
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
@@ -77,7 +78,8 @@ type RouteAdder interface {
 }
 
 // WebAPI constructs a http.Handler with all application routes bound.
-func WebAPI(cfg Config, routeAdder RouteAdder, options ...func(opts *Options)) http.Handler {
+// Returns an error if file server configuration fails.
+func WebAPI(cfg Config, routeAdder RouteAdder, options ...func(opts *Options)) (http.Handler, error) {
 	app := web.NewApp(
 		cfg.Log.Info,
 		cfg.Tracer,
@@ -100,12 +102,16 @@ func WebAPI(cfg Config, routeAdder RouteAdder, options ...func(opts *Options)) h
 	routeAdder.Add(app, cfg)
 
 	for _, site := range opts.sites {
+		var err error
 		if site.react {
-			app.FileServerReact(site.static, site.staticDir, site.staticPath) //nolint:errcheck // Static files are embedded, paths are validated at compile time
+			err = app.FileServerReact(site.static, site.staticDir, site.staticPath)
 		} else {
-			app.FileServer(site.static, site.staticDir, site.staticPath) //nolint:errcheck // Static files are embedded, paths are validated at compile time
+			err = app.FileServer(site.static, site.staticDir, site.staticPath)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("configuring file server for %s: %w", site.staticPath, err)
 		}
 	}
 
-	return app
+	return app, nil
 }

@@ -314,10 +314,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 		},
 	}
 
-	webAPI := mux.WebAPI(cfgMux,
+	webAPI, err := mux.WebAPI(cfgMux,
 		buildRoutes(),
 		mux.WithCORS(cfg.Web.CORSAllowedOrigins),
 	)
+	if err != nil {
+		return fmt.Errorf("constructing web api: %w", err)
+	}
 
 	api := http.Server{
 		Addr:         cfg.Web.APIHost,

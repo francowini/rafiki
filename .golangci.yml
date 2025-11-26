@@ -173,7 +173,7 @@ issues:
         - deadcode      # Public API may have unused code
 
     # Vendored dbarray code from lib/pq - don't modify vendored code
-    - path: sqldb/dbarray/
+    - path: ".*dbarray.*"
       linters:
         - errcheck      # Vendored code patterns
         - gocritic      # Vendored code style

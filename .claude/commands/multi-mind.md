@@ -1,21 +1,22 @@
 # Multi-Mind - Rafiki Development Team
 
-Execute a collaborative analysis using five specialized subagents for the Rafiki personal development tracker project.
+Execute a collaborative analysis using six specialized subagents (including the Product Agent which is included by default unless --no-product) for the Rafiki personal development tracker project.
 
 **Usage**: `/multi-mind [topic/task]` or `/multi-mind [topic/task] --no-product` (to exclude Product Agent)
 
 ## Project Context
 
-This is a personal development tracking application (Rafiki) with a Go backend, Next.js frontend, and PostgreSQL database. Backend is deployed on Hetzner servers, frontend on Vercel. The application helps users track their ideals (ideales), values (valores), habits (hábitos), goals (metas), and objectives (objetivos). The five-agent team consists of:
+This is a personal development tracking application (Rafiki) with a Go backend, Next.js frontend, and PostgreSQL database. Backend is deployed on Hetzner servers, frontend on Vercel. The application helps users track their ideals (ideales), values (valores), habits (hábitos), goals (metas), and objectives (objetivos). The six-agent team consists of:
 1. **Product Agent** (ALWAYS INCLUDED unless `--no-product`): Mental wellness expert, self-improvement methodology, psychological frameworks
 2. **Backend Engineer**: Go development, API design, database operations
 3. **UX/UI Designer**: Screen design, shadcn/ui patterns, user experience, visual hierarchy
 4. **Frontend Engineer**: Next.js/React development, component implementation, API integration
 5. **DevOps Engineer**: Deployment, infrastructure, Docker, server management
+6. **Architecture Validator**: Validates proposals against business-model-dependencies.md rules
 
 ## Implementation
 
-Execute this five-specialist analysis using the Task tool to create independent subagents.
+Execute this six-specialist analysis using the Task tool to create independent subagents.
 
 **Default: TWO rounds** (can be extended to more rounds if user requests)
 
@@ -207,7 +208,8 @@ Each original agent should:
   - Are there features that build intrinsic motivation?
 
   **Output Format**:
-  ```
+
+  ```markdown
   === PRODUCT VALIDATION ===
 
   --- BACKEND VALIDATION ---
@@ -479,7 +481,7 @@ Generate ONLY the documentation files that are needed for the feature. Each file
 - Don't over-specify task durations - let the developer work at their pace
 
 ## Success Metrics
-- **Round 1**: All five agents ask meaningful clarifying questions (Product Agent included)
+- **Round 1**: All six agents ask meaningful clarifying questions (Product Agent included)
 - **User engagement**: User provides clear answers to guide implementation
 - **Round 2**: Agents incorporate user feedback + Product Agent validates wellness alignment + Architecture Validator checks compliance
 - **Product Gate**: Product Agent validates that Backend and Frontend proposals support mental wellness

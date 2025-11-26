@@ -41,8 +41,11 @@ func main() {
 		}
 
 		// If a service filter was provided, check.
-		if service != "" && strings.ToLower(m["service"].(string)) != service { //nolint:errcheck // Service key always exists in valid log entries
-			continue
+		if service != "" {
+			svc, ok := m["service"].(string)
+			if !ok || !strings.EqualFold(svc, service) {
+				continue
+			}
 		}
 
 		// I like always having a traceid present in the logs.
