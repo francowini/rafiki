@@ -2,7 +2,6 @@
 
 import { useAuth } from '@/lib/auth-context';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
-import { QuickStatsCard } from '@/components/dashboard/QuickStatsCard';
 import { FeatureCard } from '@/components/dashboard/FeatureCard';
 import { ValuesPreview } from '@/components/dashboard/ValuesPreview';
 import { Brain, Target, Heart, Compass, Activity, Clock } from 'lucide-react';
@@ -14,40 +13,6 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <WelcomeCard userName={user?.name || 'there'} />
-
-      {/* Quick Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <QuickStatsCard
-          title="Thinks"
-          value={0}
-          description="Ideas captured"
-          trend="+2 this week"
-          icon={Brain}
-          color="blue"
-        />
-        <QuickStatsCard
-          title="Values"
-          value={0}
-          description="Core values"
-          icon={Heart}
-          color="red"
-        />
-        <QuickStatsCard
-          title="Goals"
-          value={0}
-          description="Active goals"
-          icon={Target}
-          color="green"
-        />
-        <QuickStatsCard
-          title="Habits"
-          value={0}
-          description="Daily habits"
-          trend="5 day streak"
-          icon={Activity}
-          color="purple"
-        />
-      </div>
 
       {/* Values Preview Section */}
       <ValuesPreview />
