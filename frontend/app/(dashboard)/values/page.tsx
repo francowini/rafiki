@@ -135,9 +135,8 @@ export default function ValuesPage() {
         <Alert className="bg-rose-50 border-rose-200">
           <Info className="h-4 w-4 text-rose-600" />
           <AlertDescription className="text-sm text-rose-900">
-            You can define up to <strong>10 core values</strong>. Values are ranked by priority,
-            with #1 being your most important value. Choose values that truly guide your life
-            decisions.
+            You can define up to <strong>10 core values</strong>. Drag to reorder and set your
+            priorities. Gaps are allowed when you delete values.
           </AlertDescription>
         </Alert>
       </div>

@@ -19,11 +19,16 @@ export function ValuesPreview() {
     const fetchValues = async () => {
       try {
         const response = await api.values.getAll();
-        // Show top 3 values
-        setValues(response.items.slice(0, 3));
+        // Sort by displayOrder and show all values
+        const sortedValues = [...response.items].sort(
+          (a, b) => a.displayOrder - b.displayOrder,
+        );
+        setValues(sortedValues);
         setError(null);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load values preview');
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to load values preview';
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -79,25 +84,21 @@ export function ValuesPreview() {
             href="/values"
             className="text-rose-600 hover:text-rose-700 flex items-center gap-1 text-sm font-medium"
           >
-            View all
+            Manage
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {values.map((value, index) => {
+        {values.map((value) => {
           const facetConfig = getFacetConfig(value.facet);
           return (
             <div key={value.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
               <Badge
                 variant="outline"
-                className={
-                  index === 0
-                    ? 'bg-rose-100 text-rose-800 border-rose-300 font-semibold shrink-0'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 shrink-0'
-                }
+                className="bg-gray-100 text-gray-700 border-gray-300 shrink-0"
               >
-                #{index + 1}
+                #{value.displayOrder}
               </Badge>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium line-clamp-2">{value.content}</p>
