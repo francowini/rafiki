@@ -96,3 +96,27 @@ COMMENT ON TABLE values IS 'Stores user core personal values with life facet cat
 COMMENT ON COLUMN values.content IS 'Encrypted value statement (plaintext validated as 3-200 chars in business layer)';
 COMMENT ON COLUMN values.facet IS 'Life domain categorization based on ACT therapy';
 COMMENT ON COLUMN values.display_order IS 'User-controlled priority ranking (1=highest)';
+
+
+-- Version: 1.05
+-- Description: Remove unique constraint on display_order to allow atomic reordering
+
+-- Drop the unique index that prevents atomic batch reordering within a transaction.
+--
+-- Trade-off: DB no longer enforces unique (user_id, display_order), so business layer
+-- validates no-duplicates for ALL write operations:
+--
+-- 1. Create: valuebus.Create() queries existing values, rejects duplicate display_order
+-- 2. Update: valuebus.Update() checks for conflicts when display_order changes
+-- 3. Reorder: valuebus.Reorder() validates via request payload + transactional batch
+--
+-- Additional safeguards:
+-- - display_order range (1-10) validated at parse time via displayorder.Parse
+-- - Concurrent requests could theoretically race, but:
+--   * Each operation queries current state before writing
+--   * Reorder uses explicit transaction (all-or-nothing)
+--   * Worst case: one request fails, UI refreshes from server state
+--
+-- This enables atomic batch reordering where swapping positions (e.g., 1↔2)
+-- would otherwise violate the unique constraint during the intermediate state.
+DROP INDEX IF EXISTS values_user_order_unique_idx;

@@ -222,6 +222,17 @@ export const api = {
         method: 'DELETE',
       });
     },
+
+    /**
+     * Reorder multiple values in a single atomic operation.
+     * Sends all display order updates in one batch request.
+     */
+    reorder: async (items: { id: string; displayOrder: number }[]): Promise<void> => {
+      return fetchAPI<void>('/v1/values/reorder', {
+        method: 'POST',
+        body: JSON.stringify({ items }),
+      });
+    },
   },
 
   health: {

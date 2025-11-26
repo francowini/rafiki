@@ -3,10 +3,17 @@ import { Value } from '@/lib/types';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
+interface ReorderItem {
+  id: string;
+  displayOrder: number;
+}
+
+// Return type: null = success, 'refresh' = needs refresh from server
+type ReorderResult = null | 'refresh';
+
 export function useValueReordering() {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
-  const previousStateRef = useRef<Value[] | null>(null);
   const isUpdatingRef = useRef(false);
 
   // Keep ref in sync with state
@@ -15,88 +22,49 @@ export function useValueReordering() {
   }, [isUpdating]);
 
   const handleValueReorder = useCallback(
-    async (
-      originalValues: Value[],
-      newValues: Value[],
-    ): Promise<Value[] | null> => {
+    async (originalValues: Value[], newValues: Value[]): Promise<ReorderResult> => {
+      // Prevent concurrent reorders
       if (isUpdatingRef.current) return null;
 
-      // Save previous state for rollback
-      previousStateRef.current = [...originalValues];
       setIsUpdating(true);
 
       try {
-        // Find values that changed displayOrder
-        const updates = newValues
-          .map((newVal, index) => {
-            const newOrder = index + 1;
-            const originalVal = originalValues.find((v) => v.id === newVal.id);
-            if (originalVal && originalVal.displayOrder !== newOrder) {
-              return { id: newVal.id, newOrder };
-            }
-            return null;
-          })
-          .filter((u): u is { id: string; newOrder: number } => u !== null);
+        // Build reorder items from new values
+        const reorderItems: ReorderItem[] = newValues.map((value, index) => ({
+          id: value.id,
+          displayOrder: index + 1,
+        }));
 
-        if (updates.length === 0) {
-          setIsUpdating(false);
-          return null;
+        // Check if anything actually changed
+        const hasChanges = reorderItems.some((item) => {
+          const originalValue = originalValues.find((v) => v.id === item.id);
+          return originalValue && originalValue.displayOrder !== item.displayOrder;
+        });
+
+        if (!hasChanges) {
+          return null; // No changes needed
         }
 
-        // Find an empty slot to use as temporary parking
-        const usedOrders = new Set(originalValues.map((v) => v.displayOrder));
-        let emptySlot: number | null = null;
-        for (let i = 1; i <= 10; i++) {
-          if (!usedOrders.has(i)) {
-            emptySlot = i;
-            break;
-          }
-        }
-
-        if (emptySlot !== null) {
-          // We have an empty slot - use it as parking
-          // 1. Move first affected value to empty slot
-          // 2. Update others sequentially
-          // 3. Move parked value to final position
-          const [firstUpdate, ...restUpdates] = updates;
-
-          // Park first value in empty slot
-          await api.values.update(firstUpdate.id, { displayOrder: emptySlot });
-
-          // Update others sequentially
-          for (const update of restUpdates) {
-            await api.values.update(update.id, { displayOrder: update.newOrder });
-          }
-
-          // Move parked value to final position
-          await api.values.update(firstUpdate.id, {
-            displayOrder: firstUpdate.newOrder,
-          });
-        } else {
-          // All 10 slots full - cannot reorder without backend support
-          throw new Error(
-            'Cannot reorder when all 10 slots are full. Delete a value first.',
-          );
-        }
+        // Single atomic API call
+        await api.values.reorder(reorderItems);
 
         toast({
           title: 'Values reordered',
           description: 'Your value priorities have been updated.',
         });
 
-        return null; // Success, no rollback needed
+        return null; // Success
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to save value order';
+
         toast({
           variant: 'destructive',
           title: 'Error saving order',
-          description:
-            error instanceof Error
-              ? error.message
-              : 'Failed to save value order. Your changes have been reverted.',
+          description: errorMessage,
         });
 
-        // Return previous state for rollback
-        return previousStateRef.current;
+        // Signal that caller should refresh from server
+        return 'refresh';
       } finally {
         setIsUpdating(false);
       }

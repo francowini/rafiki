@@ -212,6 +212,41 @@ func (a *app) queryByID(ctx context.Context, r *http.Request) web.Encoder {
 	return toAppValue(value)
 }
 
+// reorder handles POST /v1/values/reorder
+func (a *app) reorder(ctx context.Context, r *http.Request) web.Encoder {
+	var appReorder ReorderRequest
+	if err := web.Decode(r, &appReorder); err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	if err := appReorder.Validate(); err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
+	busReorder, err := toBusReorderRequest(appReorder)
+	if err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	values, err := a.valueBus.Reorder(ctx, userID, busReorder)
+	if err != nil {
+		if errors.Is(err, valuebus.ErrUserDisabled) {
+			return errs.New(errs.PermissionDenied, err)
+		}
+		if errors.Is(err, valuebus.ErrDuplicateOrder) {
+			return errs.New(errs.AlreadyExists, err)
+		}
+		return errs.Newf(errs.Internal, "reorder: %s", err)
+	}
+
+	return query.NewResult(toAppValues(values), len(values), page.Page{})
+}
+
 // ===== Query params parsing =====
 
 type queryParams struct {

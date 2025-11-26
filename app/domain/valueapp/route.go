@@ -23,6 +23,7 @@ func Routes(app *web.App, cfg Config) {
 	api := newApp(cfg.ValueBus)
 
 	app.HandlerFunc(http.MethodPost, version, "/values", api.create, bearer)
+	app.HandlerFunc(http.MethodPost, version, "/values/reorder", api.reorder, bearer)
 	app.HandlerFunc(http.MethodGet, version, "/values", api.query, bearer)
 	app.HandlerFunc(http.MethodGet, version, "/values/{value_id}", api.queryByID, bearer)
 	app.HandlerFunc(http.MethodPut, version, "/values/{value_id}", api.update, bearer)
