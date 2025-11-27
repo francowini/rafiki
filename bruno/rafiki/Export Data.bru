@@ -35,15 +35,41 @@ tests {
     expect(data.items).to.be.an("array");
   });
 
-  test("items should have correct structure", function() {
+  test("all items should have correct structure", function() {
     const data = res.getBody();
-    if (data.items.length > 0) {
-      const item = data.items[0];
-      expect(item).to.have.property("id");
-      expect(item).to.have.property("itemType");
-      expect(item).to.have.property("itemDate");
-      expect(item).to.have.property("dateCreated");
-      expect(["moment", "think"]).to.include(item.itemType);
+    data.items.forEach((item, index) => {
+      expect(item, `item[${index}]`).to.have.property("id");
+      expect(item, `item[${index}]`).to.have.property("itemType");
+      expect(item, `item[${index}]`).to.have.property("itemDate");
+      expect(item, `item[${index}]`).to.have.property("dateCreated");
+      expect(["moment", "think"], `item[${index}].itemType`).to.include(item.itemType);
+    });
+  });
+
+  test("items within date range when start_date and end_date provided", function() {
+    const data = res.getBody();
+    const startDate = req.getUrl().includes("start_date") ? new Date(req.getUrl().match(/start_date=([^&]+)/)?.[1]) : null;
+    const endDate = req.getUrl().includes("end_date") ? new Date(req.getUrl().match(/end_date=([^&]+)/)?.[1]) : null;
+
+    if (startDate && endDate && data.items.length > 0) {
+      data.items.forEach((item, index) => {
+        const itemDate = new Date(item.itemDate);
+        expect(itemDate >= startDate, `item[${index}].itemDate should be >= start_date`).to.be.true;
+        expect(itemDate <= endDate, `item[${index}].itemDate should be <= end_date`).to.be.true;
+      });
+    }
+  });
+
+  test("items sorted by itemDate DESC when orderBy=item_date,DESC", function() {
+    const data = res.getBody();
+    const url = req.getUrl();
+
+    if (url.includes("orderBy=item_date,DESC") && data.items.length > 1) {
+      for (let i = 0; i < data.items.length - 1; i++) {
+        const currentDate = new Date(data.items[i].itemDate);
+        const nextDate = new Date(data.items[i + 1].itemDate);
+        expect(currentDate >= nextDate, `item[${i}].itemDate should be >= item[${i + 1}].itemDate`).to.be.true;
+      }
     }
   });
 }
@@ -67,6 +93,35 @@ docs {
   - item_type: Type: "moment" or "think"
   - date_created: When the entry was created
 
-  ## Response
-  Returns unified export items containing both moments and thinks with their respective fields.
+  **Note:** orderBy uses snake_case field names (item_id, item_date, item_type, date_created)
+  while the JSON response uses camelCase property names (id, itemType, itemDate, dateCreated).
+
+  ## Response Fields
+  ```json
+  {
+    "items": [
+      {
+        "id": "uuid",
+        "itemType": "moment" | "think",
+        "itemDate": "2024-01-15T10:30:00Z",
+        "dateCreated": "2024-01-15T10:30:00Z",
+
+        // Moment-specific fields (null for thinks):
+        "situation": "string",
+        "thoughts": "string",
+        "physicalSymptoms": "string",
+        "behavior": "string",
+        "consequences": "string",
+        "valuesReflection": "string",
+        "intensity": 0-10,
+
+        // Think-specific fields (null for moments):
+        "category": "personal" | "work" | "ideas" | "learning" | "reflection",
+        "content": "string"
+      }
+    ],
+    "total": 100,
+    "page": 1
+  }
+  ```
 }

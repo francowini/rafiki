@@ -236,7 +236,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	// Create vexport domain (query-only view domain)
 	vexportStore := vexportdb.NewStore(log, db, encryptor)
-	vexportBus := vexportbus.NewBusiness(vexportStore)
+	vexportBus := vexportbus.NewBusiness(log, vexportStore)
 
 	// -------------------------------------------------------------------------
 	// Initialize authentication support

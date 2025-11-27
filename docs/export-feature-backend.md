@@ -862,7 +862,7 @@ Initialize business in `run` function:
 ```go
 // Initialize vexport business
 vexportStore := vexportdb.NewStore(log, db, encryptor)
-vexportBus := vexportbus.NewBusiness(vexportStore)  // Note: no logger param
+vexportBus := vexportbus.NewBusiness(log, vexportStore)
 
 // Add to BusConfig
 BusConfig: mux.BusConfig{

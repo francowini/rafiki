@@ -31,6 +31,26 @@ type exportItem struct {
 	DateCreated      time.Time      `db:"date_created"`
 }
 
+// decryptContent decrypts and parses an encrypted content field.
+// Returns nil if the field is not valid (NULL in database).
+func decryptContent(enc encrypt.Encryptor, field sql.NullString, fieldName string) (*content.Content, error) {
+	if !field.Valid {
+		return nil, nil
+	}
+
+	decrypted, err := enc.Decrypt(field.String)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt %s: %w", fieldName, err)
+	}
+
+	parsed, err := content.Parse(decrypted)
+	if err != nil {
+		return nil, fmt.Errorf("parse %s: %w", fieldName, err)
+	}
+
+	return &parsed, nil
+}
+
 func toBusExportItemDecrypted(db exportItem, enc encrypt.Encryptor) (vexportbus.ExportItem, error) {
 	item := vexportbus.ExportItem{
 		ID:          db.ID,
@@ -40,79 +60,34 @@ func toBusExportItemDecrypted(db exportItem, enc encrypt.Encryptor) (vexportbus.
 		DateCreated: db.DateCreated.In(time.Local),
 	}
 
-	// Decrypt moment-specific fields
-	if db.Situation.Valid {
-		decrypted, err := enc.Decrypt(db.Situation.String)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("decrypt situation: %w", err)
-		}
-		parsed, err := content.Parse(decrypted)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("parse situation: %w", err)
-		}
-		item.Situation = &parsed
+	var err error
+
+	// Decrypt moment-specific content fields
+	if item.Situation, err = decryptContent(enc, db.Situation, "situation"); err != nil {
+		return vexportbus.ExportItem{}, err
 	}
 
-	if db.Thoughts.Valid {
-		decrypted, err := enc.Decrypt(db.Thoughts.String)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("decrypt thoughts: %w", err)
-		}
-		parsed, err := content.Parse(decrypted)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("parse thoughts: %w", err)
-		}
-		item.Thoughts = &parsed
+	if item.Thoughts, err = decryptContent(enc, db.Thoughts, "thoughts"); err != nil {
+		return vexportbus.ExportItem{}, err
 	}
 
-	if db.PhysicalSymptoms.Valid {
-		decrypted, err := enc.Decrypt(db.PhysicalSymptoms.String)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("decrypt physical_symptoms: %w", err)
-		}
-		parsed, err := content.Parse(decrypted)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("parse physical_symptoms: %w", err)
-		}
-		item.PhysicalSymptoms = &parsed
+	if item.PhysicalSymptoms, err = decryptContent(enc, db.PhysicalSymptoms, "physical_symptoms"); err != nil {
+		return vexportbus.ExportItem{}, err
 	}
 
-	if db.Behavior.Valid {
-		decrypted, err := enc.Decrypt(db.Behavior.String)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("decrypt behavior: %w", err)
-		}
-		parsed, err := content.Parse(decrypted)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("parse behavior: %w", err)
-		}
-		item.Behavior = &parsed
+	if item.Behavior, err = decryptContent(enc, db.Behavior, "behavior"); err != nil {
+		return vexportbus.ExportItem{}, err
 	}
 
-	if db.Consequences.Valid {
-		decrypted, err := enc.Decrypt(db.Consequences.String)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("decrypt consequences: %w", err)
-		}
-		parsed, err := content.Parse(decrypted)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("parse consequences: %w", err)
-		}
-		item.Consequences = &parsed
+	if item.Consequences, err = decryptContent(enc, db.Consequences, "consequences"); err != nil {
+		return vexportbus.ExportItem{}, err
 	}
 
-	if db.ValuesReflection.Valid {
-		decrypted, err := enc.Decrypt(db.ValuesReflection.String)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("decrypt values_reflection: %w", err)
-		}
-		parsed, err := content.Parse(decrypted)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("parse values_reflection: %w", err)
-		}
-		item.ValuesReflection = &parsed
+	if item.ValuesReflection, err = decryptContent(enc, db.ValuesReflection, "values_reflection"); err != nil {
+		return vexportbus.ExportItem{}, err
 	}
 
+	// Parse intensity (not encrypted, just needs validation)
 	if db.Intensity.Valid {
 		parsed, err := intensity.Parse(int(db.Intensity.Int32))
 		if err != nil {
@@ -130,16 +105,9 @@ func toBusExportItemDecrypted(db exportItem, enc encrypt.Encryptor) (vexportbus.
 		item.Category = &cat
 	}
 
-	if db.Content.Valid {
-		decrypted, err := enc.Decrypt(db.Content.String)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("decrypt content: %w", err)
-		}
-		parsed, err := content.Parse(decrypted)
-		if err != nil {
-			return vexportbus.ExportItem{}, fmt.Errorf("parse content: %w", err)
-		}
-		item.Content = &parsed
+	// Decrypt think content field
+	if item.Content, err = decryptContent(enc, db.Content, "content"); err != nil {
+		return vexportbus.ExportItem{}, err
 	}
 
 	return item, nil
