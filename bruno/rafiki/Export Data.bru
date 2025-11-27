@@ -1,0 +1,127 @@
+meta {
+  name: Export Data
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{base-url}}/v1/export
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  rows: 1000
+  ~start_date: 2024-11-01T00:00:00Z
+  ~end_date: 2024-11-30T23:59:59Z
+  ~orderBy: item_date,DESC
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return paginated results", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("items");
+    expect(data).to.have.property("total");
+    expect(data).to.have.property("page");
+    expect(data.items).to.be.an("array");
+  });
+
+  test("all items should have correct structure", function() {
+    const data = res.getBody();
+    data.items.forEach((item, index) => {
+      expect(item, `item[${index}]`).to.have.property("id");
+      expect(item, `item[${index}]`).to.have.property("itemType");
+      expect(item, `item[${index}]`).to.have.property("itemDate");
+      expect(item, `item[${index}]`).to.have.property("dateCreated");
+      expect(["moment", "think"], `item[${index}].itemType`).to.include(item.itemType);
+    });
+  });
+
+  test("items within date range when start_date and end_date provided", function() {
+    const data = res.getBody();
+    const startDate = req.getUrl().includes("start_date") ? new Date(req.getUrl().match(/start_date=([^&]+)/)?.[1]) : null;
+    const endDate = req.getUrl().includes("end_date") ? new Date(req.getUrl().match(/end_date=([^&]+)/)?.[1]) : null;
+
+    if (startDate && endDate && data.items.length > 0) {
+      data.items.forEach((item, index) => {
+        const itemDate = new Date(item.itemDate);
+        expect(itemDate >= startDate, `item[${index}].itemDate should be >= start_date`).to.be.true;
+        expect(itemDate <= endDate, `item[${index}].itemDate should be <= end_date`).to.be.true;
+      });
+    }
+  });
+
+  test("items sorted by itemDate DESC when orderBy=item_date,DESC", function() {
+    const data = res.getBody();
+    const url = req.getUrl();
+
+    if (url.includes("orderBy=item_date,DESC") && data.items.length > 1) {
+      for (let i = 0; i < data.items.length - 1; i++) {
+        const currentDate = new Date(data.items[i].itemDate);
+        const nextDate = new Date(data.items[i + 1].itemDate);
+        expect(currentDate >= nextDate, `item[${i}].itemDate should be >= item[${i + 1}].itemDate`).to.be.true;
+      }
+    }
+  });
+}
+
+docs {
+  # Export Data
+
+  Exports moments and thinks from a date range for client-side markdown generation.
+  This endpoint enables users to download their journal entries to share with their psychologist.
+
+  ## Query Parameters
+  - page: Page number (default: 1)
+  - rows: Items per page (use 1000 for exports)
+  - start_date: Filter items >= this date (RFC3339 format, optional)
+  - end_date: Filter items <= this date (RFC3339 format, optional)
+  - orderBy: Sort field and direction (default: item_date,DESC)
+
+  ## Available Order Fields
+  - item_id: Unique identifier for the item
+  - item_date: Date of the moment/think
+  - item_type: Type: "moment" or "think"
+  - date_created: When the entry was created
+
+  **Note:** orderBy uses snake_case field names (item_id, item_date, item_type, date_created)
+  while the JSON response uses camelCase property names (id, itemType, itemDate, dateCreated).
+
+  ## Response Fields
+  ```json
+  {
+    "items": [
+      {
+        "id": "uuid",
+        "itemType": "moment" | "think",
+        "itemDate": "2024-01-15T10:30:00Z",
+        "dateCreated": "2024-01-15T10:30:00Z",
+
+        // Moment-specific fields (null for thinks):
+        "situation": "string",
+        "thoughts": "string",
+        "physicalSymptoms": "string",
+        "behavior": "string",
+        "consequences": "string",
+        "valuesReflection": "string",
+        "intensity": 0-10,
+
+        // Think-specific fields (null for moments):
+        "category": "personal" | "work" | "ideas" | "learning" | "reflection",
+        "content": "string"
+      }
+    ],
+    "total": 100,
+    "page": 1
+  }
+  ```
+}

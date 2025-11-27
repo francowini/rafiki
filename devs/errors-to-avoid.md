@@ -11,6 +11,8 @@ This document catalogs critical errors discovered during code review that should
 3. [String Length: UTF-8 Rune Count vs Byte Count](#3-string-length-utf-8-rune-count-vs-byte-count)
 4. [Strong Types: Missing Value() Method](#4-strong-types-missing-value-method)
 5. [SQL: WHERE Clause Building](#5-sql-where-clause-building)
+6. [Logging: Missing Structured Logging in Business Layer](#6-logging-missing-structured-logging-in-business-layer)
+7. [Code Duplication: Repeated Decrypt-Parse Patterns](#7-code-duplication-repeated-decrypt-parse-patterns)
 
 ---
 
@@ -378,6 +380,198 @@ func buildWhereClause(filter QueryFilter, data map[string]any) string {
 
 ---
 
+## 6. Logging: Missing Structured Logging in Business Layer
+
+### Severity: 🟠 Major (Observability Gap)
+
+### Problem
+
+Business layer methods that don't include structured logging make debugging production issues difficult. Without entry/exit logging, you can't trace request flow or identify where failures occur.
+
+### Bad Example
+
+```go
+// ❌ BAD: No logging - silent failures, no observability
+func (b *Business) Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Item, error) {
+    if filter.UserID == uuid.Nil {
+        return nil, ErrInvalidUserID
+    }
+
+    items, err := b.storer.Query(ctx, filter, orderBy, page)
+    if err != nil {
+        return nil, fmt.Errorf("query: %w", err)
+    }
+
+    return items, nil
+}
+```
+
+### Good Example
+
+```go
+// ✅ GOOD: Structured logging at entry, errors, and success
+func (b *Business) Query(ctx context.Context, filter QueryFilter, orderBy order.By, pg page.Page) ([]Item, error) {
+    // Log entry with relevant parameters
+    b.log.Info(ctx, "domain.query", "userID", filter.UserID, "page", pg.Number(), "rows", pg.RowsPerPage())
+
+    // Log validation failures
+    if filter.UserID == uuid.Nil {
+        b.log.Error(ctx, "domain.query", "err", ErrInvalidUserID)
+        return nil, ErrInvalidUserID
+    }
+
+    items, err := b.storer.Query(ctx, filter, orderBy, pg)
+    if err != nil {
+        b.log.Error(ctx, "domain.query", "err", err, "userID", filter.UserID)
+        return nil, fmt.Errorf("storer.query: %w", err)
+    }
+
+    // Log success with result count
+    b.log.Info(ctx, "domain.query.success", "userID", filter.UserID, "count", len(items))
+
+    return items, nil
+}
+```
+
+### Business Struct Pattern
+
+```go
+// Business struct must include logger
+type Business struct {
+    log    *logger.Logger  // Required for structured logging
+    storer Storer
+}
+
+// NewBusiness must accept logger as first parameter
+func NewBusiness(log *logger.Logger, storer Storer) ExtBusiness {
+    return &Business{
+        log:    log,
+        storer: storer,
+    }
+}
+```
+
+### Logging Format Guidelines
+
+```go
+// Entry log: action name + input parameters
+b.log.Info(ctx, "domain.method", "param1", value1, "param2", value2)
+
+// Error log: action name + error + relevant context
+b.log.Error(ctx, "domain.method", "err", err, "userID", userID)
+
+// Success log: action name + result summary
+b.log.Info(ctx, "domain.method.success", "userID", userID, "count", len(items))
+```
+
+### Checklist
+
+- [ ] Business struct includes `*logger.Logger` field
+- [ ] NewBusiness accepts logger as first parameter
+- [ ] All public methods log on entry with parameters
+- [ ] All errors are logged before returning
+- [ ] Success cases log result summary (count, IDs, etc.)
+- [ ] Log messages use `domain.method` naming convention
+
+---
+
+## 7. Code Duplication: Repeated Decrypt-Parse Patterns
+
+### Severity: 🟡 Minor (Maintainability)
+
+### Problem
+
+When multiple fields require the same decrypt→parse→assign pattern, copying the same code block for each field creates maintenance burden and inconsistency risk.
+
+### Bad Example
+
+```go
+// ❌ BAD: Repeated pattern for each field
+func toBusItem(db dbItem, enc encrypt.Encryptor) (Item, error) {
+    item := Item{ID: db.ID}
+
+    if db.Field1.Valid {
+        decrypted, err := enc.Decrypt(db.Field1.String)
+        if err != nil {
+            return Item{}, fmt.Errorf("decrypt field1: %w", err)
+        }
+        parsed, err := content.Parse(decrypted)
+        if err != nil {
+            return Item{}, fmt.Errorf("parse field1: %w", err)
+        }
+        item.Field1 = &parsed
+    }
+
+    if db.Field2.Valid {
+        decrypted, err := enc.Decrypt(db.Field2.String)
+        if err != nil {
+            return Item{}, fmt.Errorf("decrypt field2: %w", err)
+        }
+        parsed, err := content.Parse(decrypted)
+        if err != nil {
+            return Item{}, fmt.Errorf("parse field2: %w", err)
+        }
+        item.Field2 = &parsed
+    }
+    // ... repeated 5 more times
+}
+```
+
+### Good Example
+
+```go
+// ✅ GOOD: Extract helper function for common pattern
+func decryptContent(enc encrypt.Encryptor, field sql.NullString, fieldName string) (*content.Content, error) {
+    if !field.Valid {
+        return nil, nil
+    }
+
+    decrypted, err := enc.Decrypt(field.String)
+    if err != nil {
+        return nil, fmt.Errorf("decrypt %s: %w", fieldName, err)
+    }
+
+    parsed, err := content.Parse(decrypted)
+    if err != nil {
+        return nil, fmt.Errorf("parse %s: %w", fieldName, err)
+    }
+
+    return &parsed, nil
+}
+
+func toBusItem(db dbItem, enc encrypt.Encryptor) (Item, error) {
+    item := Item{ID: db.ID}
+    var err error
+
+    if item.Field1, err = decryptContent(enc, db.Field1, "field1"); err != nil {
+        return Item{}, err
+    }
+    if item.Field2, err = decryptContent(enc, db.Field2, "field2"); err != nil {
+        return Item{}, err
+    }
+    // ... clean and concise
+
+    return item, nil
+}
+```
+
+### When to Extract Helpers
+
+- Pattern repeated 3+ times
+- Same error wrapping logic needed
+- NULL handling is identical
+- Makes the calling code significantly cleaner
+
+### Checklist
+
+- [ ] Identify repeated patterns in conversion functions
+- [ ] Extract helper with clear name describing the operation
+- [ ] Include field name parameter for error context
+- [ ] Handle NULL/empty cases consistently
+- [ ] Keep specialized parsing (intensity, category) inline if unique
+
+---
+
 ## Quick Reference Checklist
 
 When implementing new features, verify:
@@ -388,3 +582,5 @@ When implementing new features, verify:
 - [ ] **SQL**: Use `strings.Join()` for WHERE clause construction
 - [ ] **Errors**: Define domain-specific errors (e.g., `ErrNotValueOwner`)
 - [ ] **App Layer**: Handle all business errors with appropriate HTTP status codes
+- [ ] **Logging**: Business layer methods include structured entry/error/success logging
+- [ ] **DRY**: Extract helpers for patterns repeated 3+ times
