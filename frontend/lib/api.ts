@@ -311,14 +311,21 @@ export const api = {
 
   export: {
     /**
-     * Get export items with date range filtering
+     * Get export items with date range filtering.
+     * Rows are clamped to backend limit (1-100).
      */
     getItems: async (params: ExportParams): Promise<ExportResponse> => {
+      // Clamp rows to backend limit: min 1, max 100
+      const MAX_ROWS = 100;
+      const MIN_ROWS = 1;
+      const rawRows = params.rows ?? MAX_ROWS;
+      const clampedRows = Math.max(MIN_ROWS, Math.min(MAX_ROWS, rawRows));
+
       const queryParams = new URLSearchParams({
         start_date: params.startDate,
         end_date: params.endDate,
         page: (params.page || 1).toString(),
-        rows: (params.rows || 100).toString(), // Max 100 per backend limit
+        rows: clampedRows.toString(),
       });
 
       // Add orderBy if specified (default: item_date,DESC on backend)

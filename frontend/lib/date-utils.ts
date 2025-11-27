@@ -1,6 +1,19 @@
 import { DateRange, DateRangePreset } from './types';
 
+/**
+ * Returns a DateRange for the given preset.
+ *
+ * @throws Error if preset is 'custom' - callers must handle custom ranges themselves
+ * by maintaining their own DateRange state.
+ */
 export function getDateRangeFromPreset(preset: DateRangePreset): DateRange {
+  if (preset === 'custom') {
+    throw new Error(
+      "getDateRangeFromPreset does not handle 'custom' preset. " +
+        'Callers must manage custom date ranges via their own state.',
+    );
+  }
+
   const endDate = new Date();
   endDate.setHours(23, 59, 59, 999);
 
@@ -20,17 +33,21 @@ export function getDateRangeFromPreset(preset: DateRangePreset): DateRange {
     case '90d':
       startDate.setDate(startDate.getDate() - 90);
       break;
-    case 'custom':
-      break;
   }
 
   return { startDate, endDate };
 }
 
+/**
+ * Converts a Date to ISO 8601 string for API requests.
+ */
 export function formatDateForAPI(date: Date): string {
   return date.toISOString();
 }
 
+/**
+ * Formats a Date as YYYY-MM-DD for HTML date input elements.
+ */
 export function formatDateForInput(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -38,13 +55,24 @@ export function formatDateForInput(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Parses a YYYY-MM-DD string (from HTML date input) into a Date at local midnight.
+ *
+ * Note: The resulting Date is at 00:00:00 in the LOCAL timezone.
+ * When converted to ISO (e.g., via toISOString()), the time will be adjusted to UTC.
+ * If the API expects UTC-day boundaries, consider constructing a UTC midnight Date instead.
+ */
 export function parseDateFromInput(value: string): Date {
   return new Date(`${value}T00:00:00`);
 }
 
-export function formatDateForMarkdown(date: Date | string): string {
+/**
+ * Formats a Date for display in markdown exports (e.g., "Monday, November 27, 2025").
+ * Uses 'en-US' locale. For i18n support, pass locale as a parameter.
+ */
+export function formatDateForMarkdown(date: Date | string, locale = 'en-US'): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -52,9 +80,14 @@ export function formatDateForMarkdown(date: Date | string): string {
   });
 }
 
-export function formatDateTimeForMarkdown(date: Date | string): string {
+/**
+ * Formats a Date with time for display in markdown exports
+ * (e.g., "Monday, November 27, 2025, 03:45 PM").
+ * Uses 'en-US' locale. For i18n support, pass locale as a parameter.
+ */
+export function formatDateTimeForMarkdown(date: Date | string, locale = 'en-US'): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleString('en-US', {
+  return d.toLocaleString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -64,6 +97,9 @@ export function formatDateTimeForMarkdown(date: Date | string): string {
   });
 }
 
+/**
+ * Validates a date range and returns an error message if invalid, or null if valid.
+ */
 export function validateDateRange(startDate: Date, endDate: Date): string | null {
   if (startDate > endDate) {
     return 'Start date must be before end date';

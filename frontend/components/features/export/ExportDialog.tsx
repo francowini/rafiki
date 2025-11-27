@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 const EXPORT_ROWS_DEFAULT = 100;
 
 interface ExportDialogProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 export function ExportDialog({ children }: ExportDialogProps) {
@@ -37,8 +38,13 @@ export function ExportDialog({ children }: ExportDialogProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Guard against stale responses overwriting state
+  const requestIdRef = useRef(0);
+
   useEffect(() => {
     if (!open) return;
+
+    const currentRequestId = ++requestIdRef.current;
 
     const fetchExportData = async () => {
       setIsLoading(true);
@@ -52,13 +58,23 @@ export function ExportDialog({ children }: ExportDialogProps) {
           rows: EXPORT_ROWS_DEFAULT,
           orderBy: 'item_date,DESC',
         });
-        setExportData(response);
+
+        // Only update state if this is still the latest request
+        if (currentRequestId === requestIdRef.current) {
+          setExportData(response);
+        }
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Failed to load export data';
-        setError(message);
-        setExportData(null);
+        // Only update state if this is still the latest request
+        if (currentRequestId === requestIdRef.current) {
+          const message = err instanceof Error ? err.message : 'Failed to load export data';
+          setError(message);
+          setExportData(null);
+        }
       } finally {
-        setIsLoading(false);
+        // Only update state if this is still the latest request
+        if (currentRequestId === requestIdRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -104,6 +120,7 @@ export function ExportDialog({ children }: ExportDialogProps) {
 
   const momentsCount = exportData?.items.filter((i) => i.itemType === 'moment').length || 0;
   const thinksCount = exportData?.items.filter((i) => i.itemType === 'think').length || 0;
+  const hasMoreItems = !!exportData && exportData.items.length < exportData.total;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -119,7 +136,7 @@ export function ExportDialog({ children }: ExportDialogProps) {
         <DialogHeader>
           <DialogTitle>Export Journal</DialogTitle>
           <DialogDescription>
-            Export your moments and thoughts to a markdown file. Select a date range to get started.
+            Export your moments and thinks to a markdown file. Select a date range to get started.
           </DialogDescription>
         </DialogHeader>
 
@@ -156,7 +173,9 @@ export function ExportDialog({ children }: ExportDialogProps) {
           </Button>
           <Button
             onClick={handleExport}
-            disabled={isLoading || isExporting || !exportData || exportData.total === 0}
+            disabled={
+              isLoading || isExporting || !exportData || exportData.total === 0 || hasMoreItems
+            }
             className="gap-2"
           >
             {isExporting ? (

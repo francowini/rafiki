@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -25,15 +25,45 @@ const PRESET_OPTIONS: { value: DateRangePreset; label: string }[] = [
   { value: 'custom', label: 'Custom range' },
 ];
 
+/**
+ * Detects which preset matches the given date range, or 'custom' if none match.
+ */
+function detectPresetFromRange(range: DateRange): DateRangePreset {
+  const presets: DateRangePreset[] = ['7d', '14d', '30d'];
+
+  for (const preset of presets) {
+    const presetRange = getDateRangeFromPreset(preset);
+    // Compare dates by day (ignore time differences)
+    const sameStart =
+      formatDateForInput(range.startDate) === formatDateForInput(presetRange.startDate);
+    const sameEnd = formatDateForInput(range.endDate) === formatDateForInput(presetRange.endDate);
+
+    if (sameStart && sameEnd) {
+      return preset;
+    }
+  }
+
+  return 'custom';
+}
+
 export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
-  const [selectedPreset, setSelectedPreset] = useState<DateRangePreset>('7d');
+  // Track if user explicitly selected custom mode (even if dates happen to match a preset)
+  const [isCustomMode, setIsCustomMode] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Derive the active preset from the current date range value
+  const detectedPreset = useMemo(() => detectPresetFromRange(value), [value]);
+
+  // Show custom mode if user explicitly selected it OR if dates don't match any preset
+  const activePreset = isCustomMode ? 'custom' : detectedPreset;
+
   const handlePresetChange = (preset: DateRangePreset) => {
-    setSelectedPreset(preset);
     setValidationError(null);
 
-    if (preset !== 'custom') {
+    if (preset === 'custom') {
+      setIsCustomMode(true);
+    } else {
+      setIsCustomMode(false);
       const range = getDateRangeFromPreset(preset);
       onChange(range);
     }
@@ -63,7 +93,7 @@ export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
             <Button
               key={option.value}
               type="button"
-              variant={selectedPreset === option.value ? 'default' : 'outline'}
+              variant={activePreset === option.value ? 'default' : 'outline'}
               size="sm"
               onClick={() => handlePresetChange(option.value)}
             >
@@ -73,7 +103,7 @@ export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
         </div>
       </div>
 
-      {selectedPreset === 'custom' && (
+      {activePreset === 'custom' && (
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="startDate">Start Date</Label>
