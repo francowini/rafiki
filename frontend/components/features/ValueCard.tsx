@@ -32,13 +32,7 @@ interface ValueCardProps {
   isDragging?: boolean;
 }
 
-export function ValueCard({
-  value,
-  rank,
-  onEdit,
-  onDelete,
-  isDragging = false,
-}: ValueCardProps) {
+export function ValueCard({ value, rank, onEdit, onDelete, isDragging = false }: ValueCardProps) {
   const facetConfig = getFacetConfig(value.facet);
   const gradientClass = gradientMap[value.facet] || 'bg-white';
 
@@ -52,10 +46,7 @@ export function ValueCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap flex-1">
             {/* Priority Badge - uniform styling for all */}
-            <Badge
-              variant="outline"
-              className="bg-gray-100 text-gray-700 border-gray-300"
-            >
+            <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">
               #{rank}
             </Badge>
 
@@ -73,12 +64,7 @@ export function ValueCard({
           {(onEdit || onDelete) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  aria-label="Actions"
-                >
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Actions">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -105,9 +91,7 @@ export function ValueCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-sm text-foreground leading-relaxed">
-          {value.content}
-        </p>
+        <p className="text-sm text-foreground leading-relaxed">{value.content}</p>
         <p className="text-xs text-muted-foreground">
           Updated{' '}
           {(() => {
