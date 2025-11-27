@@ -1,0 +1,38 @@
+meta {
+  name: Get Life Vision by ID
+  type: http
+  seq: 22
+}
+
+get {
+  url: {{base-url}}/v1/lifevisions/{{lifevision-id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return life vision object", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("id");
+    expect(data).to.have.property("valueId");
+    expect(data).to.have.property("content");
+    expect(data).to.have.property("dateCreated");
+    expect(data).to.have.property("dateUpdated");
+  });
+}
+
+docs {
+  # Get Life Vision by ID
+
+  Returns a specific life vision by its ID.
+
+  Only the owner can access their life visions.
+}

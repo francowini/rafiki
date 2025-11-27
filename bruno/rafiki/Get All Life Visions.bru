@@ -1,0 +1,47 @@
+meta {
+  name: Get All Life Visions
+  type: http
+  seq: 21
+}
+
+get {
+  url: {{base-url}}/v1/lifevisions
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  rows: 10
+  orderBy: date_created,DESC
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return paginated results", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("items");
+    expect(data).to.have.property("total");
+    expect(data).to.have.property("page");
+    expect(data.items).to.be.an("array");
+  });
+}
+
+docs {
+  # Get All Life Visions
+
+  Returns all life visions for the authenticated user.
+
+  ## Query Parameters
+  - page: Page number (default: 1)
+  - rows: Items per page (default: 10)
+  - orderBy: Sort field and direction (e.g., date_created,DESC)
+  - valueId: Filter by value ID (optional)
+}

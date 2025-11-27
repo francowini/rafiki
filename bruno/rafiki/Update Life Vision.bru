@@ -1,0 +1,46 @@
+meta {
+  name: Update Life Vision
+  type: http
+  seq: 23
+}
+
+put {
+  url: {{base-url}}/v1/lifevisions/{{lifevision-id}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+body:json {
+  {
+    "content": "I am embracing growth and change with courage, living authentically every day"
+  }
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return updated life vision", function() {
+    const data = res.getBody();
+    const requestBody = req.getBody();
+
+    expect(data.content).to.equal(requestBody.content);
+  });
+}
+
+docs {
+  # Update Life Vision
+
+  Updates an existing life vision.
+
+  ## Fields
+  - content: New vision statement (optional, 10-500 chars)
+  - valueId: Move to different value (optional, must own the value)
+
+  Only the owner can update their life visions.
+}

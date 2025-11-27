@@ -1,0 +1,57 @@
+meta {
+  name: Get Life Visions by Value
+  type: http
+  seq: 25
+}
+
+get {
+  url: {{base-url}}/v1/values/{{value-id}}/lifevisions
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  rows: 10
+  orderBy: date_created,DESC
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return paginated results", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("items");
+    expect(data).to.have.property("total");
+    expect(data).to.have.property("page");
+    expect(data.items).to.be.an("array");
+  });
+
+  test("should return life visions for the specified value", function() {
+    const data = res.getBody();
+    const valueId = bru.getEnvVar("value-id");
+
+    for (const item of data.items) {
+      expect(item.valueId).to.equal(valueId);
+    }
+  });
+}
+
+docs {
+  # Get Life Visions by Value
+
+  Returns all life visions for a specific value.
+
+  ## Query Parameters
+  - page: Page number (default: 1)
+  - rows: Items per page (default: 10)
+  - orderBy: Sort field and direction (e.g., date_created,DESC)
+
+  Only the owner can access their life visions.
+}

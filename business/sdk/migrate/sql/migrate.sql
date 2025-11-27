@@ -120,3 +120,28 @@ COMMENT ON COLUMN values.display_order IS 'User-controlled priority ranking (1=h
 -- This enables atomic batch reordering where swapping positions (e.g., 1↔2)
 -- would otherwise violate the unique constraint during the intermediate state.
 DROP INDEX IF EXISTS values_user_order_unique_idx;
+
+
+-- Version: 1.06
+-- Description: Create life_visions table for aspirational states of being
+
+CREATE TABLE life_visions (
+    life_vision_id  UUID        NOT NULL,
+    user_id         UUID        NOT NULL,
+    value_id        UUID        NOT NULL,
+    content         TEXT        NOT NULL,
+    date_created    TIMESTAMP   NOT NULL,
+    date_updated    TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (life_vision_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (value_id) REFERENCES values(value_id) ON DELETE CASCADE
+);
+
+-- Performance indexes
+CREATE INDEX life_visions_user_id_idx ON life_visions(user_id);
+CREATE INDEX life_visions_value_id_idx ON life_visions(value_id);
+CREATE INDEX life_visions_date_created_idx ON life_visions(date_created DESC);
+
+COMMENT ON TABLE life_visions IS 'Aspirational states of being linked to personal values';
+COMMENT ON COLUMN life_visions.content IS 'Encrypted vision statement (plaintext validated as 10-500 chars in business layer)';
