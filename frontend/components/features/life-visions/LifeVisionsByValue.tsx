@@ -45,9 +45,7 @@ export function LifeVisionsByValue({ value, visions, onEdit, onDelete }: LifeVis
           ))
         ) : (
           <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center">
-            <p className="text-sm text-muted-foreground italic">
-              No visions yet. Click &quot;New vision&quot; to add one.
-            </p>
+            <p className="text-sm text-muted-foreground italic">No visions yet for this value.</p>
           </div>
         )}
       </div>

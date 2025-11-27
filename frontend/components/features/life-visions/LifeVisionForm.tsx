@@ -112,8 +112,10 @@ export function LifeVisionForm({
       if (onSuccess) {
         onSuccess();
       }
-    } catch (err: any) {
-      setError(err.message || `Error ${isEditMode ? 'updating' : 'creating'} vision`);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : `Error ${isEditMode ? 'updating' : 'creating'} vision`;
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -121,8 +123,8 @@ export function LifeVisionForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <Alert className="bg-rose-50 border-rose-200">
-        <AlertDescription className="text-sm text-rose-900">
+      <Alert className="bg-gray-50 border-gray-200">
+        <AlertDescription className="text-sm text-gray-700">
           Your life visions are private and only visible to you.
         </AlertDescription>
       </Alert>

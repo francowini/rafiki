@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Value, LifeVision } from '@/lib/types';
@@ -33,8 +33,9 @@ export function ValuesTableWithVisions() {
         ]);
         setValues(valuesRes.items);
         setVisions(visionsRes.items);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load data');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to load data';
+        setError(message);
       } finally {
         setIsLoading(false);
       }
@@ -43,9 +44,15 @@ export function ValuesTableWithVisions() {
     fetchData();
   }, []);
 
-  const getVisionsForValue = (valueId: string) => {
-    return visions.filter((v) => v.valueId === valueId);
-  };
+  const visionsByValueId = useMemo(() => {
+    return visions.reduce<Record<string, LifeVision[]>>((acc, vision) => {
+      if (!acc[vision.valueId]) {
+        acc[vision.valueId] = [];
+      }
+      acc[vision.valueId].push(vision);
+      return acc;
+    }, {});
+  }, [visions]);
 
   if (isLoading) {
     return (
@@ -92,8 +99,8 @@ export function ValuesTableWithVisions() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-rose-600" />
-          <h2 className="text-xl font-semibold text-rose-900">Values & Life Visions</h2>
+          <Sparkles className="h-5 w-5 text-gray-600" />
+          <h2 className="text-xl font-semibold text-gray-900">Values & Life Visions</h2>
         </div>
         <Link href="/life-visions">
           <Button variant="outline" size="sm" className="gap-2">
@@ -114,7 +121,7 @@ export function ValuesTableWithVisions() {
           </TableHeader>
           <TableBody>
             {values.map((value) => {
-              const valueVisions = getVisionsForValue(value.id);
+              const valueVisions = visionsByValueId[value.id] || [];
               const facetConfig = getFacetConfig(value.facet);
 
               return (
@@ -138,7 +145,11 @@ export function ValuesTableWithVisions() {
                     {valueVisions.length > 0 ? (
                       <ul className="space-y-1">
                         {valueVisions.map((vision) => (
-                          <li key={vision.id} className="text-sm text-foreground line-clamp-1">
+                          <li
+                            key={vision.id}
+                            className="text-sm text-foreground line-clamp-1"
+                            title={vision.content}
+                          >
                             {vision.content}
                           </li>
                         ))}

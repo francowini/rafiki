@@ -49,11 +49,12 @@ export default function LifeVisionsPage() {
       ]);
       setValues(valuesRes.items);
       setVisions(visionsRes.items);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load data. Please try again.';
       toast({
         variant: 'destructive',
         title: 'Error loading data',
-        description: err.message || 'Failed to load data. Please try again.',
+        description: message,
       });
     } finally {
       setIsLoading(false);
@@ -92,11 +93,13 @@ export default function LifeVisionsPage() {
       });
       setVisionToDelete(null);
       fetchData();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to delete vision. Please try again.';
       toast({
         variant: 'destructive',
         title: 'Error deleting vision',
-        description: err.message || 'Failed to delete vision. Please try again.',
+        description: message,
       });
     } finally {
       setIsDeleting(false);
@@ -129,20 +132,20 @@ export default function LifeVisionsPage() {
       <div className="container mx-auto py-8 px-4 max-w-7xl">
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-8 w-8 text-rose-600" />
-            <h1 className="text-3xl font-bold tracking-tight text-rose-900">Life Visions</h1>
+            <Sparkles className="h-8 w-8 text-gray-600" />
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Life Visions</h1>
           </div>
           <p className="text-muted-foreground">Define how you want to live each of your values</p>
         </div>
 
         <div className="border rounded-lg p-8 text-center">
-          <Sparkles className="h-12 w-12 text-rose-400 mx-auto mb-4" />
+          <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">No values defined yet</h3>
           <p className="text-muted-foreground mb-6">
             You need to create values first before adding life visions.
           </p>
           <Link href="/values">
-            <Button className="bg-rose-600 hover:bg-rose-700">Define your values</Button>
+            <Button>Define your values</Button>
           </Link>
         </div>
       </div>
@@ -155,15 +158,15 @@ export default function LifeVisionsPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="h-8 w-8 text-rose-600" />
-              <h1 className="text-3xl font-bold tracking-tight text-rose-900">Life Visions</h1>
+              <Sparkles className="h-8 w-8 text-gray-600" />
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Life Visions</h1>
             </div>
             <p className="text-muted-foreground">Define how you want to live each of your values</p>
           </div>
 
           <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
             <SheetTrigger asChild>
-              <Button size="lg" className="bg-rose-600 hover:bg-rose-700">
+              <Button size="lg">
                 <Plus className="h-5 w-5 mr-2" />
                 New vision
               </Button>
@@ -187,9 +190,9 @@ export default function LifeVisionsPage() {
           </Sheet>
         </div>
 
-        <Alert className="bg-rose-50 border-rose-200">
-          <Info className="h-4 w-4 text-rose-600" />
-          <AlertDescription className="text-sm text-rose-900">
+        <Alert className="bg-gray-50 border-gray-200">
+          <Info className="h-4 w-4 text-gray-600" />
+          <AlertDescription className="text-sm text-gray-700">
             Each value can have multiple visions, but we recommend max 2 per value for clarity.
             Visions help you translate abstract values into concrete life goals.
           </AlertDescription>

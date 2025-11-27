@@ -23,6 +23,7 @@ export function LifeVisionCard({ lifeVision, onEdit, onDelete }: LifeVisionCardP
             size="sm"
             onClick={() => onEdit(lifeVision)}
             className="h-8 px-2 text-muted-foreground hover:text-foreground"
+            aria-label="Edit life vision"
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -31,6 +32,7 @@ export function LifeVisionCard({ lifeVision, onEdit, onDelete }: LifeVisionCardP
             size="sm"
             onClick={() => onDelete(lifeVision)}
             className="h-8 px-2 text-muted-foreground hover:text-destructive"
+            aria-label="Delete life vision"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
