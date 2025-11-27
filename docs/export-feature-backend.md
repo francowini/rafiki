@@ -24,9 +24,9 @@ Add to `/business/sdk/migrate/sql/migrate.sql`:
 
 ```sql
 -- Version: 1.07
--- Description: Create view_weekly_export for combined moments and thinks export
+-- Description: Create view_export_items for combined moments and thinks export
 
-CREATE VIEW view_weekly_export AS
+CREATE VIEW view_export_items AS
 -- Select moments with type identifier
 SELECT
     moment_id AS item_id,
@@ -533,7 +533,7 @@ func (s *Store) Query(ctx context.Context, filter vexportbus.QueryFilter, orderB
 		consequences, values_reflection, intensity,
 		category, content, date_created
 	FROM
-		view_weekly_export`
+		view_export_items`
 
 	buf := bytes.NewBufferString(q)
 	s.applyFilter(filter, data, buf)
@@ -562,7 +562,7 @@ func (s *Store) Count(ctx context.Context, filter vexportbus.QueryFilter) (int, 
 	SELECT
 		count(1) AS count
 	FROM
-		view_weekly_export`
+		view_export_items`
 
 	buf := bytes.NewBufferString(q)
 	s.applyFilter(filter, data, buf)

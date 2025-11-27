@@ -45,7 +45,7 @@ func (s *Store) Query(ctx context.Context, filter vexportbus.QueryFilter, orderB
 		consequences, values_reflection, intensity,
 		category, content, date_created
 	FROM
-		view_weekly_export`
+		view_export_items`
 
 	buf := bytes.NewBufferString(q)
 	s.applyFilter(filter, data, buf)
@@ -74,7 +74,7 @@ func (s *Store) Count(ctx context.Context, filter vexportbus.QueryFilter) (int, 
 	SELECT
 		count(1) AS count
 	FROM
-		view_weekly_export`
+		view_export_items`
 
 	buf := bytes.NewBufferString(q)
 	s.applyFilter(filter, data, buf)

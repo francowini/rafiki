@@ -148,9 +148,9 @@ COMMENT ON COLUMN life_visions.content IS 'Encrypted vision statement (plaintext
 
 
 -- Version: 1.07
--- Description: Create view_weekly_export for combined moments and thinks export
+-- Description: Create view for combined moments and thinks export
 
-CREATE VIEW view_weekly_export AS
+CREATE VIEW view_export_items AS
 -- Select moments with type identifier
 SELECT
     moment_id AS item_id,

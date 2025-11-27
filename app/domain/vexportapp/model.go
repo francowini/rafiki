@@ -22,7 +22,7 @@ type ExportItem struct {
 	Intensity        *int    `json:"intensity,omitempty"`
 
 	// Think-specific fields
-	Category string  `json:"category,omitempty"`
+	Category *string `json:"category,omitempty"`
 	Content  *string `json:"content,omitempty"`
 
 	DateCreated string `json:"dateCreated"`
@@ -65,7 +65,10 @@ func toAppExportItem(item vexportbus.ExportItem) ExportItem {
 		appItem.Intensity = &i
 	}
 
-	appItem.Category = item.Category
+	if item.Category != nil {
+		s := item.Category.String()
+		appItem.Category = &s
+	}
 	if item.Content != nil {
 		s := item.Content.String()
 		appItem.Content = &s

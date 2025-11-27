@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/types/content"
 	"github.com/francowini/rafiki/business/types/intensity"
 )
@@ -14,6 +15,7 @@ import (
 var (
 	ErrNotFound         = errors.New("export items not found")
 	ErrInvalidDateRange = errors.New("start_date must be before end_date")
+	ErrInvalidUserID    = errors.New("user_id is required and cannot be empty")
 )
 
 // ItemType represents the type of export item (moment or think).
@@ -46,7 +48,7 @@ type ExportItem struct {
 	Intensity        *intensity.Intensity
 
 	// Think-specific fields (empty/nil for moments)
-	Category string
+	Category *thinkbus.Category
 	Content  *content.Content
 
 	DateCreated time.Time

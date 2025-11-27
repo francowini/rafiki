@@ -28,11 +28,11 @@ var (
 )
 
 // Claims represents the authorization claims transmitted via a JWT.
+// NOTE: Email and Name are intentionally omitted to avoid storing PII in tokens.
+// Use userBus.QueryByID(ctx, userID) to fetch user details when needed.
 type Claims struct {
 	jwt.RegisteredClaims
 	Roles []string `json:"roles"`
-	Email string   `json:"email"`
-	Name  string   `json:"name"`
 }
 
 // KeyLookup declares a method set of behavior for looking up

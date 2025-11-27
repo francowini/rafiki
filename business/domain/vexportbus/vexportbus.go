@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 )
@@ -49,6 +51,11 @@ func NewBusiness(storer Storer, extensions ...Extension) ExtBusiness {
 
 // Query retrieves a list of export items based on the filter.
 func (b *Business) Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]ExportItem, error) {
+	// Validate UserID is provided (security: user data isolation)
+	if filter.UserID == uuid.Nil {
+		return nil, ErrInvalidUserID
+	}
+
 	// Domain-specific validation: date range must be valid
 	if filter.StartDate != nil && filter.EndDate != nil {
 		if filter.StartDate.After(*filter.EndDate) {
@@ -66,5 +73,17 @@ func (b *Business) Query(ctx context.Context, filter QueryFilter, orderBy order.
 
 // Count returns the total number of export items matching the filter.
 func (b *Business) Count(ctx context.Context, filter QueryFilter) (int, error) {
+	// Validate UserID is provided (security: user data isolation)
+	if filter.UserID == uuid.Nil {
+		return 0, ErrInvalidUserID
+	}
+
+	// Domain-specific validation: date range must be valid
+	if filter.StartDate != nil && filter.EndDate != nil {
+		if filter.StartDate.After(*filter.EndDate) {
+			return 0, ErrInvalidDateRange
+		}
+	}
+
 	return b.storer.Count(ctx, filter)
 }

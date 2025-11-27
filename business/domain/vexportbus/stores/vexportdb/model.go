@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/vexportbus"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/types/content"
@@ -120,9 +121,13 @@ func toBusExportItemDecrypted(db exportItem, enc encrypt.Encryptor) (vexportbus.
 		item.Intensity = &parsed
 	}
 
-	// Decrypt think-specific fields
+	// Parse think-specific fields
 	if db.Category.Valid {
-		item.Category = db.Category.String
+		cat, err := thinkbus.ParseCategory(db.Category.String)
+		if err != nil {
+			return vexportbus.ExportItem{}, fmt.Errorf("parse category: %w", err)
+		}
+		item.Category = &cat
 	}
 
 	if db.Content.Valid {

@@ -24,8 +24,6 @@ func (s *Store) applyFilter(filter vexportbus.QueryFilter, data map[string]any, 
 		wc = append(wc, "item_date <= :end_date")
 	}
 
-	if len(wc) > 0 {
-		buf.WriteString(" WHERE ")
-		buf.WriteString(strings.Join(wc, " AND "))
-	}
+	buf.WriteString(" WHERE ")
+	buf.WriteString(strings.Join(wc, " AND "))
 }
