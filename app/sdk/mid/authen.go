@@ -75,6 +75,8 @@ func Basic(ath *auth.Auth, userBus userbus.ExtBusiness) web.MidFunc {
 					IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 				},
 				Roles: role.ParseToString(usr.Roles),
+				Email: usr.Email.Address,
+				Name:  usr.Name.String(),
 			}
 
 			subjectID, err := uuid.Parse(claims.Subject)

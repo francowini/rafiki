@@ -31,6 +31,8 @@ var (
 type Claims struct {
 	jwt.RegisteredClaims
 	Roles []string `json:"roles"`
+	Email string   `json:"email"`
+	Name  string   `json:"name"`
 }
 
 // KeyLookup declares a method set of behavior for looking up
