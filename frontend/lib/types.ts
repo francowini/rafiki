@@ -138,3 +138,30 @@ export interface ValueListResponse {
   items: Value[];
   total: number;
 }
+
+// ============================================================================
+// Life Vision Types
+// ============================================================================
+
+export interface LifeVision {
+  id: string;
+  valueId: string;
+  content: string;
+  dateCreated: string;
+  dateUpdated: string;
+}
+
+export interface NewLifeVision {
+  valueId: string;
+  content: string;
+}
+
+export interface UpdateLifeVision {
+  content?: string;
+  valueId?: string;
+}
+
+export interface LifeVisionListResponse {
+  items: LifeVision[];
+  total: number;
+}

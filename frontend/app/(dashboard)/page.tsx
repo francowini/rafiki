@@ -3,8 +3,8 @@
 import { useAuth } from '@/lib/auth-context';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { FeatureCard } from '@/components/dashboard/FeatureCard';
-import { ValuesPreview } from '@/components/dashboard/ValuesPreview';
-import { Brain, Target, Heart, Compass, Activity, Clock } from 'lucide-react';
+import { ValuesTableWithVisions } from '@/components/dashboard/ValuesTableWithVisions';
+import { Brain, Target, Heart, Compass, Activity, Clock, Sparkles } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -14,8 +14,8 @@ export default function DashboardPage() {
       {/* Welcome Section */}
       <WelcomeCard userName={user?.name || 'there'} />
 
-      {/* Values Preview Section */}
-      <ValuesPreview />
+      {/* Values & Life Visions Section */}
+      <ValuesTableWithVisions />
 
       {/* Feature Navigation Section */}
       <div>
@@ -26,6 +26,14 @@ export default function DashboardPage() {
             description="Define and track your core values and principles"
             icon={Heart}
             href="/values"
+            color="red"
+            available
+          />
+          <FeatureCard
+            title="Life Visions"
+            description="Define how you want to live each of your values"
+            icon={Sparkles}
+            href="/life-visions"
             color="red"
             available
           />

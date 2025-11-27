@@ -12,6 +12,10 @@ import {
   NewValue,
   UpdateValue,
   Facet,
+  LifeVision,
+  LifeVisionListResponse,
+  NewLifeVision,
+  UpdateLifeVision,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -248,6 +252,58 @@ export const api = {
      */
     liveness: async (): Promise<{ status: string }> => {
       return fetchAPI<{ status: string }>('/v1/liveness');
+    },
+  },
+
+  lifeVisions: {
+    /**
+     * Get all life visions for the current user
+     */
+    getAll: async (): Promise<LifeVisionListResponse> => {
+      return fetchAPI<LifeVisionListResponse>('/v1/lifevisions');
+    },
+
+    /**
+     * Get all life visions for a specific value
+     */
+    getByValue: async (valueId: string): Promise<LifeVisionListResponse> => {
+      return fetchAPI<LifeVisionListResponse>(`/v1/values/${valueId}/lifevisions`);
+    },
+
+    /**
+     * Get a single life vision by ID
+     */
+    getById: async (id: string): Promise<LifeVision> => {
+      return fetchAPI<LifeVision>(`/v1/lifevisions/${id}`);
+    },
+
+    /**
+     * Create a new life vision
+     */
+    create: async (data: NewLifeVision): Promise<LifeVision> => {
+      return fetchAPI<LifeVision>('/v1/lifevisions', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    /**
+     * Update an existing life vision
+     */
+    update: async (id: string, data: UpdateLifeVision): Promise<LifeVision> => {
+      return fetchAPI<LifeVision>(`/v1/lifevisions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+
+    /**
+     * Delete a life vision
+     */
+    delete: async (id: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/lifevisions/${id}`, {
+        method: 'DELETE',
+      });
     },
   },
 };

@@ -83,7 +83,7 @@ export default function ValuesPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-rose-900">Values</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Values</h1>
             <p className="text-muted-foreground mt-1">Define what matters most in your life</p>
           </div>
 
@@ -132,9 +132,9 @@ export default function ValuesPage() {
         </div>
 
         {/* Info Alert */}
-        <Alert className="bg-rose-50 border-rose-200">
-          <Info className="h-4 w-4 text-rose-600" />
-          <AlertDescription className="text-sm text-rose-900">
+        <Alert className="bg-gray-50 border-gray-200">
+          <Info className="h-4 w-4 text-gray-600" />
+          <AlertDescription className="text-sm text-gray-700">
             You can define up to <strong>10 core values</strong>. Drag to reorder and set your
             priorities. Gaps are allowed when you delete values.
           </AlertDescription>

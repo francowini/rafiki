@@ -17,6 +17,12 @@ export function Header() {
           </Link>
           {isAuthenticated && (
             <nav className="flex gap-4">
+              <Link href="/values">
+                <Button variant="ghost">Values</Button>
+              </Link>
+              <Link href="/life-visions">
+                <Button variant="ghost">Life Visions</Button>
+              </Link>
               <Link href="/thinks">
                 <Button variant="ghost">Thinks</Button>
               </Link>
