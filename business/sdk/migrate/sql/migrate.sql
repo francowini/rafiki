@@ -145,3 +145,46 @@ CREATE INDEX life_visions_date_created_idx ON life_visions(date_created DESC);
 
 COMMENT ON TABLE life_visions IS 'Aspirational states of being linked to personal values';
 COMMENT ON COLUMN life_visions.content IS 'Encrypted vision statement (plaintext validated as 10-500 chars in business layer)';
+
+
+-- Version: 1.07
+-- Description: Create view_weekly_export for combined moments and thinks export
+
+CREATE VIEW view_weekly_export AS
+-- Select moments with type identifier
+SELECT
+    moment_id AS item_id,
+    user_id,
+    'moment' AS item_type,
+    moment_date AS item_date,
+    situation,
+    thoughts,
+    physical_symptoms,
+    behavior,
+    consequences,
+    values_reflection,
+    intensity,
+    NULL AS category,
+    NULL AS content,
+    date_created
+FROM moments
+
+UNION ALL
+
+-- Select thinks with type identifier
+SELECT
+    think_id AS item_id,
+    user_id,
+    'think' AS item_type,
+    date_created AS item_date,
+    NULL AS situation,
+    NULL AS thoughts,
+    NULL AS physical_symptoms,
+    NULL AS behavior,
+    NULL AS consequences,
+    NULL AS values_reflection,
+    NULL AS intensity,
+    category,
+    content,
+    date_created
+FROM thinks;

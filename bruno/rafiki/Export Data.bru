@@ -1,0 +1,71 @@
+meta {
+  name: Export Data
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{base-url}}/v1/export
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  rows: 1000
+  ~start_date: 2024-11-01T00:00:00Z
+  ~end_date: 2024-11-30T23:59:59Z
+  ~orderBy: item_date,DESC
+}
+
+auth:bearer {
+  token: {{jwt-token}}
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return paginated results", function() {
+    const data = res.getBody();
+    expect(data).to.have.property("items");
+    expect(data).to.have.property("total");
+    expect(data).to.have.property("page");
+    expect(data.items).to.be.an("array");
+  });
+
+  test("items should have correct structure", function() {
+    const data = res.getBody();
+    if (data.items.length > 0) {
+      const item = data.items[0];
+      expect(item).to.have.property("id");
+      expect(item).to.have.property("itemType");
+      expect(item).to.have.property("itemDate");
+      expect(item).to.have.property("dateCreated");
+      expect(["moment", "think"]).to.include(item.itemType);
+    }
+  });
+}
+
+docs {
+  # Export Data
+
+  Exports moments and thinks from a date range for client-side markdown generation.
+  This endpoint enables users to download their journal entries to share with their psychologist.
+
+  ## Query Parameters
+  - page: Page number (default: 1)
+  - rows: Items per page (use 1000 for exports)
+  - start_date: Filter items >= this date (RFC3339 format, optional)
+  - end_date: Filter items <= this date (RFC3339 format, optional)
+  - orderBy: Sort field and direction (default: item_date,DESC)
+
+  ## Available Order Fields
+  - item_date: Date of the moment/think
+  - item_type: Type: "moment" or "think"
+  - date_created: When the entry was created
+
+  ## Response
+  Returns unified export items containing both moments and thinks with their respective fields.
+}

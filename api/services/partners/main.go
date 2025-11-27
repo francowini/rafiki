@@ -29,6 +29,8 @@ import (
 	"github.com/francowini/rafiki/business/domain/userbus/stores/userdb"
 	"github.com/francowini/rafiki/business/domain/valuebus"
 	"github.com/francowini/rafiki/business/domain/valuebus/stores/valuedb"
+	"github.com/francowini/rafiki/business/domain/vexportbus"
+	"github.com/francowini/rafiki/business/domain/vexportbus/stores/vexportdb"
 	"github.com/francowini/rafiki/business/sdk/delegate"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/migrate"
@@ -232,6 +234,10 @@ func run(ctx context.Context, log *logger.Logger) error {
 	lifeVisionStore := lifevisiondb.NewStore(log, db, encryptor)
 	lifeVisionBus := lifevisionbus.NewBusiness(log, valueBus, dlg, lifeVisionStore)
 
+	// Create vexport domain (query-only view domain)
+	vexportStore := vexportdb.NewStore(log, db, encryptor)
+	vexportBus := vexportbus.NewBusiness(vexportStore)
+
 	// -------------------------------------------------------------------------
 	// Initialize authentication support
 
@@ -316,6 +322,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 			MomentBus:     momentBus,
 			ValueBus:      valueBus,
 			LifeVisionBus: lifeVisionBus,
+			VExportBus:    vexportBus,
 			UserBus:       userBus,
 			Auth:          authInstance,
 		},
