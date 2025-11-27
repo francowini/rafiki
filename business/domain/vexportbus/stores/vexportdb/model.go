@@ -52,15 +52,20 @@ func decryptContent(enc encrypt.Encryptor, field sql.NullString, fieldName strin
 }
 
 func toBusExportItemDecrypted(db exportItem, enc encrypt.Encryptor) (vexportbus.ExportItem, error) {
+	// Validate ItemType before assignment
+	itemType, err := vexportbus.ParseItemType(db.ItemType)
+	if err != nil {
+		return vexportbus.ExportItem{}, fmt.Errorf("parse item_type: %w", err)
+	}
+
+	// Keep timestamps in UTC - timezone conversion happens at the API layer
 	item := vexportbus.ExportItem{
 		ID:          db.ID,
 		UserID:      db.UserID,
-		ItemType:    vexportbus.ItemType(db.ItemType),
-		ItemDate:    db.ItemDate.In(time.Local),
-		DateCreated: db.DateCreated.In(time.Local),
+		ItemType:    itemType,
+		ItemDate:    db.ItemDate.UTC(),
+		DateCreated: db.DateCreated.UTC(),
 	}
-
-	var err error
 
 	// Decrypt moment-specific content fields
 	if item.Situation, err = decryptContent(enc, db.Situation, "situation"); err != nil {

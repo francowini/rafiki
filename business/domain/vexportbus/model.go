@@ -16,6 +16,7 @@ var (
 	ErrNotFound         = errors.New("export items not found")
 	ErrInvalidDateRange = errors.New("start_date must be before end_date")
 	ErrInvalidUserID    = errors.New("user_id is required and cannot be empty")
+	ErrInvalidItemType  = errors.New("invalid item type, must be 'moment' or 'think'")
 )
 
 // ItemType represents the type of export item (moment or think).
@@ -29,6 +30,18 @@ const (
 
 func (it ItemType) String() string {
 	return string(it)
+}
+
+// ParseItemType validates and converts a string to an ItemType.
+func ParseItemType(s string) (ItemType, error) {
+	switch s {
+	case "moment":
+		return ItemTypeMoment, nil
+	case "think":
+		return ItemTypeThink, nil
+	default:
+		return "", ErrInvalidItemType
+	}
 }
 
 // ExportItem represents a unified export item (moment or think).
