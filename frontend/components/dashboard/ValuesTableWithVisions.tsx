@@ -138,9 +138,8 @@ export function ValuesTableWithVisions() {
                     {valueVisions.length > 0 ? (
                       <ul className="space-y-1">
                         {valueVisions.map((vision) => (
-                          <li key={vision.id} className="text-sm text-muted-foreground">
-                            <span className="text-rose-400 mr-2">•</span>
-                            <span className="line-clamp-1">{vision.content}</span>
+                          <li key={vision.id} className="text-sm text-foreground line-clamp-1">
+                            {vision.content}
                           </li>
                         ))}
                       </ul>
