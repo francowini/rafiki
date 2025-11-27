@@ -2,7 +2,6 @@
 
 import { LifeVision, Value } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles } from 'lucide-react';
 import { getFacetConfig } from '@/lib/value-utils';
 import { LifeVisionCard } from './LifeVisionCard';
 
@@ -45,9 +44,8 @@ export function LifeVisionsByValue({ value, visions, onEdit, onDelete }: LifeVis
             />
           ))
         ) : (
-          <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 text-center">
-            <Sparkles className="h-5 w-5 text-rose-400 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">
+          <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center">
+            <p className="text-sm text-muted-foreground italic">
               No visions yet. Click &quot;New vision&quot; to add one.
             </p>
           </div>

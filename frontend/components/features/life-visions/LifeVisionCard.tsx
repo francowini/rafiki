@@ -12,9 +12,9 @@ interface LifeVisionCardProps {
 
 export function LifeVisionCard({ lifeVision, onEdit, onDelete }: LifeVisionCardProps) {
   return (
-    <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+    <div className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap flex-1">
+        <p className="text-base font-medium text-foreground leading-relaxed whitespace-pre-wrap flex-1">
           {lifeVision.content}
         </p>
         <div className="flex gap-1 shrink-0">

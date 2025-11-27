@@ -136,21 +136,16 @@ export function ValuesTableWithVisions() {
                   </TableCell>
                   <TableCell>
                     {valueVisions.length > 0 ? (
-                      <div className="space-y-2">
+                      <ul className="space-y-1">
                         {valueVisions.map((vision) => (
-                          <div
-                            key={vision.id}
-                            className="bg-rose-50 border border-rose-200 rounded p-2"
-                          >
-                            <p className="text-sm line-clamp-2">{vision.content}</p>
-                          </div>
+                          <li key={vision.id} className="text-sm text-muted-foreground">
+                            <span className="text-rose-400 mr-2">•</span>
+                            <span className="line-clamp-1">{vision.content}</span>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     ) : (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Sparkles className="h-4 w-4 text-rose-300" />
-                        <span className="text-sm">No visions yet</span>
-                      </div>
+                      <span className="text-sm text-muted-foreground italic">No visions yet</span>
                     )}
                   </TableCell>
                 </TableRow>
