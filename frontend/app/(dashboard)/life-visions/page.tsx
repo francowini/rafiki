@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { LifeVision, Value } from '@/lib/types';
 import { LifeVisionForm } from '@/components/features/life-visions/LifeVisionForm';
@@ -41,7 +41,7 @@ export default function LifeVisionsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [valuesRes, visionsRes] = await Promise.all([
         api.values.getAll(),
@@ -59,11 +59,11 @@ export default function LifeVisionsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleCreateSuccess = () => {
     setIsFormOpen(false);
