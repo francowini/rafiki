@@ -165,3 +165,51 @@ export interface LifeVisionListResponse {
   items: LifeVision[];
   total: number;
 }
+
+// ============================================================================
+// Export Types
+// ============================================================================
+
+export interface ExportItem {
+  id: string;
+  itemType: 'moment' | 'think';
+  itemDate: string; // ISO 8601 timestamp
+
+  // Moment-specific fields (optional)
+  situation?: string;
+  thoughts?: string;
+  physicalSymptoms?: string;
+  behavior?: string;
+  consequences?: string;
+  valuesReflection?: string;
+  intensity?: number;
+
+  // Think-specific fields (optional)
+  category?: ThinkCategory;
+  content?: string;
+
+  dateCreated: string;
+}
+
+export interface ExportParams {
+  startDate: string; // ISO 8601 date string
+  endDate: string; // ISO 8601 date string
+  page?: number; // Page number (1-based, default: 1)
+  rows?: number; // Items per page (max: 100 per backend limit)
+  orderBy?: string; // Sort order (default: "item_date,DESC")
+}
+
+// Standard Query Domain response format
+export interface ExportResponse {
+  items: ExportItem[];
+  total: number;
+  page: number; // Current page number
+  rowsPerPage: number; // Items per page
+}
+
+export type DateRangePreset = '7d' | '14d' | '30d' | '90d' | 'custom';
+
+export interface DateRange {
+  startDate: Date;
+  endDate: Date;
+}
