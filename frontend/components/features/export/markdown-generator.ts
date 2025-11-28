@@ -8,7 +8,8 @@ import { formatDateForMarkdown, formatDateTimeForMarkdown } from '@/lib/date-uti
  */
 function escapeMarkdown(text: string): string {
   // Escape characters that have special meaning in Markdown
-  return text.replace(/([\\*_\[\]()#+-.,!`>|{}])/g, '\\$1');
+  // Note: hyphen moved to end of character class to avoid range interpretation
+  return text.replace(/([\\*_\[\]()#+.,!`>|{}-])/g, '\\$1');
 }
 
 /**

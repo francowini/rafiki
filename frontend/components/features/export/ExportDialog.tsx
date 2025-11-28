@@ -167,17 +167,23 @@ export function ExportDialog({ children }: ExportDialogProps) {
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isExporting}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleExport}
-            disabled={
-              isLoading || isExporting || !exportData || exportData.total === 0 || hasMoreItems
-            }
-            className="gap-2"
-          >
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          {hasMoreItems && (
+            <p className="text-sm text-muted-foreground text-left sm:mr-auto">
+              Export is limited to {EXPORT_ROWS_DEFAULT} entries. Please narrow your date range.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={isExporting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleExport}
+              disabled={
+                isLoading || isExporting || !exportData || exportData.total === 0 || hasMoreItems
+              }
+              className="gap-2"
+            >
             {isExporting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -189,7 +195,8 @@ export function ExportDialog({ children }: ExportDialogProps) {
                 Export to Markdown
               </>
             )}
-          </Button>
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

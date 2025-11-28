@@ -20,7 +20,7 @@ This document catalogs critical errors discovered during code review that should
 
 F1. [Security: Markdown Injection in User Content](#f1-security-markdown-injection-in-user-content)
 F2. [Async: Stale Responses in useEffect](#f2-async-stale-responses-in-useeffect)
-F3. [Data: Truncated Export Without Warning](#f3-data-truncated-export-without-warning)
+F3. [Data: Silent Data Truncation](#f3-data-silent-data-truncation)
 
 ---
 
@@ -752,7 +752,7 @@ useEffect(() => {
 
 ---
 
-## F3. Data: Truncated Export Without Warning
+## F3. Data: Silent Data Truncation
 
 ### Severity: 🟠 Major (Data Loss / UX Issue)
 

@@ -29,7 +29,7 @@ const PRESET_OPTIONS: { value: DateRangePreset; label: string }[] = [
  * Detects which preset matches the given date range, or 'custom' if none match.
  */
 function detectPresetFromRange(range: DateRange): DateRangePreset {
-  const presets: DateRangePreset[] = ['7d', '14d', '30d'];
+  const presets: Exclude<DateRangePreset, 'custom'>[] = ['7d', '14d', '30d'];
 
   for (const preset of presets) {
     const presetRange = getDateRangeFromPreset(preset);
