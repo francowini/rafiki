@@ -6,6 +6,8 @@ This document catalogs critical errors discovered during code review that should
 
 ## Table of Contents
 
+### Backend (Go)
+
 1. [Security: Child Entity Ownership Validation](#1-security-child-entity-ownership-validation)
 2. [Error Handling: Sentinel vs Generic Errors](#2-error-handling-sentinel-vs-generic-errors)
 3. [String Length: UTF-8 Rune Count vs Byte Count](#3-string-length-utf-8-rune-count-vs-byte-count)
@@ -13,6 +15,12 @@ This document catalogs critical errors discovered during code review that should
 5. [SQL: WHERE Clause Building](#5-sql-where-clause-building)
 6. [Logging: Missing Structured Logging in Business Layer](#6-logging-missing-structured-logging-in-business-layer)
 7. [Code Duplication: Repeated Decrypt-Parse Patterns](#7-code-duplication-repeated-decrypt-parse-patterns)
+
+### Frontend (TypeScript/React)
+
+F1. [Security: Markdown Injection in User Content](#f1-security-markdown-injection-in-user-content)
+F2. [Async: Stale Responses in useEffect](#f2-async-stale-responses-in-useeffect)
+F3. [Data: Silent Data Truncation](#f3-data-silent-data-truncation)
 
 ---
 
@@ -572,7 +580,7 @@ func toBusItem(db dbItem, enc encrypt.Encryptor) (Item, error) {
 
 ---
 
-## Quick Reference Checklist
+## Quick Reference Checklist (Backend)
 
 When implementing new features, verify:
 
@@ -584,3 +592,251 @@ When implementing new features, verify:
 - [ ] **App Layer**: Handle all business errors with appropriate HTTP status codes
 - [ ] **Logging**: Business layer methods include structured entry/error/success logging
 - [ ] **DRY**: Extract helpers for patterns repeated 3+ times
+
+---
+
+# Frontend Errors to Avoid
+
+This section catalogs critical errors specific to frontend (TypeScript/React) development.
+
+---
+
+## F1. Security: Markdown Injection in User Content
+
+### Severity: 🔴 CRITICAL (Security Vulnerability)
+
+### Problem
+
+When generating Markdown from user-provided content, failing to escape special characters allows users to inject malicious Markdown that can break formatting, inject links, or cause rendering issues.
+
+### Bad Example
+
+```typescript
+// ❌ BAD: User content inserted directly into Markdown
+function formatMoment(moment: ExportItem): string[] {
+  const lines: string[] = [];
+
+  if (moment.situation) {
+    lines.push('**Situation:**');
+    lines.push(moment.situation); // User could inject: "# HACKED [click here](evil.com)"
+    lines.push('');
+  }
+
+  return lines;
+}
+```
+
+### Good Example
+
+```typescript
+// ✅ GOOD: Escape Markdown special characters in user content
+function escapeMarkdown(text: string): string {
+  return text.replace(/([\\*_\[\]()#+-.,!`>|{}])/g, '\\$1');
+}
+
+function formatMoment(moment: ExportItem): string[] {
+  const lines: string[] = [];
+
+  if (moment.situation) {
+    lines.push('**Situation:**');
+    lines.push(escapeMarkdown(moment.situation)); // Safe: special chars escaped
+    lines.push('');
+  }
+
+  return lines;
+}
+```
+
+### Checklist
+
+- [ ] All user-provided content is escaped before insertion into Markdown
+- [ ] Escape function covers all Markdown special characters
+- [ ] Headings and programmatic strings remain unescaped
+
+---
+
+## F2. Async: Stale Responses in useEffect
+
+### Severity: 🟠 Major (Race Condition Bug)
+
+### Problem
+
+When fetching data in `useEffect`, rapid state changes (e.g., user quickly changing date range) can cause stale responses to overwrite newer data. Without a freshness guard, the UI may show outdated results.
+
+### Bad Example
+
+```typescript
+// ❌ BAD: No guard against stale responses
+useEffect(() => {
+  if (!open) return;
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.getData(filter);
+      setData(response); // Stale response may overwrite newer data!
+    } catch (err) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchData();
+}, [filter, open]);
+```
+
+### Good Example
+
+```typescript
+// ✅ GOOD: Request ID guards against stale responses
+const requestIdRef = useRef(0);
+
+useEffect(() => {
+  if (!open) return;
+
+  const currentRequestId = ++requestIdRef.current;
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.getData(filter);
+
+      // Only update if this is still the latest request
+      if (currentRequestId === requestIdRef.current) {
+        setData(response);
+      }
+    } catch (err) {
+      if (currentRequestId === requestIdRef.current) {
+        setError(err);
+      }
+    } finally {
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  fetchData();
+}, [filter, open]);
+```
+
+### Alternative: AbortController
+
+```typescript
+useEffect(() => {
+  const controller = new AbortController();
+
+  const fetchData = async () => {
+    try {
+      const response = await api.getData(filter, { signal: controller.signal });
+      setData(response);
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        setError(err);
+      }
+    }
+  };
+
+  fetchData();
+
+  return () => controller.abort(); // Cleanup: cancel pending request
+}, [filter]);
+```
+
+### Checklist
+
+- [ ] All async useEffect hooks have a freshness guard (requestId or AbortController)
+- [ ] State updates are conditional on the request still being current
+- [ ] Loading and error states also check freshness before updating
+
+---
+
+## F3. Data: Silent Data Truncation
+
+### Severity: 🟠 Major (Data Loss / UX Issue)
+
+### Problem
+
+When exporting paginated data, if only the first page is fetched but the UI suggests a full export, users unknowingly receive partial data. This is especially problematic for date-range exports where users expect all entries.
+
+### Bad Example
+
+```typescript
+// ❌ BAD: Only fetches first page, no truncation warning
+const handleExport = async () => {
+  const response = await api.export.getItems({
+    startDate,
+    endDate,
+    rows: 100, // Backend limit
+  });
+
+  // User gets only first 100 items even if total is 500!
+  generateMarkdown(response.items);
+};
+```
+
+### Good Example
+
+```typescript
+// ✅ GOOD: Block export when results are truncated
+const momentsCount = exportData?.items.filter((i) => i.itemType === 'moment').length || 0;
+const thinksCount = exportData?.items.filter((i) => i.itemType === 'think').length || 0;
+const hasMoreItems = !!exportData && exportData.items.length < exportData.total;
+
+// In preview component: warn user about truncation
+{hasMoreItems && (
+  <p className="text-sm text-amber-600">
+    Showing {exportData.items.length} of {exportData.total} entries.
+    Consider using a smaller date range.
+  </p>
+)}
+
+// Disable export button when truncated
+<Button
+  onClick={handleExport}
+  disabled={isLoading || isExporting || hasMoreItems}
+>
+  Export
+</Button>
+```
+
+### Better Solution: Full Pagination
+
+```typescript
+// ✅ BEST: Fetch all pages before export
+const fetchAllItems = async (params: ExportParams): Promise<ExportItem[]> => {
+  const allItems: ExportItem[] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const response = await api.export.getItems({ ...params, page });
+    allItems.push(...response.items);
+    hasMore = allItems.length < response.total;
+    page++;
+  }
+
+  return allItems;
+};
+```
+
+### Checklist
+
+- [ ] Compare `items.length` vs `total` to detect truncation
+- [ ] Either block export or show prominent warning when truncated
+- [ ] Consider implementing full pagination for complete exports
+
+---
+
+## Quick Reference Checklist (Frontend)
+
+When implementing new features, verify:
+
+- [ ] **Markdown**: User content is escaped before insertion into Markdown/HTML
+- [ ] **Async**: useEffect with fetch uses requestId or AbortController for freshness
+- [ ] **Pagination**: Exports/downloads handle truncation (warn or fetch all pages)
+- [ ] **Types**: Use `import type` for type-only imports (not `React.ReactNode`)
+- [ ] **State Sync**: Local state derived from props syncs via useEffect when props change
+- [ ] **Cleanup**: File downloads use try-catch-finally for resource cleanup
+- [ ] **Validation**: API params are clamped/validated before sending (e.g., rows limit)

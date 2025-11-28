@@ -16,6 +16,8 @@ import {
   LifeVisionListResponse,
   NewLifeVision,
   UpdateLifeVision,
+  ExportParams,
+  ExportResponse,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -304,6 +306,34 @@ export const api = {
       return fetchAPI<void>(`/v1/lifevisions/${id}`, {
         method: 'DELETE',
       });
+    },
+  },
+
+  export: {
+    /**
+     * Get export items with date range filtering.
+     * Rows are clamped to backend limit (1-100).
+     */
+    getItems: async (params: ExportParams): Promise<ExportResponse> => {
+      // Clamp rows to backend limit: min 1, max 100
+      const MAX_ROWS = 100;
+      const MIN_ROWS = 1;
+      const rawRows = params.rows ?? MAX_ROWS;
+      const clampedRows = Math.max(MIN_ROWS, Math.min(MAX_ROWS, rawRows));
+
+      const queryParams = new URLSearchParams({
+        start_date: params.startDate,
+        end_date: params.endDate,
+        page: (params.page || 1).toString(),
+        rows: clampedRows.toString(),
+      });
+
+      // Add orderBy if specified (default: item_date,DESC on backend)
+      if (params.orderBy) {
+        queryParams.set('orderBy', params.orderBy);
+      }
+
+      return fetchAPI<ExportResponse>(`/v1/export?${queryParams.toString()}`);
     },
   },
 };

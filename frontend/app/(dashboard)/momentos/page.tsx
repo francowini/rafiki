@@ -24,8 +24,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus } from 'lucide-react';
+import { Plus, Download } from 'lucide-react';
 import { api } from '@/lib/api';
+import { ExportDialog } from '@/components/features/export';
 
 export default function MomentosPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -72,25 +73,36 @@ export default function MomentosPage() {
           <p className="text-muted-foreground mt-1">Record and reflect on your difficult moments</p>
         </div>
 
-        <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <SheetTrigger asChild>
-            <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
-              <Plus className="h-5 w-5 mr-2" />
-              New moment
+        <div className="flex gap-3">
+          {/* Export Button */}
+          <ExportDialog>
+            <Button variant="outline" size="lg">
+              <Download className="h-5 w-5 mr-2" />
+              Export
             </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle className="text-xl">Record a moment</SheetTitle>
-              <SheetDescription>
-                Take your time to describe what happened. There are no right or wrong answers.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="mt-6">
-              <MomentForm onSuccess={handleCreateSuccess} onCancel={() => setIsFormOpen(false)} />
-            </div>
-          </SheetContent>
-        </Sheet>
+          </ExportDialog>
+
+          {/* New Moment Button */}
+          <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <SheetTrigger asChild>
+              <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
+                <Plus className="h-5 w-5 mr-2" />
+                New moment
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle className="text-xl">Record a moment</SheetTitle>
+                <SheetDescription>
+                  Take your time to describe what happened. There are no right or wrong answers.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6">
+                <MomentForm onSuccess={handleCreateSuccess} onCancel={() => setIsFormOpen(false)} />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       {/* Moment List */}
