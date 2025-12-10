@@ -1,6 +1,6 @@
--- Version: 1.01
+-- Version: 1
 -- Description: Create table users
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
 	user_id       UUID        NOT NULL,
 	name          TEXT        NOT NULL,
 	email         TEXT UNIQUE NOT NULL,
@@ -15,10 +15,9 @@ CREATE TABLE users (
 );
 
 
--- Version: 1.02
+-- Version: 2
 -- Description: Create table thinks
-
-CREATE TABLE thinks (
+CREATE TABLE IF NOT EXISTS thinks (
     think_id      UUID      NOT NULL,
     user_id      UUID       NOT NULL,
     category      TEXT      NOT NULL,
@@ -27,19 +26,16 @@ CREATE TABLE thinks (
     date_updated  TIMESTAMP NOT NULL,
 
     PRIMARY KEY (think_id),
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE  
-
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- Create index for faster retrieval by date
-CREATE INDEX thinks_date_created_idx ON thinks(date_created DESC);
-CREATE INDEX thinks_category_idx ON thinks(category);
+CREATE INDEX IF NOT EXISTS thinks_date_created_idx ON thinks(date_created DESC);
+CREATE INDEX IF NOT EXISTS thinks_category_idx ON thinks(category);
 
 
--- Version: 1.03
+-- Version: 3
 -- Description: Create table moments for emotional tracking
-
-CREATE TABLE moments (
+CREATE TABLE IF NOT EXISTS moments (
     moment_id         UUID        NOT NULL,
     user_id           UUID        NOT NULL,
     moment_date       TIMESTAMP   NOT NULL,
@@ -57,21 +53,19 @@ CREATE TABLE moments (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
-CREATE INDEX moments_user_id_idx ON moments(user_id);
-CREATE INDEX moments_user_date_idx ON moments(user_id, moment_date DESC);
-CREATE INDEX moments_date_created_idx ON moments(date_created DESC);
-CREATE INDEX moments_intensity_idx ON moments(intensity);
+CREATE INDEX IF NOT EXISTS moments_user_id_idx ON moments(user_id);
+CREATE INDEX IF NOT EXISTS moments_user_date_idx ON moments(user_id, moment_date DESC);
+CREATE INDEX IF NOT EXISTS moments_date_created_idx ON moments(date_created DESC);
+CREATE INDEX IF NOT EXISTS moments_intensity_idx ON moments(intensity);
 
 COMMENT ON TABLE moments IS 'Tracks emotional/difficult moments for psychological self-observation';
 COMMENT ON COLUMN moments.moment_date IS 'When the observed moment actually occurred (user can backdate)';
 COMMENT ON COLUMN moments.intensity IS 'Distress intensity on 0-10 scale';
 
 
--- Version: 1.04
+-- Version: 4
 -- Description: Create values table for personal values tracking
-
--- Create values table
-CREATE TABLE values (
+CREATE TABLE IF NOT EXISTS values (
     value_id       UUID        NOT NULL,
     user_id        UUID        NOT NULL,
     content        TEXT        NOT NULL,
@@ -84,48 +78,23 @@ CREATE TABLE values (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- Performance indexes
-CREATE INDEX values_user_id_idx ON values(user_id);
-CREATE INDEX values_facet_idx ON values(facet);
+CREATE INDEX IF NOT EXISTS values_user_id_idx ON values(user_id);
+CREATE INDEX IF NOT EXISTS values_facet_idx ON values(facet);
 
--- Unique constraint to prevent duplicate display_order per user
-CREATE UNIQUE INDEX values_user_order_unique_idx ON values(user_id, display_order);
-
--- Documentation
 COMMENT ON TABLE values IS 'Stores user core personal values with life facet categorization (max 10 per user)';
 COMMENT ON COLUMN values.content IS 'Encrypted value statement (plaintext validated as 3-200 chars in business layer)';
 COMMENT ON COLUMN values.facet IS 'Life domain categorization based on ACT therapy';
 COMMENT ON COLUMN values.display_order IS 'User-controlled priority ranking (1=highest)';
 
 
--- Version: 1.05
+-- Version: 5
 -- Description: Remove unique constraint on display_order to allow atomic reordering
-
--- Drop the unique index that prevents atomic batch reordering within a transaction.
---
--- Trade-off: DB no longer enforces unique (user_id, display_order), so business layer
--- validates no-duplicates for ALL write operations:
---
--- 1. Create: valuebus.Create() queries existing values, rejects duplicate display_order
--- 2. Update: valuebus.Update() checks for conflicts when display_order changes
--- 3. Reorder: valuebus.Reorder() validates via request payload + transactional batch
---
--- Additional safeguards:
--- - display_order range (1-10) validated at parse time via displayorder.Parse
--- - Concurrent requests could theoretically race, but:
---   * Each operation queries current state before writing
---   * Reorder uses explicit transaction (all-or-nothing)
---   * Worst case: one request fails, UI refreshes from server state
---
--- This enables atomic batch reordering where swapping positions (e.g., 1↔2)
--- would otherwise violate the unique constraint during the intermediate state.
 DROP INDEX IF EXISTS values_user_order_unique_idx;
 
 
--- Version: 1.06
+-- Version: 6
 -- Description: Create life_visions table for aspirational states of being
-
-CREATE TABLE life_visions (
+CREATE TABLE IF NOT EXISTS life_visions (
     life_vision_id  UUID        NOT NULL,
     user_id         UUID        NOT NULL,
     value_id        UUID        NOT NULL,
@@ -138,20 +107,17 @@ CREATE TABLE life_visions (
     FOREIGN KEY (value_id) REFERENCES values(value_id) ON DELETE CASCADE
 );
 
--- Performance indexes
-CREATE INDEX life_visions_user_id_idx ON life_visions(user_id);
-CREATE INDEX life_visions_value_id_idx ON life_visions(value_id);
-CREATE INDEX life_visions_date_created_idx ON life_visions(date_created DESC);
+CREATE INDEX IF NOT EXISTS life_visions_user_id_idx ON life_visions(user_id);
+CREATE INDEX IF NOT EXISTS life_visions_value_id_idx ON life_visions(value_id);
+CREATE INDEX IF NOT EXISTS life_visions_date_created_idx ON life_visions(date_created DESC);
 
 COMMENT ON TABLE life_visions IS 'Aspirational states of being linked to personal values';
 COMMENT ON COLUMN life_visions.content IS 'Encrypted vision statement (plaintext validated as 10-500 chars in business layer)';
 
 
--- Version: 1.07
+-- Version: 7
 -- Description: Create view for combined moments and thinks export
-
-CREATE VIEW view_export_items AS
--- Select moments with type identifier
+CREATE OR REPLACE VIEW view_export_items AS
 SELECT
     moment_id AS item_id,
     user_id,
@@ -168,10 +134,7 @@ SELECT
     NULL AS content,
     date_created
 FROM moments
-
 UNION ALL
-
--- Select thinks with type identifier
 SELECT
     think_id AS item_id,
     user_id,
@@ -190,37 +153,24 @@ SELECT
 FROM thinks;
 
 
--- Version: 1.08
+-- Version: 8
 -- Description: Add River Queue tables for background job processing
---
--- Rollback Strategy:
---   Before rollback: Ensure all River jobs are drained or accept backlog loss.
---   To rollback, drop tables in this order (respects foreign keys):
---     DROP TABLE IF EXISTS river_client_queue;
---     DROP TABLE IF EXISTS river_client;
---     DROP TABLE IF EXISTS river_leader;
---     DROP TABLE IF EXISTS river_queue;
---     DROP TABLE IF EXISTS river_job;
---     DROP TYPE IF EXISTS river_job_state;
---
--- Version Compatibility:
---   Requires River Go client v0.15.0 or later (schema version 006).
---   See: https://riverqueue.com/docs/migrations
+DO $$ BEGIN
+    CREATE TYPE river_job_state AS ENUM(
+      'available',
+      'cancelled',
+      'completed',
+      'discarded',
+      'pending',
+      'retryable',
+      'running',
+      'scheduled'
+    );
+EXCEPTION WHEN duplicate_object THEN
+    NULL;
+END $$;
 
--- River job state enum
-CREATE TYPE river_job_state AS ENUM(
-  'available',
-  'cancelled',
-  'completed',
-  'discarded',
-  'pending',
-  'retryable',
-  'running',
-  'scheduled'
-);
-
--- Main jobs table
-CREATE TABLE river_job(
+CREATE TABLE IF NOT EXISTS river_job(
   id bigserial PRIMARY KEY,
   state river_job_state NOT NULL DEFAULT 'available',
   attempt smallint NOT NULL DEFAULT 0,
@@ -250,14 +200,12 @@ CREATE TABLE river_job(
   CONSTRAINT kind_length CHECK (char_length(kind) > 0 AND char_length(kind) < 128)
 );
 
--- Performance indexes
-CREATE INDEX river_job_kind ON river_job USING btree(kind);
-CREATE INDEX river_job_state_and_finalized_at_index ON river_job USING btree(state, finalized_at) WHERE finalized_at IS NOT NULL;
-CREATE INDEX river_job_prioritized_fetching_index ON river_job USING btree(state, queue, priority, scheduled_at, id);
-CREATE INDEX river_job_args_index ON river_job USING GIN(args);
-CREATE INDEX river_job_metadata_index ON river_job USING GIN(metadata);
+CREATE INDEX IF NOT EXISTS river_job_kind ON river_job USING btree(kind);
+CREATE INDEX IF NOT EXISTS river_job_state_and_finalized_at_index ON river_job USING btree(state, finalized_at) WHERE finalized_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS river_job_prioritized_fetching_index ON river_job USING btree(state, queue, priority, scheduled_at, id);
+CREATE INDEX IF NOT EXISTS river_job_args_index ON river_job USING GIN(args);
+CREATE INDEX IF NOT EXISTS river_job_metadata_index ON river_job USING GIN(metadata);
 
--- Unique job deduplication function and index
 CREATE OR REPLACE FUNCTION river_job_state_in_bitmask(bitmask BIT(8), state river_job_state)
 RETURNS boolean
 LANGUAGE SQL
@@ -276,13 +224,16 @@ AS $$
     END = 1;
 $$;
 
-CREATE UNIQUE INDEX river_job_unique_idx ON river_job (unique_key)
-    WHERE unique_key IS NOT NULL
-      AND unique_states IS NOT NULL
-      AND river_job_state_in_bitmask(unique_states, state);
+DO $$ BEGIN
+    CREATE UNIQUE INDEX river_job_unique_idx ON river_job (unique_key)
+        WHERE unique_key IS NOT NULL
+          AND unique_states IS NOT NULL
+          AND river_job_state_in_bitmask(unique_states, state);
+EXCEPTION WHEN duplicate_table THEN
+    NULL;
+END $$;
 
--- Leader election table (unlogged for performance)
-CREATE UNLOGGED TABLE river_leader(
+CREATE UNLOGGED TABLE IF NOT EXISTS river_leader(
     elected_at timestamptz NOT NULL,
     expires_at timestamptz NOT NULL,
     leader_id text NOT NULL,
@@ -291,8 +242,7 @@ CREATE UNLOGGED TABLE river_leader(
     CONSTRAINT leader_id_length CHECK (char_length(leader_id) > 0 AND char_length(leader_id) < 128)
 );
 
--- Queue metadata table
-CREATE TABLE river_queue (
+CREATE TABLE IF NOT EXISTS river_queue (
     name text PRIMARY KEY NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
     metadata jsonb NOT NULL DEFAULT '{}' ::jsonb,
@@ -300,8 +250,7 @@ CREATE TABLE river_queue (
     updated_at timestamptz NOT NULL
 );
 
--- Client tracking tables (unlogged for performance)
-CREATE UNLOGGED TABLE river_client (
+CREATE UNLOGGED TABLE IF NOT EXISTS river_client (
     id text PRIMARY KEY NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
     metadata jsonb NOT NULL DEFAULT '{}',
@@ -310,7 +259,7 @@ CREATE UNLOGGED TABLE river_client (
     CONSTRAINT name_length CHECK (char_length(id) > 0 AND char_length(id) < 128)
 );
 
-CREATE UNLOGGED TABLE river_client_queue (
+CREATE UNLOGGED TABLE IF NOT EXISTS river_client_queue (
     river_client_id text NOT NULL REFERENCES river_client (id) ON DELETE CASCADE,
     name text NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
