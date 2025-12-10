@@ -31,10 +31,12 @@ import (
 	"github.com/francowini/rafiki/business/domain/valuebus/stores/valuedb"
 	"github.com/francowini/rafiki/business/domain/vexportbus"
 	"github.com/francowini/rafiki/business/domain/vexportbus/stores/vexportdb"
+	"github.com/francowini/rafiki/business/jobs/healthcheck"
 	"github.com/francowini/rafiki/business/sdk/delegate"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/migrate"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/foundation/jobqueue"
 	"github.com/francowini/rafiki/foundation/keystore"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/otel"
@@ -148,7 +150,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	log.Info(ctx, "startup", "status", "initializing database support", "hostport", cfg.DB.Host)
 
-	db, err := sqldb.Open(sqldb.Config{
+	// Single database configuration used by both sqlx and pgx pools
+	dbConfig := sqldb.Config{
 		User:         cfg.DB.User,
 		Password:     cfg.DB.Password,
 		Host:         cfg.DB.Host,
@@ -158,7 +161,9 @@ func run(ctx context.Context, log *logger.Logger) error {
 		MaxOpenConns: cfg.DB.MaxOpenConns,
 		DisableTLS:   cfg.DB.DisableTLS,
 		SSLMode:      cfg.DB.SSLMode,
-	})
+	}
+
+	db, err := sqldb.Open(dbConfig)
 	if err != nil {
 		return fmt.Errorf("connecting to db: %w", err)
 	}
@@ -179,6 +184,72 @@ func run(ctx context.Context, log *logger.Logger) error {
 	}
 
 	log.Info(ctx, "startup", "status", "database migrations completed")
+
+	// -------------------------------------------------------------------------
+	// Initialize Job Queue
+
+	log.Info(ctx, "startup", "status", "initializing job queue")
+
+	pgxPool, err := sqldb.OpenPgxPool(ctx, dbConfig)
+	if err != nil {
+		return fmt.Errorf("create pgx pool for job queue: %w", err)
+	}
+	defer pgxPool.Close()
+
+	// Configure job queue with default settings
+	jqConfig := jobqueue.DefaultConfig()
+
+	// Register workers
+	workers := jobqueue.NewWorkers()
+	jobqueue.AddWorker(workers, healthcheck.NewWorker(log))
+
+	// Create and start job queue
+	jq, err := jobqueue.NewClient(ctx, log, pgxPool, jqConfig, workers)
+	if err != nil {
+		return fmt.Errorf("create job queue: %w", err)
+	}
+
+	if err := jq.Start(ctx); err != nil {
+		return fmt.Errorf("start job queue: %w", err)
+	}
+
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := jq.Stop(shutdownCtx); err != nil {
+			log.Error(shutdownCtx, "shutdown", "component", "jobqueue", "err", err)
+		}
+	}()
+
+	log.Info(ctx, "startup", "status", "job queue started")
+
+	// -------------------------------------------------------------------------
+	// Start Job Queue Heartbeat
+	// Inserts a healthcheck job every 5 minutes to verify the queue is alive.
+
+	heartbeatCtx, cancelHeartbeat := context.WithCancel(ctx)
+	defer cancelHeartbeat() // Ensure cleanup on any exit path
+
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+
+		// Insert first heartbeat immediately on startup
+		if _, err := jq.Insert(heartbeatCtx, healthcheck.Args{Message: "heartbeat"}, nil); err != nil {
+			log.Error(heartbeatCtx, "heartbeat", "status", "insert_failed", "err", err)
+		}
+
+		for {
+			select {
+			case <-ticker.C:
+				if _, err := jq.Insert(heartbeatCtx, healthcheck.Args{Message: "heartbeat"}, nil); err != nil {
+					log.Error(heartbeatCtx, "heartbeat", "status", "insert_failed", "err", err)
+				}
+			case <-heartbeatCtx.Done():
+				return
+			}
+		}
+	}()
 
 	// -------------------------------------------------------------------------
 	// Initialize Encryption Support
@@ -360,9 +431,15 @@ func run(ctx context.Context, log *logger.Logger) error {
 	case err := <-serverErrors:
 		return fmt.Errorf("server error: %w", err)
 
+	case <-jq.River().Stopped():
+		return fmt.Errorf("job queue stopped unexpectedly")
+
 	case sig := <-shutdown:
 		log.Info(ctx, "shutdown", "status", "shutdown started", "signal", sig)
 		defer log.Info(ctx, "shutdown", "status", "shutdown complete", "signal", sig)
+
+		// Stop heartbeat goroutine first
+		cancelHeartbeat()
 
 		ctx, cancel := context.WithTimeout(ctx, cfg.Web.ShutdownTimeout)
 		defer cancel()

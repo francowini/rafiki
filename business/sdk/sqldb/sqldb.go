@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/attribute"
@@ -47,27 +48,39 @@ type Config struct {
 	SSLMode      string
 }
 
-// Open knows how to open a database connection based on the configuration.
-func Open(cfg Config) (*sqlx.DB, error) {
-	// Determine SSL mode with backward compatibility
+// validSSLModes defines the allowed PostgreSQL SSL modes.
+var validSSLModes = map[string]bool{
+	"disable":     true,
+	"require":     true,
+	"verify-ca":   true,
+	"verify-full": true,
+}
+
+// sslMode returns the SSL mode to use, applying precedence rules:
+// 1. Explicit SSLMode if set
+// 2. "disable" if DisableTLS is true
+// 3. "require" as default
+func (cfg Config) sslMode() (string, error) {
 	sslMode := "require"
 	if cfg.SSLMode != "" {
-		// Explicit SSLMode takes precedence
 		sslMode = cfg.SSLMode
 	} else if cfg.DisableTLS {
-		// Fall back to DisableTLS for backward compatibility
 		sslMode = "disable"
 	}
 
-	// Validate SSL mode
-	validSSLModes := map[string]bool{
-		"disable":     true,
-		"require":     true,
-		"verify-ca":   true,
-		"verify-full": true,
-	}
 	if !validSSLModes[sslMode] {
-		return nil, fmt.Errorf("invalid sslmode: %s (must be one of: disable, require, verify-ca, verify-full)", sslMode)
+		return "", fmt.Errorf("invalid sslmode: %s (must be one of: disable, require, verify-ca, verify-full)", sslMode)
+	}
+
+	return sslMode, nil
+}
+
+// URL builds the database connection URL from the config.
+// Returns an error if the SSL mode is invalid.
+func (cfg Config) URL() (string, error) {
+	sslMode, err := cfg.sslMode()
+	if err != nil {
+		return "", err
 	}
 
 	q := make(url.Values)
@@ -77,7 +90,6 @@ func Open(cfg Config) (*sqlx.DB, error) {
 		q.Set("search_path", cfg.Schema)
 	}
 
-	// Construct host with port
 	host := cfg.Host
 	if cfg.Port != "" {
 		host = fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
@@ -91,7 +103,50 @@ func Open(cfg Config) (*sqlx.DB, error) {
 		RawQuery: q.Encode(),
 	}
 
-	db, err := sqlx.Open("pgx", u.String())
+	return u.String(), nil
+}
+
+// OpenPgxPool opens a pgx connection pool for use with River Queue.
+// It validates configuration, creates the pool with proper settings, and
+// verifies connectivity before returning.
+func OpenPgxPool(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
+	connURL, err := cfg.URL()
+	if err != nil {
+		return nil, err
+	}
+
+	poolCfg, err := pgxpool.ParseConfig(connURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse pgx pool config: %w", err)
+	}
+
+	// Apply pool settings if configured
+	if cfg.MaxOpenConns > 0 {
+		poolCfg.MaxConns = int32(cfg.MaxOpenConns)
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return nil, fmt.Errorf("create pgx pool: %w", err)
+	}
+
+	// Verify connectivity before returning
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("ping pgx pool: %w", err)
+	}
+
+	return pool, nil
+}
+
+// Open knows how to open a database connection based on the configuration.
+func Open(cfg Config) (*sqlx.DB, error) {
+	connURL, err := cfg.URL()
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := sqlx.Open("pgx", connURL)
 	if err != nil {
 		return nil, err
 	}
