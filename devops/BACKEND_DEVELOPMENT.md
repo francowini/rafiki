@@ -657,16 +657,68 @@ See:
 - [Auth Deployment Guide](./AUTH_DEPLOYMENT_GUIDE.md)
 - [Docker Cleanup](./DOCKER_CLEANUP.md)
 
+## Dependencies Requiring Migration Care
+
+Some dependencies have their own database schemas. When upgrading these, you **MUST** check for new migrations and add them to Darwin before deploying.
+
+### River Queue (Job Processing)
+
+**Package**: `github.com/riverqueue/river`
+
+**Why it matters**: River stores jobs in PostgreSQL tables (`river_job`, `river_leader`, etc.). New versions may require schema changes.
+
+**Before upgrading**:
+
+```bash
+# 1. Check current version
+go list -m github.com/riverqueue/river
+
+# 2. Check River's changelog for migration changes
+# https://github.com/riverqueue/river/releases
+
+# 3. Export new migration SQL (if any)
+river migrate-get --version <NEW_VERSION> --up
+
+# 4. Add to migrate.sql as next Darwin version (e.g., 1.09)
+# See: docs/river-queue-foundation.md
+
+# 5. Test migration locally before deploying
+make up
+docker exec -it rafiki-postgres psql -U rafiki -d rafiki -c "\dt river_*"
+```
+
+**Safe upgrade process**:
+
+1. Read River changelog for breaking changes
+2. Export any new migration SQL
+3. Add to `business/sdk/migrate/sql/migrate.sql`
+4. Test locally with `make up`
+5. Create PR with both go.mod update AND migration
+6. Deploy (migrations run automatically)
+
+**Current River version**: Check `go.mod`
+**Migration docs**: `docs/river-queue-foundation.md`
+
+### Future Dependencies
+
+If adding new dependencies that create database tables, document them here with:
+- Package name
+- What tables they create
+- How to export migrations for Darwin
+- Link to migration documentation
+
 ## Getting Help
 
 - **Linter errors**: Run `golangci-lint run --fix` first
 - **Build errors**: Check `go.mod` dependencies with `go mod tidy`
 - **Test failures**: Run `go test -v ./...` for verbose output
 - **CodeRabbit issues**: Check `.coderabbit.yaml` path instructions
+- **River migrations**: See `docs/river-queue-foundation.md`
 
 ## Related Documentation
 
 - [Frontend Development Guide](./FRONTEND_DEVELOPMENT.md)
 - [Deployment Guide](./DEPLOYMENT_GUIDE.md)
 - [Auth Deployment Guide](./AUTH_DEPLOYMENT_GUIDE.md)
+- [Job Queue Guide](./JOB_QUEUE.md)
 - [CodeRabbit Configuration](../docs/coderabbit-automation-implementation-plan.md)

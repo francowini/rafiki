@@ -477,7 +477,7 @@ docker exec -it rafiki-postgres pg_isready -U rafiki -d rafiki
 docker exec -it rafiki-postgres psql -U rafiki -d rafiki -c \
   "SELECT tablename FROM pg_tables WHERE schemaname='public';"
 
-# Expected tables: users, thinks, darwin_migrations
+# Expected tables: users, thinks, darwin_migrations, river_job, river_leader, etc.
 ```
 
 ### End-to-End Authentication Test
@@ -994,7 +994,13 @@ docker compose down  # Safe - keeps database intact
 
 ---
 
-**Last Updated:** 2025-11-22
+**Last Updated:** 2025-12-10
 **Server:** Hetzner CPX11 @ 178.156.170.37
 **Repository:** /opt/rafiki
 **Documentation:** See `/docs/` for implementation guides
+
+## Related Documentation
+
+- [Backend Development Guide](./BACKEND_DEVELOPMENT.md)
+- [Job Queue Guide](./JOB_QUEUE.md)
+- [Auth Deployment Guide](./AUTH_DEPLOYMENT_GUIDE.md)

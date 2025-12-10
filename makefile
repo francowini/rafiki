@@ -26,6 +26,9 @@ version:
 # ==============================================================================
 # Docker Compose - Local Development
 # ==============================================================================
+# Note: docker-compose.override.yml (gitignored) is auto-loaded for local dev.
+# It exposes PostgreSQL on port 5432 for pgAdmin/DBeaver.
+# Production uses explicit -f flags and never loads the override file.
 
 # up: Always rebuilds to ensure latest code is running
 up:
