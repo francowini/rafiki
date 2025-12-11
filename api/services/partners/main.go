@@ -16,6 +16,8 @@ import (
 	"github.com/ardanlabs/conf/v3"
 
 	"github.com/francowini/rafiki/api/services/partners/all"
+	"github.com/francowini/rafiki/app/jobs/healthcheck"
+	"github.com/francowini/rafiki/app/jobs/telegramnotify"
 	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/debug"
 	"github.com/francowini/rafiki/app/sdk/mux"
@@ -35,8 +37,6 @@ import (
 	"github.com/francowini/rafiki/business/domain/vexportbus/stores/vexportdb"
 	"github.com/francowini/rafiki/business/domain/vnotificationbus"
 	"github.com/francowini/rafiki/business/domain/vnotificationbus/stores/vnotificationdb"
-	"github.com/francowini/rafiki/business/jobs/healthcheck"
-	"github.com/francowini/rafiki/business/jobs/telegramnotify"
 	"github.com/francowini/rafiki/business/sdk/delegate"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/migrate"

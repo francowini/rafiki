@@ -9,9 +9,15 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/francowini/rafiki/business/domain/vnotificationbus"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
 )
+
+// VNotificationQuerier interface for querying values (dependency injection).
+type VNotificationQuerier interface {
+	QueryByUserID(ctx context.Context, userID uuid.UUID) ([]vnotificationbus.ValueWithVision, error)
+}
 
 // Storer interface declares the behavior this package needs to persist and
 // retrieve data.
@@ -141,4 +147,174 @@ func (b *Business) QueryTelegramUsers(ctx context.Context) ([]TelegramUser, erro
 	}
 
 	return users, nil
+}
+
+// ============================================================================
+// Scheduling and Sending Logic (moved from job layer)
+// ============================================================================
+
+// ScheduleMorningMessageIfTime schedules a morning message if current time is in the morning window.
+// Returns nil if already scheduled (idempotent behavior) or not in time window.
+func (b *Business) ScheduleMorningMessageIfTime(
+	ctx context.Context,
+	userID uuid.UUID,
+	cfg ScheduleConfig,
+	now time.Time,
+	vnotificationQuerier VNotificationQuerier,
+) error {
+	currentTime := now.Format("15:04")
+	if !b.IsInTimeWindow(currentTime, cfg.MorningTime) {
+		return nil
+	}
+
+	// Fetch user's values for message content
+	values, err := vnotificationQuerier.QueryByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("query values: %w", err)
+	}
+
+	// Generate message content
+	content := GenerateMorningMessage(values)
+
+	// Create notification (idempotent - handles duplicates)
+	_, err = b.Create(ctx, NewMessage{
+		UserID:      userID,
+		MessageType: MessageTypeMorning,
+		Content:     content,
+		ScheduledAt: now,
+	})
+	if err != nil {
+		if errors.Is(err, ErrDuplicateSchedule) {
+			b.log.Info(ctx, "notificationbus.scheduleMorning", "msg", "already scheduled", "user_id", userID)
+			return nil
+		}
+		return fmt.Errorf("create morning message: %w", err)
+	}
+
+	b.log.Info(ctx, "notificationbus.scheduleMorning", "msg", "scheduled", "user_id", userID)
+	return nil
+}
+
+// ScheduleEveningMessageIfTime schedules an evening message if current time is in the evening window.
+// Returns nil if already scheduled (idempotent behavior) or not in time window.
+func (b *Business) ScheduleEveningMessageIfTime(
+	ctx context.Context,
+	userID uuid.UUID,
+	cfg ScheduleConfig,
+	now time.Time,
+	vnotificationQuerier VNotificationQuerier,
+) error {
+	currentTime := now.Format("15:04")
+	if !b.IsInTimeWindow(currentTime, cfg.EveningTime) {
+		return nil
+	}
+
+	// Fetch user's values for message content
+	values, err := vnotificationQuerier.QueryByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("query values: %w", err)
+	}
+
+	// Generate message content
+	content := GenerateEveningMessage(values)
+
+	// Create notification (idempotent - handles duplicates)
+	_, err = b.Create(ctx, NewMessage{
+		UserID:      userID,
+		MessageType: MessageTypeEvening,
+		Content:     content,
+		ScheduledAt: now,
+	})
+	if err != nil {
+		if errors.Is(err, ErrDuplicateSchedule) {
+			b.log.Info(ctx, "notificationbus.scheduleEvening", "msg", "already scheduled", "user_id", userID)
+			return nil
+		}
+		return fmt.Errorf("create evening message: %w", err)
+	}
+
+	b.log.Info(ctx, "notificationbus.scheduleEvening", "msg", "scheduled", "user_id", userID)
+	return nil
+}
+
+// IsInTimeWindow checks if current time is within 10 minutes of target time.
+func (b *Business) IsInTimeWindow(currentTime, targetTime string) bool {
+	current, err := time.Parse("15:04", currentTime)
+	if err != nil {
+		return false
+	}
+
+	target, err := time.Parse("15:04", targetTime)
+	if err != nil {
+		return false
+	}
+
+	// Calculate difference in minutes (0 to +9 minutes after target)
+	diff := current.Sub(target).Minutes()
+	return diff >= 0 && diff < 10
+}
+
+// SendPendingMessages sends all pending messages scheduled before now.
+func (b *Business) SendPendingMessages(
+	ctx context.Context,
+	telegramSender TelegramSender,
+	before time.Time,
+) error {
+	// Get pending messages
+	pending, err := b.QueryPending(ctx, before)
+	if err != nil {
+		return fmt.Errorf("query pending: %w", err)
+	}
+
+	if len(pending) == 0 {
+		return nil
+	}
+
+	b.log.Info(ctx, "notificationbus.sendPending", "msg", "processing", "count", len(pending))
+
+	// Get telegram users for chat ID lookup
+	users, err := b.QueryTelegramUsers(ctx)
+	if err != nil {
+		return fmt.Errorf("query telegram users: %w", err)
+	}
+
+	// Build chat ID map
+	chatIDMap := make(map[uuid.UUID]TelegramChatID)
+	for _, u := range users {
+		chatIDMap[u.UserID] = u.TelegramChatID
+	}
+
+	// Send each message
+	for _, msg := range pending {
+		chatID, ok := chatIDMap[msg.UserID]
+		if !ok {
+			b.log.Error(ctx, "notificationbus.sendPending", "msg", "user not in telegram map", "user_id", msg.UserID)
+			errMsg := FailureReason("user telegram not enabled")
+			if _, markErr := b.MarkFailed(ctx, msg, errMsg); markErr != nil {
+				b.log.Error(ctx, "notificationbus.sendPending", "msg", "mark failed error", "err", markErr)
+			}
+			continue
+		}
+
+		b.log.Info(ctx, "notificationbus.sendPending", "msg", "sending", "message_id", msg.ID, "chat_id", chatID.Value())
+
+		resp, err := telegramSender.SendMessage(ctx, chatID.Value(), msg.Content)
+		if err != nil {
+			b.log.Error(ctx, "notificationbus.sendPending", "msg", "send failed", "message_id", msg.ID, "err", err)
+			errMsg := FailureReason(err.Error())
+			if _, markErr := b.MarkFailed(ctx, msg, errMsg); markErr != nil {
+				b.log.Error(ctx, "notificationbus.sendPending", "msg", "mark failed error", "err", markErr)
+			}
+			continue
+		}
+
+		telegramMsgID := TelegramMessageID(resp.MessageID)
+		if _, err := b.MarkSent(ctx, msg, telegramMsgID); err != nil {
+			b.log.Error(ctx, "notificationbus.sendPending", "msg", "mark sent error", "err", err)
+		}
+
+		b.log.Info(ctx, "notificationbus.sendPending", "msg", "sent", "message_id", msg.ID, "telegram_msg_id", resp.MessageID)
+	}
+
+	return nil
 }

@@ -127,6 +127,35 @@ Support domains handle concerns that span multiple business domains without bein
 - **File Storage**: Handle file uploads/downloads for any domain
 - **Background Jobs**: Queue and process async tasks from any domain
 
+**Important: Job Workers vs Job Business Logic**
+
+There's an important distinction between:
+
+1. **Job Business Logic** (Support Domain - `business/domain/`):
+   - The actual business operations: scheduling decisions, message generation, sending logic
+   - Lives in `business/domain/notificationbus/` or similar support domain
+   - Has NO dependencies on other business domains
+   - Can be called from job workers, API endpoints, or CLI tools
+
+2. **Job Workers** (Application Layer - `app/jobs/`):
+   - Thin orchestration code that implements the job queue interface (e.g., River)
+   - Lives in `app/jobs/telegramnotify/`, `app/jobs/healthcheck/`
+   - Delegates to business layer for actual work
+   - Handles job lifecycle: retries, timeouts, queue management
+
+```
+app/jobs/telegramnotify/          (Application Layer - thin orchestration)
+    ↓ imports
+business/domain/notificationbus/  (Support Domain - business logic)
+    ↓ uses (via interface)
+business/domain/vnotificationbus/ (Query Domain - read-only data)
+```
+
+**Why this separation?**
+- Business logic is reusable across job workers, API endpoints, and CLI tools
+- Job workers remain simple "glue code" that can be easily tested
+- Follows the principle: "jobs are about HOW to run something, business layer is about WHAT to do"
+
 **Example Structure:**
 ```go
 package auditbus
