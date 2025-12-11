@@ -89,11 +89,12 @@ func NewScheduleConfig(morningTime, eveningTime string, location *time.Location)
 }
 
 // TelegramSender interface for dependency injection.
+// Uses strong types (TelegramChatID, TelegramMessageID) per business domain guidelines.
 type TelegramSender interface {
-	SendMessage(ctx context.Context, chatID int64, content string) (TelegramSendResponse, error)
+	SendMessage(ctx context.Context, chatID TelegramChatID, content string) (TelegramSendResponse, error)
 }
 
 // TelegramSendResponse represents the response from sending a Telegram message.
 type TelegramSendResponse struct {
-	MessageID int64
+	MessageID TelegramMessageID
 }

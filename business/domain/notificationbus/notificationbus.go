@@ -98,6 +98,20 @@ func (b *Business) MarkSent(ctx context.Context, msg Message, telegramMsgID Tele
 	return msg, nil
 }
 
+// MarkSending marks a message as currently being sent.
+// This prevents duplicate sends if the job runs again before MarkSent completes.
+func (b *Business) MarkSending(ctx context.Context, msg Message) (Message, error) {
+	msg.Status = StatusSending
+
+	if err := b.storer.Update(ctx, msg); err != nil {
+		b.log.Error(ctx, "notificationbus.markSending", "err", err, "message_id", msg.ID)
+		return Message{}, fmt.Errorf("update: %w", err)
+	}
+
+	b.log.Info(ctx, "notificationbus.markSending", "message_id", msg.ID)
+	return msg, nil
+}
+
 // MarkFailed marks a message as failed with an error message.
 func (b *Business) MarkFailed(ctx context.Context, msg Message, errMsg FailureReason) (Message, error) {
 	msg.Status = StatusFailed
@@ -326,9 +340,17 @@ func (b *Business) SendPendingMessages(
 			continue
 		}
 
+		// Mark as "sending" before API call to prevent duplicate sends
+		// If the job restarts, this message won't be picked up by QueryPending
+		msg, err = b.MarkSending(ctx, msg)
+		if err != nil {
+			b.log.Error(ctx, "notificationbus.sendPending", "msg", "mark sending error", "message_id", msg.ID, "err", err)
+			continue
+		}
+
 		b.log.Info(ctx, "notificationbus.sendPending", "msg", "sending", "message_id", msg.ID, "chat_id", chatID.Value())
 
-		resp, err := telegramSender.SendMessage(ctx, chatID.Value(), msg.Content)
+		resp, err := telegramSender.SendMessage(ctx, chatID, msg.Content)
 		if err != nil {
 			b.log.Error(ctx, "notificationbus.sendPending", "msg", "send failed", "message_id", msg.ID, "err", err)
 			errMsg := FailureReason(err.Error())
@@ -338,8 +360,7 @@ func (b *Business) SendPendingMessages(
 			continue
 		}
 
-		telegramMsgID := TelegramMessageID(resp.MessageID)
-		if _, err := b.MarkSent(ctx, msg, telegramMsgID); err != nil {
+		if _, err := b.MarkSent(ctx, msg, resp.MessageID); err != nil {
 			b.log.Error(ctx, "notificationbus.sendPending", "msg", "mark sent error", "err", err)
 		}
 

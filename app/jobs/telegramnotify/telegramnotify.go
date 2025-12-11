@@ -45,17 +45,18 @@ func (Args) InsertOpts() river.InsertOpts {
 }
 
 // telegramSenderAdapter adapts telegram.Client to notificationbus.TelegramSender.
+// Converts between strong types (TelegramChatID, TelegramMessageID) and primitives.
 type telegramSenderAdapter struct {
 	client *telegram.Client
 }
 
-func (a *telegramSenderAdapter) SendMessage(ctx context.Context, chatID int64, content string) (notificationbus.TelegramSendResponse, error) {
-	resp, err := a.client.SendMessage(ctx, chatID, content)
+func (a *telegramSenderAdapter) SendMessage(ctx context.Context, chatID notificationbus.TelegramChatID, content string) (notificationbus.TelegramSendResponse, error) {
+	resp, err := a.client.SendMessage(ctx, chatID.Value(), content)
 	if err != nil {
 		return notificationbus.TelegramSendResponse{}, err
 	}
 	return notificationbus.TelegramSendResponse{
-		MessageID: resp.Result.MessageID,
+		MessageID: notificationbus.TelegramMessageID(resp.Result.MessageID),
 	}, nil
 }
 
@@ -115,11 +116,27 @@ func (w *Worker) processNotifications(ctx context.Context) error {
 		return fmt.Errorf("query telegram users: %w", err)
 	}
 
-	if len(users) == 0 {
-		w.log.Info(ctx, "telegram_notify", "msg", "no telegram users found")
-		return nil
+	// 2. Schedule messages if there are users
+	if len(users) > 0 {
+		if err := w.scheduleMessagesForUsers(ctx, users, now); err != nil {
+			// Log but don't return - we still want to send pending messages
+			w.log.Error(ctx, "telegram_notify", "msg", "all scheduling failed", "err", err)
+		}
+	} else {
+		w.log.Info(ctx, "telegram_notify", "msg", "no telegram users found, skipping scheduling")
 	}
 
+	// 3. Send pending messages (always run - there may be orphaned messages)
+	if err := w.notificationBus.SendPendingMessages(ctx, w.telegramSender, now); err != nil {
+		return fmt.Errorf("send pending messages: %w", err)
+	}
+
+	return nil
+}
+
+// scheduleMessagesForUsers schedules morning/evening messages for all users.
+// Returns an error only if ALL scheduling attempts fail.
+func (w *Worker) scheduleMessagesForUsers(ctx context.Context, users []notificationbus.TelegramUser, now time.Time) error {
 	// Log time check for debugging (use local time from config)
 	localNow := now
 	if w.scheduleConfig.Location != nil {
@@ -132,7 +149,6 @@ func (w *Worker) processNotifications(ctx context.Context) error {
 		"evening_target", w.scheduleConfig.EveningTime.Value(),
 		"users_count", len(users))
 
-	// 2. Schedule messages (delegates to business layer)
 	// Track errors to detect complete failure
 	var scheduleErrors int
 	totalAttempts := len(users) * 2 // morning + evening for each user
@@ -149,14 +165,9 @@ func (w *Worker) processNotifications(ctx context.Context) error {
 		}
 	}
 
-	// If all scheduling attempts failed, return an error so the job fails
+	// If all scheduling attempts failed, return an error
 	if scheduleErrors == totalAttempts {
 		return fmt.Errorf("all %d scheduling attempts failed for %d users", totalAttempts, len(users))
-	}
-
-	// 3. Send pending messages (delegates to business layer)
-	if err := w.notificationBus.SendPendingMessages(ctx, w.telegramSender, now); err != nil {
-		return fmt.Errorf("send pending messages: %w", err)
 	}
 
 	return nil
