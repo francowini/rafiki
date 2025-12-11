@@ -153,8 +153,66 @@ func (b *Business) QueryTelegramUsers(ctx context.Context) ([]TelegramUser, erro
 // Scheduling and Sending Logic (moved from job layer)
 // ============================================================================
 
+// contentGenerator is a function that generates message content from values.
+type contentGenerator func([]vnotificationbus.ValueWithVision) string
+
+// scheduleMessageIfTime is a helper that handles the common scheduling flow.
+// It checks if the current time is within the target time window, fetches user values,
+// generates content, and creates the notification message.
+func (b *Business) scheduleMessageIfTime(
+	ctx context.Context,
+	userID uuid.UUID,
+	targetTime TimeOfDay,
+	messageType MessageType,
+	generateContent contentGenerator,
+	localNow time.Time,
+	vnotificationQuerier VNotificationQuerier,
+) error {
+	currentTime := localNow.Format("15:04")
+	if !b.isInTimeWindow(ctx, currentTime, targetTime.Value()) {
+		return nil
+	}
+
+	// Fetch user's values for message content
+	values, err := vnotificationQuerier.QueryByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("query values: %w", err)
+	}
+
+	// Generate message content
+	content := generateContent(values)
+
+	// Create notification (idempotent - handles duplicates)
+	_, err = b.Create(ctx, NewMessage{
+		UserID:      userID,
+		MessageType: messageType,
+		Content:     content,
+		ScheduledAt: localNow,
+	})
+	if err != nil {
+		if errors.Is(err, ErrDuplicateSchedule) {
+			b.log.Info(ctx, "notificationbus.schedule", "msg", "already scheduled", "user_id", userID, "type", messageType)
+			return nil
+		}
+		return fmt.Errorf("create %s message: %w", messageType, err)
+	}
+
+	b.log.Info(ctx, "notificationbus.schedule", "msg", "scheduled", "user_id", userID, "type", messageType)
+	return nil
+}
+
+// getLocalNow returns the current time in the configured timezone.
+// If cfg.Location is nil, it uses the provided now time as-is.
+func (b *Business) getLocalNow(cfg ScheduleConfig, now time.Time) time.Time {
+	if cfg.Location == nil {
+		return now
+	}
+	return now.In(cfg.Location)
+}
+
 // ScheduleMorningMessageIfTime schedules a morning message if current time is in the morning window.
 // Returns nil if already scheduled (idempotent behavior) or not in time window.
+// The cfg.Location is used to convert the provided time to the correct timezone.
 func (b *Business) ScheduleMorningMessageIfTime(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -162,41 +220,21 @@ func (b *Business) ScheduleMorningMessageIfTime(
 	now time.Time,
 	vnotificationQuerier VNotificationQuerier,
 ) error {
-	currentTime := now.Format("15:04")
-	if !b.IsInTimeWindow(currentTime, cfg.MorningTime) {
-		return nil
-	}
-
-	// Fetch user's values for message content
-	values, err := vnotificationQuerier.QueryByUserID(ctx, userID)
-	if err != nil {
-		return fmt.Errorf("query values: %w", err)
-	}
-
-	// Generate message content
-	content := GenerateMorningMessage(values)
-
-	// Create notification (idempotent - handles duplicates)
-	_, err = b.Create(ctx, NewMessage{
-		UserID:      userID,
-		MessageType: MessageTypeMorning,
-		Content:     content,
-		ScheduledAt: now,
-	})
-	if err != nil {
-		if errors.Is(err, ErrDuplicateSchedule) {
-			b.log.Info(ctx, "notificationbus.scheduleMorning", "msg", "already scheduled", "user_id", userID)
-			return nil
-		}
-		return fmt.Errorf("create morning message: %w", err)
-	}
-
-	b.log.Info(ctx, "notificationbus.scheduleMorning", "msg", "scheduled", "user_id", userID)
-	return nil
+	localNow := b.getLocalNow(cfg, now)
+	return b.scheduleMessageIfTime(
+		ctx,
+		userID,
+		cfg.MorningTime,
+		MessageTypeMorning,
+		GenerateMorningMessage,
+		localNow,
+		vnotificationQuerier,
+	)
 }
 
 // ScheduleEveningMessageIfTime schedules an evening message if current time is in the evening window.
 // Returns nil if already scheduled (idempotent behavior) or not in time window.
+// The cfg.Location is used to convert the provided time to the correct timezone.
 func (b *Business) ScheduleEveningMessageIfTime(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -204,48 +242,40 @@ func (b *Business) ScheduleEveningMessageIfTime(
 	now time.Time,
 	vnotificationQuerier VNotificationQuerier,
 ) error {
-	currentTime := now.Format("15:04")
-	if !b.IsInTimeWindow(currentTime, cfg.EveningTime) {
-		return nil
-	}
-
-	// Fetch user's values for message content
-	values, err := vnotificationQuerier.QueryByUserID(ctx, userID)
-	if err != nil {
-		return fmt.Errorf("query values: %w", err)
-	}
-
-	// Generate message content
-	content := GenerateEveningMessage(values)
-
-	// Create notification (idempotent - handles duplicates)
-	_, err = b.Create(ctx, NewMessage{
-		UserID:      userID,
-		MessageType: MessageTypeEvening,
-		Content:     content,
-		ScheduledAt: now,
-	})
-	if err != nil {
-		if errors.Is(err, ErrDuplicateSchedule) {
-			b.log.Info(ctx, "notificationbus.scheduleEvening", "msg", "already scheduled", "user_id", userID)
-			return nil
-		}
-		return fmt.Errorf("create evening message: %w", err)
-	}
-
-	b.log.Info(ctx, "notificationbus.scheduleEvening", "msg", "scheduled", "user_id", userID)
-	return nil
+	localNow := b.getLocalNow(cfg, now)
+	return b.scheduleMessageIfTime(
+		ctx,
+		userID,
+		cfg.EveningTime,
+		MessageTypeEvening,
+		GenerateEveningMessage,
+		localNow,
+		vnotificationQuerier,
+	)
 }
 
-// IsInTimeWindow checks if current time is within 10 minutes of target time.
-func (b *Business) IsInTimeWindow(currentTime, targetTime string) bool {
+// isInTimeWindow checks if current time is within 10 minutes of target time.
+// Logs a warning if time parsing fails.
+func (b *Business) isInTimeWindow(ctx context.Context, currentTime, targetTime string) bool {
 	current, err := time.Parse("15:04", currentTime)
 	if err != nil {
+		b.log.Warn(ctx, "notificationbus.isInTimeWindow",
+			"msg", "failed to parse current time",
+			"current_time", currentTime,
+			"expected_format", "15:04",
+			"err", err,
+		)
 		return false
 	}
 
 	target, err := time.Parse("15:04", targetTime)
 	if err != nil {
+		b.log.Warn(ctx, "notificationbus.isInTimeWindow",
+			"msg", "failed to parse target time",
+			"target_time", targetTime,
+			"expected_format", "15:04",
+			"err", err,
+		)
 		return false
 	}
 

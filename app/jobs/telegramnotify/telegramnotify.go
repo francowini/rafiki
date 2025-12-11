@@ -66,8 +66,7 @@ type Worker struct {
 	notificationBus  *notificationbus.Business
 	vnotificationBus *vnotificationbus.Business
 	telegramSender   notificationbus.TelegramSender
-	config           Config
-	location         *time.Location
+	scheduleConfig   notificationbus.ScheduleConfig
 }
 
 // NewWorker creates a new telegram notification worker.
@@ -79,20 +78,16 @@ func NewWorker(
 	telegramClient *telegram.Client,
 	cfg Config,
 ) (*Worker, error) {
-	// Validate timezone
+	// Validate and load timezone
 	loc, err := time.LoadLocation(cfg.Timezone)
 	if err != nil {
 		return nil, fmt.Errorf("invalid timezone %q: %w", cfg.Timezone, err)
 	}
 
-	// Validate MorningTime format (HH:MM)
-	if _, err := time.Parse("15:04", cfg.MorningTime); err != nil {
-		return nil, fmt.Errorf("invalid morning time %q (expected HH:MM format): %w", cfg.MorningTime, err)
-	}
-
-	// Validate EveningTime format (HH:MM)
-	if _, err := time.Parse("15:04", cfg.EveningTime); err != nil {
-		return nil, fmt.Errorf("invalid evening time %q (expected HH:MM format): %w", cfg.EveningTime, err)
+	// Create validated ScheduleConfig (validates time formats)
+	scheduleConfig, err := notificationbus.NewScheduleConfig(cfg.MorningTime, cfg.EveningTime, loc)
+	if err != nil {
+		return nil, fmt.Errorf("invalid schedule config: %w", err)
 	}
 
 	return &Worker{
@@ -100,8 +95,7 @@ func NewWorker(
 		notificationBus:  notificationBus,
 		vnotificationBus: vnotificationBus,
 		telegramSender:   &telegramSenderAdapter{client: telegramClient},
-		config:           cfg,
-		location:         loc,
+		scheduleConfig:   scheduleConfig,
 	}, nil
 }
 
@@ -113,7 +107,7 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[Args]) error {
 }
 
 func (w *Worker) processNotifications(ctx context.Context) error {
-	now := time.Now().In(w.location)
+	now := time.Now()
 
 	// 1. Get all users with Telegram enabled
 	users, err := w.notificationBus.QueryTelegramUsers(ctx)
@@ -126,28 +120,38 @@ func (w *Worker) processNotifications(ctx context.Context) error {
 		return nil
 	}
 
-	// 2. Schedule messages (delegates to business layer)
-	cfg := notificationbus.ScheduleConfig{
-		MorningTime: w.config.MorningTime,
-		EveningTime: w.config.EveningTime,
-		Location:    w.location,
+	// Log time check for debugging (use local time from config)
+	localNow := now
+	if w.scheduleConfig.Location != nil {
+		localNow = now.In(w.scheduleConfig.Location)
 	}
 
-	// Log time check for debugging
 	w.log.Info(ctx, "telegram_notify", "msg", "checking time windows",
-		"current_time", now.Format("15:04"),
-		"morning_target", cfg.MorningTime,
-		"evening_target", cfg.EveningTime,
+		"current_time", localNow.Format("15:04"),
+		"morning_target", w.scheduleConfig.MorningTime.Value(),
+		"evening_target", w.scheduleConfig.EveningTime.Value(),
 		"users_count", len(users))
+
+	// 2. Schedule messages (delegates to business layer)
+	// Track errors to detect complete failure
+	var scheduleErrors int
+	totalAttempts := len(users) * 2 // morning + evening for each user
 
 	for _, user := range users {
 		// Business layer decides if it's time to schedule
-		if err := w.notificationBus.ScheduleMorningMessageIfTime(ctx, user.UserID, cfg, now, w.vnotificationBus); err != nil {
+		if err := w.notificationBus.ScheduleMorningMessageIfTime(ctx, user.UserID, w.scheduleConfig, now, w.vnotificationBus); err != nil {
 			w.log.Error(ctx, "telegram_notify", "msg", "schedule morning failed", "user_id", user.UserID, "err", err)
+			scheduleErrors++
 		}
-		if err := w.notificationBus.ScheduleEveningMessageIfTime(ctx, user.UserID, cfg, now, w.vnotificationBus); err != nil {
+		if err := w.notificationBus.ScheduleEveningMessageIfTime(ctx, user.UserID, w.scheduleConfig, now, w.vnotificationBus); err != nil {
 			w.log.Error(ctx, "telegram_notify", "msg", "schedule evening failed", "user_id", user.UserID, "err", err)
+			scheduleErrors++
 		}
+	}
+
+	// If all scheduling attempts failed, return an error so the job fails
+	if scheduleErrors == totalAttempts {
+		return fmt.Errorf("all %d scheduling attempts failed for %d users", totalAttempts, len(users))
 	}
 
 	// 3. Send pending messages (delegates to business layer)
