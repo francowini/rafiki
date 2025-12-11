@@ -21,6 +21,7 @@ type groupedValue struct {
 func groupValuesByID(values []vnotificationbus.ValueWithVision) []groupedValue {
 	// Use ordered map to preserve order and group by value
 	valueMap := make(map[uuid.UUID]*groupedValue)
+	visionSets := make(map[uuid.UUID]map[string]bool) // Track unique visions per value
 	var order []uuid.UUID
 
 	for _, v := range values {
@@ -30,10 +31,15 @@ func groupValuesByID(values []vnotificationbus.ValueWithVision) []groupedValue {
 				ValueFacet:   v.ValueFacet,
 				Visions:      []string{},
 			}
+			visionSets[v.ValueID] = make(map[string]bool)
 			order = append(order, v.ValueID)
 		}
 		if v.LifeVisionContent != nil && *v.LifeVisionContent != "" {
-			valueMap[v.ValueID].Visions = append(valueMap[v.ValueID].Visions, *v.LifeVisionContent)
+			vision := *v.LifeVisionContent
+			if !visionSets[v.ValueID][vision] {
+				visionSets[v.ValueID][vision] = true
+				valueMap[v.ValueID].Visions = append(valueMap[v.ValueID].Visions, vision)
+			}
 		}
 	}
 
