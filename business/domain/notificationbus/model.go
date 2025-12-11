@@ -46,6 +46,7 @@ type MessageStatus string
 // Message status constants.
 const (
 	StatusPending MessageStatus = "pending"
+	StatusSending MessageStatus = "sending" // Intermediate state to prevent duplicate sends
 	StatusSent    MessageStatus = "sent"
 	StatusFailed  MessageStatus = "failed"
 )
@@ -58,7 +59,7 @@ func (ms MessageStatus) String() string {
 // Valid returns true if the message status is a known valid status.
 func (ms MessageStatus) Valid() bool {
 	switch ms {
-	case StatusPending, StatusSent, StatusFailed:
+	case StatusPending, StatusSending, StatusSent, StatusFailed:
 		return true
 	}
 	return false

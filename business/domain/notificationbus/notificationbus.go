@@ -9,9 +9,15 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/francowini/rafiki/business/domain/vnotificationbus"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/logger"
 )
+
+// VNotificationQuerier interface for querying values (dependency injection).
+type VNotificationQuerier interface {
+	QueryByUserID(ctx context.Context, userID uuid.UUID) ([]vnotificationbus.ValueWithVision, error)
+}
 
 // Storer interface declares the behavior this package needs to persist and
 // retrieve data.
@@ -92,6 +98,20 @@ func (b *Business) MarkSent(ctx context.Context, msg Message, telegramMsgID Tele
 	return msg, nil
 }
 
+// MarkSending marks a message as currently being sent.
+// This prevents duplicate sends if the job runs again before MarkSent completes.
+func (b *Business) MarkSending(ctx context.Context, msg Message) (Message, error) {
+	msg.Status = StatusSending
+
+	if err := b.storer.Update(ctx, msg); err != nil {
+		b.log.Error(ctx, "notificationbus.markSending", "err", err, "message_id", msg.ID)
+		return Message{}, fmt.Errorf("update: %w", err)
+	}
+
+	b.log.Info(ctx, "notificationbus.markSending", "message_id", msg.ID)
+	return msg, nil
+}
+
 // MarkFailed marks a message as failed with an error message.
 func (b *Business) MarkFailed(ctx context.Context, msg Message, errMsg FailureReason) (Message, error) {
 	msg.Status = StatusFailed
@@ -141,4 +161,211 @@ func (b *Business) QueryTelegramUsers(ctx context.Context) ([]TelegramUser, erro
 	}
 
 	return users, nil
+}
+
+// ============================================================================
+// Scheduling and Sending Logic (moved from job layer)
+// ============================================================================
+
+// contentGenerator is a function that generates message content from values.
+type contentGenerator func([]vnotificationbus.ValueWithVision) string
+
+// scheduleMessageIfTime is a helper that handles the common scheduling flow.
+// It checks if the current time is within the target time window, fetches user values,
+// generates content, and creates the notification message.
+func (b *Business) scheduleMessageIfTime(
+	ctx context.Context,
+	userID uuid.UUID,
+	targetTime TimeOfDay,
+	messageType MessageType,
+	generateContent contentGenerator,
+	localNow time.Time,
+	vnotificationQuerier VNotificationQuerier,
+) error {
+	currentTime := localNow.Format("15:04")
+	if !b.isInTimeWindow(ctx, currentTime, targetTime.Value()) {
+		return nil
+	}
+
+	// Fetch user's values for message content
+	values, err := vnotificationQuerier.QueryByUserID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("query values: %w", err)
+	}
+
+	// Generate message content
+	content := generateContent(values)
+
+	// Create notification (idempotent - handles duplicates)
+	_, err = b.Create(ctx, NewMessage{
+		UserID:      userID,
+		MessageType: messageType,
+		Content:     content,
+		ScheduledAt: localNow,
+	})
+	if err != nil {
+		if errors.Is(err, ErrDuplicateSchedule) {
+			b.log.Info(ctx, "notificationbus.schedule", "msg", "already scheduled", "user_id", userID, "type", messageType)
+			return nil
+		}
+		return fmt.Errorf("create %s message: %w", messageType, err)
+	}
+
+	b.log.Info(ctx, "notificationbus.schedule", "msg", "scheduled", "user_id", userID, "type", messageType)
+	return nil
+}
+
+// getLocalNow returns the current time in the configured timezone.
+// If cfg.Location is nil, it uses the provided now time as-is.
+func (b *Business) getLocalNow(cfg ScheduleConfig, now time.Time) time.Time {
+	if cfg.Location == nil {
+		return now
+	}
+	return now.In(cfg.Location)
+}
+
+// ScheduleMorningMessageIfTime schedules a morning message if current time is in the morning window.
+// Returns nil if already scheduled (idempotent behavior) or not in time window.
+// The cfg.Location is used to convert the provided time to the correct timezone.
+func (b *Business) ScheduleMorningMessageIfTime(
+	ctx context.Context,
+	userID uuid.UUID,
+	cfg ScheduleConfig,
+	now time.Time,
+	vnotificationQuerier VNotificationQuerier,
+) error {
+	localNow := b.getLocalNow(cfg, now)
+	return b.scheduleMessageIfTime(
+		ctx,
+		userID,
+		cfg.MorningTime,
+		MessageTypeMorning,
+		GenerateMorningMessage,
+		localNow,
+		vnotificationQuerier,
+	)
+}
+
+// ScheduleEveningMessageIfTime schedules an evening message if current time is in the evening window.
+// Returns nil if already scheduled (idempotent behavior) or not in time window.
+// The cfg.Location is used to convert the provided time to the correct timezone.
+func (b *Business) ScheduleEveningMessageIfTime(
+	ctx context.Context,
+	userID uuid.UUID,
+	cfg ScheduleConfig,
+	now time.Time,
+	vnotificationQuerier VNotificationQuerier,
+) error {
+	localNow := b.getLocalNow(cfg, now)
+	return b.scheduleMessageIfTime(
+		ctx,
+		userID,
+		cfg.EveningTime,
+		MessageTypeEvening,
+		GenerateEveningMessage,
+		localNow,
+		vnotificationQuerier,
+	)
+}
+
+// isInTimeWindow checks if current time is within 10 minutes of target time.
+// Logs a warning if time parsing fails.
+func (b *Business) isInTimeWindow(ctx context.Context, currentTime, targetTime string) bool {
+	current, err := time.Parse("15:04", currentTime)
+	if err != nil {
+		b.log.Warn(ctx, "notificationbus.isInTimeWindow",
+			"msg", "failed to parse current time",
+			"current_time", currentTime,
+			"expected_format", "15:04",
+			"err", err,
+		)
+		return false
+	}
+
+	target, err := time.Parse("15:04", targetTime)
+	if err != nil {
+		b.log.Warn(ctx, "notificationbus.isInTimeWindow",
+			"msg", "failed to parse target time",
+			"target_time", targetTime,
+			"expected_format", "15:04",
+			"err", err,
+		)
+		return false
+	}
+
+	// Calculate difference in minutes (0 to +9 minutes after target)
+	diff := current.Sub(target).Minutes()
+	return diff >= 0 && diff < 10
+}
+
+// SendPendingMessages sends all pending messages scheduled before now.
+func (b *Business) SendPendingMessages(
+	ctx context.Context,
+	telegramSender TelegramSender,
+	before time.Time,
+) error {
+	// Get pending messages
+	pending, err := b.QueryPending(ctx, before)
+	if err != nil {
+		return fmt.Errorf("query pending: %w", err)
+	}
+
+	if len(pending) == 0 {
+		return nil
+	}
+
+	b.log.Info(ctx, "notificationbus.sendPending", "msg", "processing", "count", len(pending))
+
+	// Get telegram users for chat ID lookup
+	users, err := b.QueryTelegramUsers(ctx)
+	if err != nil {
+		return fmt.Errorf("query telegram users: %w", err)
+	}
+
+	// Build chat ID map
+	chatIDMap := make(map[uuid.UUID]TelegramChatID)
+	for _, u := range users {
+		chatIDMap[u.UserID] = u.TelegramChatID
+	}
+
+	// Send each message
+	for _, msg := range pending {
+		chatID, ok := chatIDMap[msg.UserID]
+		if !ok {
+			b.log.Error(ctx, "notificationbus.sendPending", "msg", "user not in telegram map", "user_id", msg.UserID)
+			errMsg := FailureReason("user telegram not enabled")
+			if _, markErr := b.MarkFailed(ctx, msg, errMsg); markErr != nil {
+				b.log.Error(ctx, "notificationbus.sendPending", "msg", "mark failed error", "err", markErr)
+			}
+			continue
+		}
+
+		// Mark as "sending" before API call to prevent duplicate sends
+		// If the job restarts, this message won't be picked up by QueryPending
+		msg, err = b.MarkSending(ctx, msg)
+		if err != nil {
+			b.log.Error(ctx, "notificationbus.sendPending", "msg", "mark sending error", "message_id", msg.ID, "err", err)
+			continue
+		}
+
+		b.log.Info(ctx, "notificationbus.sendPending", "msg", "sending", "message_id", msg.ID, "chat_id", chatID.Value())
+
+		resp, err := telegramSender.SendMessage(ctx, chatID, msg.Content)
+		if err != nil {
+			b.log.Error(ctx, "notificationbus.sendPending", "msg", "send failed", "message_id", msg.ID, "err", err)
+			errMsg := FailureReason(err.Error())
+			if _, markErr := b.MarkFailed(ctx, msg, errMsg); markErr != nil {
+				b.log.Error(ctx, "notificationbus.sendPending", "msg", "mark failed error", "err", markErr)
+			}
+			continue
+		}
+
+		if _, err := b.MarkSent(ctx, msg, resp.MessageID); err != nil {
+			b.log.Error(ctx, "notificationbus.sendPending", "msg", "mark sent error", "err", err)
+		}
+
+		b.log.Info(ctx, "notificationbus.sendPending", "msg", "sent", "message_id", msg.ID, "telegram_msg_id", resp.MessageID)
+	}
+
+	return nil
 }
