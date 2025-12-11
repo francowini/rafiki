@@ -2,6 +2,7 @@ package notificationdb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -41,6 +42,9 @@ func (s *Store) Create(ctx context.Context, msg notificationbus.Message) error {
 	dbMsg := toDBMessage(msg)
 
 	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, dbMsg); err != nil {
+		if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
+			return notificationbus.ErrDuplicateSchedule
+		}
 		return fmt.Errorf("namedexeccontext: %w", err)
 	}
 
@@ -61,8 +65,13 @@ func (s *Store) Update(ctx context.Context, msg notificationbus.Message) error {
 
 	dbMsg := toDBMessage(msg)
 
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, dbMsg); err != nil {
+	rowsAffected, err := sqldb.NamedExecContextWithResult(ctx, s.log, s.db, q, dbMsg)
+	if err != nil {
 		return fmt.Errorf("namedexeccontext: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return notificationbus.ErrNotFound
 	}
 
 	return nil
@@ -85,6 +94,9 @@ func (s *Store) QueryByID(ctx context.Context, messageID uuid.UUID) (notificatio
 
 	var dbMsg message
 	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &dbMsg); err != nil {
+		if errors.Is(err, sqldb.ErrDBNotFound) {
+			return notificationbus.Message{}, notificationbus.ErrNotFound
+		}
 		return notificationbus.Message{}, fmt.Errorf("namedquerystruct: %w", err)
 	}
 

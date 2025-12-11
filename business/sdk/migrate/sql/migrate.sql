@@ -317,11 +317,17 @@ CREATE INDEX IF NOT EXISTS notification_messages_user_idx
 CREATE INDEX IF NOT EXISTS notification_messages_pending_idx
   ON notification_messages(scheduled_at) WHERE status = 'pending';
 
+-- Unique constraint to prevent duplicate scheduled messages per user/type/date
+CREATE UNIQUE INDEX IF NOT EXISTS notification_messages_schedule_unique_idx
+  ON notification_messages(user_id, message_type, DATE(scheduled_at))
+  WHERE status = 'pending';
+
 COMMENT ON TABLE notification_messages IS 'Telegram notification messages sent to users';
 COMMENT ON COLUMN notification_messages.message_type IS 'morning, evening, test, or welcome message';
 COMMENT ON COLUMN notification_messages.scheduled_at IS 'When message should be sent (UTC)';
 
 -- Create view for notification content (values + life visions)
+-- Note: ORDER BY intentionally omitted - consumers should order when querying
 CREATE OR REPLACE VIEW view_notification_content AS
 SELECT
     v.user_id,
@@ -332,7 +338,6 @@ SELECT
     lv.life_vision_id,
     lv.content AS life_vision_content
 FROM values v
-LEFT JOIN life_visions lv ON lv.value_id = v.value_id
-ORDER BY v.user_id, v.display_order;
+LEFT JOIN life_visions lv ON lv.value_id = v.value_id;
 
 COMMENT ON VIEW view_notification_content IS 'Read-only view for notification message content';

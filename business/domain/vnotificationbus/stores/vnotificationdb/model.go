@@ -1,6 +1,8 @@
 package vnotificationdb
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 
 	"github.com/francowini/rafiki/business/domain/vnotificationbus"
@@ -21,7 +23,7 @@ func toBusValueWithVision(db valueWithVision, enc encrypt.Encryptor) (vnotificat
 	// Decrypt value content
 	valueContent, err := enc.Decrypt(db.ValueContent)
 	if err != nil {
-		return vnotificationbus.ValueWithVision{}, err
+		return vnotificationbus.ValueWithVision{}, fmt.Errorf("decrypt ValueContent: %w", err)
 	}
 
 	// Decrypt life vision content if present
@@ -29,7 +31,7 @@ func toBusValueWithVision(db valueWithVision, enc encrypt.Encryptor) (vnotificat
 	if db.LifeVisionContent != nil {
 		decrypted, err := enc.Decrypt(*db.LifeVisionContent)
 		if err != nil {
-			return vnotificationbus.ValueWithVision{}, err
+			return vnotificationbus.ValueWithVision{}, fmt.Errorf("decrypt LifeVisionContent: %w", err)
 		}
 		lifeVisionContent = &decrypted
 	}

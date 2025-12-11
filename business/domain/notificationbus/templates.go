@@ -3,14 +3,11 @@ package notificationbus
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
-	"time"
 
 	"github.com/francowini/rafiki/business/domain/vnotificationbus"
 )
-
-var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 // GenerateMorningMessage creates a morning notification message.
 func GenerateMorningMessage(values []vnotificationbus.ValueWithVision) string {
@@ -23,7 +20,7 @@ func GenerateMorningMessage(values []vnotificationbus.ValueWithVision) string {
 		morningTemplate2,
 		morningTemplate3,
 	}
-	return templates[rng.Intn(len(templates))](values)
+	return templates[rand.IntN(len(templates))](values)
 }
 
 // GenerateEveningMessage creates an evening notification message.
@@ -37,7 +34,7 @@ func GenerateEveningMessage(values []vnotificationbus.ValueWithVision) string {
 		eveningTemplate2,
 		eveningTemplate3,
 	}
-	return templates[rng.Intn(len(templates))](values)
+	return templates[rand.IntN(len(templates))](values)
 }
 
 func morningTemplate1(values []vnotificationbus.ValueWithVision) string {

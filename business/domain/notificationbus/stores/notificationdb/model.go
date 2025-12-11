@@ -23,14 +23,26 @@ type message struct {
 }
 
 func toDBMessage(bus notificationbus.Message) message {
+	var telegramMsgID *int64
+	if bus.TelegramMsgID != nil {
+		v := bus.TelegramMsgID.Value()
+		telegramMsgID = &v
+	}
+
+	var errorMessage *string
+	if bus.ErrorMessage != nil {
+		v := bus.ErrorMessage.String()
+		errorMessage = &v
+	}
+
 	return message{
 		ID:            bus.ID,
 		UserID:        bus.UserID,
 		MessageType:   bus.MessageType.String(),
 		Content:       bus.Content,
-		TelegramMsgID: bus.TelegramMsgID,
+		TelegramMsgID: telegramMsgID,
 		Status:        bus.Status.String(),
-		ErrorMessage:  bus.ErrorMessage,
+		ErrorMessage:  errorMessage,
 		RetryCount:    bus.RetryCount,
 		ScheduledAt:   bus.ScheduledAt.UTC(),
 		SentAt:        toUTCPtr(bus.SentAt),
@@ -39,18 +51,30 @@ func toDBMessage(bus notificationbus.Message) message {
 }
 
 func toBusMessage(db message) notificationbus.Message {
+	// Parse and validate MessageType (default to test if invalid)
+	messageType := notificationbus.MessageType(db.MessageType)
+	if !messageType.Valid() {
+		messageType = notificationbus.MessageTypeTest
+	}
+
+	// Parse and validate MessageStatus (default to pending if invalid)
+	status := notificationbus.MessageStatus(db.Status)
+	if !status.Valid() {
+		status = notificationbus.StatusPending
+	}
+
 	return notificationbus.Message{
 		ID:            db.ID,
 		UserID:        db.UserID,
-		MessageType:   notificationbus.MessageType(db.MessageType),
+		MessageType:   messageType,
 		Content:       db.Content,
-		TelegramMsgID: db.TelegramMsgID,
-		Status:        notificationbus.MessageStatus(db.Status),
-		ErrorMessage:  db.ErrorMessage,
+		TelegramMsgID: toTelegramMsgIDPtr(db.TelegramMsgID),
+		Status:        status,
+		ErrorMessage:  toFailureReasonPtr(db.ErrorMessage),
 		RetryCount:    db.RetryCount,
-		ScheduledAt:   db.ScheduledAt.In(time.Local),
-		SentAt:        toLocalPtr(db.SentAt),
-		DateCreated:   db.DateCreated.In(time.Local),
+		ScheduledAt:   db.ScheduledAt.UTC(),
+		SentAt:        toUTCPtrRead(db.SentAt),
+		DateCreated:   db.DateCreated.UTC(),
 	}
 }
 
@@ -72,10 +96,26 @@ func toBusTelegramUsers(dbs []telegramUser) []notificationbus.TelegramUser {
 	for i, db := range dbs {
 		users[i] = notificationbus.TelegramUser{
 			UserID:         db.UserID,
-			TelegramChatID: db.TelegramChatID,
+			TelegramChatID: notificationbus.TelegramChatID(db.TelegramChatID),
 		}
 	}
 	return users
+}
+
+func toTelegramMsgIDPtr(v *int64) *notificationbus.TelegramMessageID {
+	if v == nil {
+		return nil
+	}
+	t := notificationbus.TelegramMessageID(*v)
+	return &t
+}
+
+func toFailureReasonPtr(v *string) *notificationbus.FailureReason {
+	if v == nil {
+		return nil
+	}
+	f := notificationbus.FailureReason(*v)
+	return &f
 }
 
 func toUTCPtr(t *time.Time) *time.Time {
@@ -86,10 +126,10 @@ func toUTCPtr(t *time.Time) *time.Time {
 	return &utc
 }
 
-func toLocalPtr(t *time.Time) *time.Time {
+func toUTCPtrRead(t *time.Time) *time.Time {
 	if t == nil {
 		return nil
 	}
-	local := t.In(time.Local)
-	return &local
+	utc := t.UTC()
+	return &utc
 }

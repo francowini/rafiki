@@ -5,13 +5,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
 const baseURL = "https://api.telegram.org"
+
+// ErrEmptyBotToken is returned when bot token is empty.
+var ErrEmptyBotToken = errors.New("telegram: bot token cannot be empty")
 
 // Client for Telegram Bot API.
 type Client struct {
@@ -19,14 +24,18 @@ type Client struct {
 	httpClient *http.Client
 }
 
-// NewClient creates a Telegram client.
-func NewClient(botToken string) *Client {
+// NewClient creates a Telegram client. Returns error if botToken is empty.
+func NewClient(botToken string) (*Client, error) {
+	if strings.TrimSpace(botToken) == "" {
+		return nil, ErrEmptyBotToken
+	}
+
 	return &Client{
 		botToken: botToken,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-	}
+	}, nil
 }
 
 // SendMessageRequest for Telegram API.
@@ -75,6 +84,17 @@ func (c *Client) SendMessage(ctx context.Context, chatID int64, text string) (*S
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	// Check for non-2xx responses (infrastructure errors like 502, 503, etc.)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// Truncate body for error message (max 200 chars)
+		bodySnippet := string(respBody)
+		if len(bodySnippet) > 200 {
+			bodySnippet = bodySnippet[:200] + "..."
+		}
+		return nil, fmt.Errorf("telegram http error: status=%d %s, body=%s",
+			resp.StatusCode, http.StatusText(resp.StatusCode), bodySnippet)
 	}
 
 	var apiResp SendMessageResponse

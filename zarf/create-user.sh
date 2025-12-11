@@ -128,6 +128,14 @@ debug "PARTNER_DB_HOST=${PARTNER_DB_HOST:-not set}"
 if [ -n "$PARTNER_DB_HOST" ]; then
     echo -e "${YELLOW}Using external database: $PARTNER_DB_HOST${NC}"
 
+    # Validate required database variables
+    for var in PARTNER_DB_USER PARTNER_DB_PASSWORD PARTNER_DB_NAME PARTNER_DB_PORT; do
+        if [ -z "${!var}" ]; then
+            echo -e "${RED}Error: $var is not set${NC}"
+            exit 1
+        fi
+    done
+
     # Build connection string
     DB_URL="postgresql://${PARTNER_DB_USER}:${PARTNER_DB_PASSWORD}@${PARTNER_DB_HOST}:${PARTNER_DB_PORT}/${PARTNER_DB_NAME}?sslmode=${PARTNER_DB_SSLMODE:-require}"
     debug "DB_URL built (password hidden)"

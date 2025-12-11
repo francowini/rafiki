@@ -267,7 +267,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	var telegramClient *telegram.Client
 	if cfg.Telegram.BotToken != "" {
-		telegramClient = telegram.NewClient(cfg.Telegram.BotToken)
+		var err error
+		telegramClient, err = telegram.NewClient(cfg.Telegram.BotToken)
+		if err != nil {
+			return fmt.Errorf("create telegram client: %w", err)
+		}
 		log.Info(ctx, "startup", "status", "telegram client initialized")
 	}
 
