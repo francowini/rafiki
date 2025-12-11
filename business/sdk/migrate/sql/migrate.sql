@@ -318,9 +318,9 @@ CREATE INDEX IF NOT EXISTS notification_messages_pending_idx
   ON notification_messages(scheduled_at) WHERE status = 'pending';
 
 -- Unique constraint to prevent duplicate scheduled messages per user/type/date
+-- Note: No WHERE clause so uniqueness applies regardless of status
 CREATE UNIQUE INDEX IF NOT EXISTS notification_messages_schedule_unique_idx
-  ON notification_messages(user_id, message_type, DATE(scheduled_at))
-  WHERE status = 'pending';
+  ON notification_messages(user_id, message_type, DATE(scheduled_at));
 
 COMMENT ON TABLE notification_messages IS 'Telegram notification messages sent to users';
 COMMENT ON COLUMN notification_messages.message_type IS 'morning, evening, test, or welcome message';
@@ -341,3 +341,16 @@ FROM values v
 LEFT JOIN life_visions lv ON lv.value_id = v.value_id;
 
 COMMENT ON VIEW view_notification_content IS 'Read-only view for notification message content';
+
+
+-- Version: 10
+-- Description: Fix duplicate message prevention - remove status condition from unique index
+
+-- Drop the old partial unique index (only prevented duplicates for pending messages)
+DROP INDEX IF EXISTS notification_messages_schedule_unique_idx;
+
+-- Create new unique index without WHERE clause (prevents duplicates regardless of status)
+CREATE UNIQUE INDEX IF NOT EXISTS notification_messages_user_type_date_unique_idx
+  ON notification_messages(user_id, message_type, DATE(scheduled_at));
+
+COMMENT ON INDEX notification_messages_user_type_date_unique_idx IS 'Prevents duplicate messages per user/type/day regardless of status';

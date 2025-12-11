@@ -2,13 +2,24 @@
 package notificationbus
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
 
 	"github.com/francowini/rafiki/business/domain/vnotificationbus"
 )
+
+// facetEmojis maps facet names to their emoji representations.
+var facetEmojis = map[string]string{
+	"spirituality":  "🧘",
+	"health":        "💪",
+	"family":        "👨‍👩‍👧‍👦",
+	"relationships": "🤝",
+	"career":        "💼",
+	"finances":      "💰",
+	"growth":        "🌱",
+	"fun":           "🎉",
+}
 
 // groupedValue represents a value with all its associated life visions (goals).
 type groupedValue struct {
@@ -67,15 +78,29 @@ func GenerateEveningMessage(values []vnotificationbus.ValueWithVision) string {
 	return eveningTemplate(groupValuesByID(values))
 }
 
+func facetEmoji(facet string) string {
+	if emoji, ok := facetEmojis[facet]; ok {
+		return emoji
+	}
+	return "✨"
+}
+
 func morningTemplate(values []groupedValue) string {
 	var sb strings.Builder
-	sb.WriteString("*Buenos dias!*\n\n")
-	sb.WriteString("Tus valores te guian hoy:\n\n")
+	sb.WriteString("☀️ *Buenos dias!*\n\n")
 
-	for _, v := range values {
-		sb.WriteString(fmt.Sprintf("*%s* _%s_\n", v.ValueContent, v.ValueFacet))
+	for i, v := range values {
+		sb.WriteString(facetEmoji(v.ValueFacet))
+		sb.WriteString(" ")
+		sb.WriteString(v.ValueContent)
+		sb.WriteString("\n")
 		for _, vision := range v.Visions {
-			sb.WriteString(fmt.Sprintf("  - %s\n", vision))
+			sb.WriteString("    ↳ _")
+			sb.WriteString(vision)
+			sb.WriteString("_\n")
+		}
+		if i < len(values)-1 {
+			sb.WriteString("\n")
 		}
 	}
 
@@ -84,17 +109,24 @@ func morningTemplate(values []groupedValue) string {
 
 func eveningTemplate(values []groupedValue) string {
 	var sb strings.Builder
-	sb.WriteString("*Cierre del dia*\n\n")
-	sb.WriteString("Tus valores te guian:\n\n")
+	sb.WriteString("🌙 *Cierre del dia*\n\n")
 
-	for _, v := range values {
-		sb.WriteString(fmt.Sprintf("*%s* _%s_\n", v.ValueContent, v.ValueFacet))
+	for i, v := range values {
+		sb.WriteString(facetEmoji(v.ValueFacet))
+		sb.WriteString(" ")
+		sb.WriteString(v.ValueContent)
+		sb.WriteString("\n")
 		for _, vision := range v.Visions {
-			sb.WriteString(fmt.Sprintf("  - %s\n", vision))
+			sb.WriteString("    ↳ _")
+			sb.WriteString(vision)
+			sb.WriteString("_\n")
+		}
+		if i < len(values)-1 {
+			sb.WriteString("\n")
 		}
 	}
 
-	sb.WriteString("\n_Descansa bien._")
+	sb.WriteString("\n_Descansa bien_ 😴")
 	return sb.String()
 }
 
