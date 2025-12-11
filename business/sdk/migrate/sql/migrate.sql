@@ -354,3 +354,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS notification_messages_user_type_date_unique_id
   ON notification_messages(user_id, message_type, DATE(scheduled_at));
 
 COMMENT ON INDEX notification_messages_user_type_date_unique_idx IS 'Prevents duplicate messages per user/type/day regardless of status';
+
+
+-- Version: 11
+-- Description: Add 'sending' status to prevent duplicate message delivery
+
+-- Drop the old check constraint and add new one with 'sending' status
+ALTER TABLE notification_messages
+  DROP CONSTRAINT IF EXISTS notification_messages_status_check;
+
+ALTER TABLE notification_messages
+  ADD CONSTRAINT notification_messages_status_check
+  CHECK (status IN ('pending', 'sending', 'sent', 'failed'));
+
+COMMENT ON COLUMN notification_messages.status IS 'Message status: pending, sending, sent, or failed';
