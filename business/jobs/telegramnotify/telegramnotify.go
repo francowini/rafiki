@@ -57,17 +57,28 @@ type Worker struct {
 }
 
 // NewWorker creates a new telegram notification worker.
+// Returns an error if the configuration is invalid (bad timezone or time format).
 func NewWorker(
 	log *logger.Logger,
 	notificationBus *notificationbus.Business,
 	vnotificationBus *vnotificationbus.Business,
 	telegramClient *telegram.Client,
 	cfg Config,
-) *Worker {
+) (*Worker, error) {
+	// Validate timezone
 	loc, err := time.LoadLocation(cfg.Timezone)
 	if err != nil {
-		loc = time.UTC
-		log.Error(context.Background(), "telegram_worker", "msg", "failed to load timezone, using UTC", "timezone", cfg.Timezone, "err", err)
+		return nil, fmt.Errorf("invalid timezone %q: %w", cfg.Timezone, err)
+	}
+
+	// Validate MorningTime format (HH:MM)
+	if _, err := time.Parse("15:04", cfg.MorningTime); err != nil {
+		return nil, fmt.Errorf("invalid morning time %q (expected HH:MM format): %w", cfg.MorningTime, err)
+	}
+
+	// Validate EveningTime format (HH:MM)
+	if _, err := time.Parse("15:04", cfg.EveningTime); err != nil {
+		return nil, fmt.Errorf("invalid evening time %q (expected HH:MM format): %w", cfg.EveningTime, err)
 	}
 
 	return &Worker{
@@ -77,7 +88,7 @@ func NewWorker(
 		telegramClient:   telegramClient,
 		config:           cfg,
 		location:         loc,
-	}
+	}, nil
 }
 
 // Work processes a single job.
@@ -217,8 +228,9 @@ func (w *Worker) scheduleEveningMessage(ctx context.Context, userID uuid.UUID, n
 }
 
 func (w *Worker) sendPendingMessages(ctx context.Context) error {
-	// Get pending messages
-	messages, err := w.notificationBus.QueryPending(ctx, time.Now())
+	// Get pending messages using configured timezone for consistency with scheduling
+	now := time.Now().In(w.location)
+	messages, err := w.notificationBus.QueryPending(ctx, now)
 	if err != nil {
 		return fmt.Errorf("query pending: %w", err)
 	}

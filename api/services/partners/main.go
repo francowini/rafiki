@@ -295,7 +295,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	// Add Telegram notification worker if client is configured
 	if telegramClient != nil {
-		jobqueue.AddWorker(workers, telegramnotify.NewWorker(
+		telegramWorker, err := telegramnotify.NewWorker(
 			log,
 			notificationBus,
 			vnotificationBus,
@@ -305,7 +305,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 				EveningTime: cfg.Telegram.EveningTime,
 				Timezone:    cfg.Telegram.Timezone,
 			},
-		))
+		)
+		if err != nil {
+			return fmt.Errorf("create telegram worker: %w", err)
+		}
+		jobqueue.AddWorker(workers, telegramWorker)
 		log.Info(ctx, "startup", "status", "telegram notification worker registered",
 			"morning", cfg.Telegram.MorningTime,
 			"evening", cfg.Telegram.EveningTime,
