@@ -40,7 +40,7 @@ func (Args) InsertOpts() river.InsertOpts {
 		Queue:       jobqueue.QueueDefault,
 		MaxAttempts: 1, // This job should not retry - it handles retries internally
 		UniqueOpts: river.UniqueOpts{
-			ByPeriod: 10 * time.Minute, // Deduplicate jobs within 10 minute window
+			ByPeriod: 5 * time.Minute, // Deduplicate jobs within 5 minute window
 		},
 	}
 }
@@ -119,16 +119,27 @@ func (w *Worker) scheduleMessages(ctx context.Context, now time.Time) error {
 	// Get all users with Telegram enabled
 	users, err := w.notificationBus.QueryTelegramUsers(ctx)
 	if err != nil {
+		w.log.Error(ctx, "telegram_notify", "msg", "failed to query telegram users", "err", err)
 		return fmt.Errorf("query telegram users: %w", err)
 	}
 
 	if len(users) == 0 {
+		w.log.Info(ctx, "telegram_notify", "msg", "no telegram users found")
 		return nil
 	}
 
 	currentTime := now.Format("15:04")
 	morningWindow := w.isInTimeWindow(currentTime, w.config.MorningTime)
 	eveningWindow := w.isInTimeWindow(currentTime, w.config.EveningTime)
+
+	// Always log the time check for debugging
+	w.log.Info(ctx, "telegram_notify", "msg", "checking time windows",
+		"current_time", currentTime,
+		"morning_target", w.config.MorningTime,
+		"evening_target", w.config.EveningTime,
+		"morning_window", morningWindow,
+		"evening_window", eveningWindow,
+		"users_count", len(users))
 
 	if !morningWindow && !eveningWindow {
 		return nil
@@ -173,6 +184,7 @@ func (w *Worker) scheduleMorningMessage(ctx context.Context, userID uuid.UUID, n
 	// Get user's values with visions
 	values, err := w.vnotificationBus.QueryByUserID(ctx, userID)
 	if err != nil {
+		w.log.Error(ctx, "telegram_notify", "msg", "failed to query values for morning message", "user_id", userID, "err", err)
 		return fmt.Errorf("query values: %w", err)
 	}
 
@@ -189,8 +201,10 @@ func (w *Worker) scheduleMorningMessage(ctx context.Context, userID uuid.UUID, n
 	if err != nil {
 		if errors.Is(err, notificationbus.ErrDuplicateSchedule) {
 			// Already scheduled for today - this is expected behavior
+			w.log.Info(ctx, "telegram_notify", "msg", "morning message already scheduled", "user_id", userID)
 			return nil
 		}
+		w.log.Error(ctx, "telegram_notify", "msg", "failed to create morning message", "user_id", userID, "err", err)
 		return fmt.Errorf("create message: %w", err)
 	}
 
@@ -202,6 +216,7 @@ func (w *Worker) scheduleEveningMessage(ctx context.Context, userID uuid.UUID, n
 	// Get user's values with visions
 	values, err := w.vnotificationBus.QueryByUserID(ctx, userID)
 	if err != nil {
+		w.log.Error(ctx, "telegram_notify", "msg", "failed to query values for evening message", "user_id", userID, "err", err)
 		return fmt.Errorf("query values: %w", err)
 	}
 
@@ -218,8 +233,10 @@ func (w *Worker) scheduleEveningMessage(ctx context.Context, userID uuid.UUID, n
 	if err != nil {
 		if errors.Is(err, notificationbus.ErrDuplicateSchedule) {
 			// Already scheduled for today - this is expected behavior
+			w.log.Info(ctx, "telegram_notify", "msg", "evening message already scheduled", "user_id", userID)
 			return nil
 		}
+		w.log.Error(ctx, "telegram_notify", "msg", "failed to create evening message", "user_id", userID, "err", err)
 		return fmt.Errorf("create message: %w", err)
 	}
 
@@ -232,6 +249,7 @@ func (w *Worker) sendPendingMessages(ctx context.Context) error {
 	now := time.Now().In(w.location)
 	messages, err := w.notificationBus.QueryPending(ctx, now)
 	if err != nil {
+		w.log.Error(ctx, "telegram_notify", "msg", "failed to query pending messages", "err", err)
 		return fmt.Errorf("query pending: %w", err)
 	}
 
@@ -239,9 +257,12 @@ func (w *Worker) sendPendingMessages(ctx context.Context) error {
 		return nil
 	}
 
+	w.log.Info(ctx, "telegram_notify", "msg", "processing pending messages", "count", len(messages))
+
 	// Get all Telegram users for chat ID lookup
 	users, err := w.notificationBus.QueryTelegramUsers(ctx)
 	if err != nil {
+		w.log.Error(ctx, "telegram_notify", "msg", "failed to query telegram users for sending", "err", err)
 		return fmt.Errorf("query telegram users: %w", err)
 	}
 
@@ -255,6 +276,7 @@ func (w *Worker) sendPendingMessages(ctx context.Context) error {
 	for _, msg := range messages {
 		chatID, ok := chatIDMap[msg.UserID]
 		if !ok {
+			w.log.Error(ctx, "telegram_notify", "msg", "user telegram not enabled", "message_id", msg.ID, "user_id", msg.UserID)
 			errMsg := notificationbus.FailureReason("user telegram not enabled")
 			if _, err := w.notificationBus.MarkFailed(ctx, msg, errMsg); err != nil {
 				w.log.Error(ctx, "telegram_notify", "msg", "failed to mark message as failed", "message_id", msg.ID, "err", err)
@@ -263,8 +285,10 @@ func (w *Worker) sendPendingMessages(ctx context.Context) error {
 		}
 
 		// Send via Telegram
+		w.log.Info(ctx, "telegram_notify", "msg", "sending telegram message", "message_id", msg.ID, "chat_id", chatID.Value())
 		resp, err := w.telegramClient.SendMessage(ctx, chatID.Value(), msg.Content)
 		if err != nil {
+			w.log.Error(ctx, "telegram_notify", "msg", "telegram send failed", "message_id", msg.ID, "err", err)
 			errMsg := notificationbus.FailureReason(err.Error())
 			if _, err := w.notificationBus.MarkFailed(ctx, msg, errMsg); err != nil {
 				w.log.Error(ctx, "telegram_notify", "msg", "failed to mark message as failed", "message_id", msg.ID, "err", err)

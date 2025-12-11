@@ -367,11 +367,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	// -------------------------------------------------------------------------
 	// Start Telegram Notification Scheduler
-	// Inserts a telegram_notify job every 10 minutes to check for notifications.
+	// Inserts a telegram_notify job every 5 minutes to check for notifications.
 
 	if telegramClient != nil {
 		go func() {
-			ticker := time.NewTicker(10 * time.Minute)
+			ticker := time.NewTicker(5 * time.Minute)
 			defer ticker.Stop()
 
 			// Insert first notification check immediately on startup
