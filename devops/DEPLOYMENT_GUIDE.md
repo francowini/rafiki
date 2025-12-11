@@ -608,6 +608,97 @@ docker compose down -v  # The -v flag deletes volumes (DATABASE!)
 
 ---
 
+## Telegram Notifications (Optional)
+
+Send daily morning and evening messages with users' values and life visions.
+
+### 1. Create Bot
+
+1. Open Telegram and search for `@BotFather`
+2. Send `/newbot` and follow prompts
+3. Save the token (format: `1234567890:ABCdef...`)
+
+### 2. Configure Environment
+
+```bash
+# On server
+ssh root@178.156.170.37
+cd /opt/rafiki
+
+# Add to .env (required)
+echo "PARTNER_TELEGRAM_BOTTOKEN=<your_token>" >> .env
+
+# Optional: customize schedule (defaults shown)
+echo "PARTNER_TELEGRAM_MORNINGTIME=08:00" >> .env
+echo "PARTNER_TELEGRAM_EVENINGTIME=21:00" >> .env
+echo "PARTNER_TELEGRAM_TIMEZONE=America/Argentina/Buenos_Aires" >> .env
+```
+
+### 3. Deploy and Verify
+
+```bash
+# Deploy
+make deploy
+
+# Verify Telegram is active
+make deploy-logs | grep telegram
+# Should see: "telegram notifications enabled"
+```
+
+### 4. Enable Users
+
+Users must first send `/start` to your bot to get their chat ID.
+
+```bash
+# Get chat ID from Telegram API
+curl "https://api.telegram.org/bot<TOKEN>/getUpdates"
+# Look for "chat":{"id":123456789...}
+
+# Connect to database
+make db-shell-prod
+```
+
+```sql
+-- Enable user
+UPDATE users SET
+    telegram_chat_id = 123456789,
+    telegram_enabled = true
+WHERE email = 'user@example.com';
+
+-- Send test message (processed within 10 minutes)
+INSERT INTO notification_messages (
+    message_id, user_id, message_type, content,
+    status, retry_count, scheduled_at, date_created
+)
+SELECT gen_random_uuid(), user_id, 'test',
+    '*Test* - Rafiki connected!', 'pending', 0, NOW(), NOW()
+FROM users WHERE email = 'user@example.com';
+```
+
+### 5. Monitoring
+
+```sql
+-- View recent messages
+SELECT message_type, status, scheduled_at, sent_at
+FROM notification_messages ORDER BY date_created DESC LIMIT 10;
+
+-- View enabled users
+SELECT email, telegram_chat_id FROM users WHERE telegram_enabled = true;
+
+-- View failed messages
+SELECT message_id, error_message FROM notification_messages WHERE status = 'failed';
+```
+
+### 6. Disable Telegram
+
+```bash
+# Comment out or remove token
+sed -i 's/^PARTNER_TELEGRAM_BOTTOKEN=/#PARTNER_TELEGRAM_BOTTOKEN=/' .env
+docker compose restart partner-service
+```
+
+---
+
 ## Troubleshooting
 
 ### Health Check Fails
