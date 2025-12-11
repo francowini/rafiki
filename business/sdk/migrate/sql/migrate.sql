@@ -279,3 +279,65 @@ COMMENT ON TABLE river_leader IS 'River Queue: Leader election for periodic jobs
 COMMENT ON TABLE river_queue IS 'River Queue: Queue metadata and pause state';
 COMMENT ON TABLE river_client IS 'River Queue: Active client tracking';
 COMMENT ON TABLE river_client_queue IS 'River Queue: Per-client queue state';
+
+
+-- Version: 9
+-- Description: Add Telegram notifications support (users fields, messages table, content view)
+
+-- Add Telegram connection fields to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_enabled BOOLEAN NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS users_telegram_enabled_idx
+  ON users(telegram_enabled) WHERE telegram_enabled = true;
+
+COMMENT ON COLUMN users.telegram_chat_id IS 'Telegram chat ID for sending notifications';
+COMMENT ON COLUMN users.telegram_enabled IS 'Whether Telegram notifications are enabled';
+
+-- Create notification_messages table (Support Domain)
+CREATE TABLE IF NOT EXISTS notification_messages (
+    message_id        UUID        NOT NULL,
+    user_id           UUID        NOT NULL,
+    message_type      TEXT        NOT NULL CHECK (message_type IN ('morning', 'evening', 'test', 'welcome')),
+    content           TEXT        NOT NULL,
+    telegram_msg_id   BIGINT,
+    status            TEXT        NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed')),
+    error_message     TEXT,
+    retry_count       INTEGER     NOT NULL DEFAULT 0,
+    scheduled_at      TIMESTAMP   NOT NULL,
+    sent_at           TIMESTAMP,
+    date_created      TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (message_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS notification_messages_user_idx
+  ON notification_messages(user_id, date_created DESC);
+CREATE INDEX IF NOT EXISTS notification_messages_pending_idx
+  ON notification_messages(scheduled_at) WHERE status = 'pending';
+
+-- Unique constraint to prevent duplicate scheduled messages per user/type/date
+CREATE UNIQUE INDEX IF NOT EXISTS notification_messages_schedule_unique_idx
+  ON notification_messages(user_id, message_type, DATE(scheduled_at))
+  WHERE status = 'pending';
+
+COMMENT ON TABLE notification_messages IS 'Telegram notification messages sent to users';
+COMMENT ON COLUMN notification_messages.message_type IS 'morning, evening, test, or welcome message';
+COMMENT ON COLUMN notification_messages.scheduled_at IS 'When message should be sent (UTC)';
+
+-- Create view for notification content (values + life visions)
+-- Note: ORDER BY intentionally omitted - consumers should order when querying
+CREATE OR REPLACE VIEW view_notification_content AS
+SELECT
+    v.user_id,
+    v.value_id,
+    v.content AS value_content,
+    v.facet AS value_facet,
+    v.display_order AS value_order,
+    lv.life_vision_id,
+    lv.content AS life_vision_content
+FROM values v
+LEFT JOIN life_visions lv ON lv.value_id = v.value_id;
+
+COMMENT ON VIEW view_notification_content IS 'Read-only view for notification message content';

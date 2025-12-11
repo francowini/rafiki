@@ -580,6 +580,365 @@ func toBusItem(db dbItem, enc encrypt.Encryptor) (Item, error) {
 
 ---
 
+## 8. Thread Safety: Package-Level Random Sources
+
+### Severity: 🟠 Major (Race Condition)
+
+### Problem
+
+Creating a package-level `rand.Rand` instance with `rand.New(rand.NewSource(...))` is not safe for concurrent use. Multiple goroutines calling `rng.Intn()` simultaneously can cause data races.
+
+### Bad Example
+
+```go
+// ❌ BAD: Not thread-safe
+var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func GetRandomTemplate() string {
+    templates := []string{"a", "b", "c"}
+    return templates[rng.Intn(len(templates))] // DATA RACE!
+}
+```
+
+### Good Example (Go 1.22+)
+
+```go
+import "math/rand/v2"
+
+// ✅ GOOD: Use thread-safe rand/v2 package
+func GetRandomTemplate() string {
+    templates := []string{"a", "b", "c"}
+    return templates[rand.IntN(len(templates))] // Thread-safe
+}
+```
+
+### Good Example (Pre Go 1.22)
+
+```go
+import (
+    "math/rand"
+    "sync"
+)
+
+// ✅ GOOD: Protect with mutex
+var (
+    rng   = rand.New(rand.NewSource(time.Now().UnixNano()))
+    rngMu sync.Mutex
+)
+
+func GetRandomTemplate() string {
+    templates := []string{"a", "b", "c"}
+    rngMu.Lock()
+    idx := rng.Intn(len(templates))
+    rngMu.Unlock()
+    return templates[idx]
+}
+```
+
+### Checklist
+
+- [ ] Never use `rand.New(rand.NewSource(...))` at package level without mutex
+- [ ] Prefer `math/rand/v2` on Go 1.22+ for thread-safe global generator
+- [ ] Run tests with `-race` flag to detect data races
+
+---
+
+## 9. Timezone: Using time.Local in Database Conversions
+
+### Severity: 🟠 Major (Non-Deterministic Behavior)
+
+### Problem
+
+Using `time.Local` when converting timestamps from the database ties behavior to the host's timezone, causing inconsistent results across different servers or containers.
+
+### Bad Example
+
+```go
+// ❌ BAD: Tied to server timezone
+func toBusMessage(db message) Message {
+    return Message{
+        ScheduledAt: db.ScheduledAt.In(time.Local), // Different on each server!
+        DateCreated: db.DateCreated.In(time.Local),
+    }
+}
+
+func toLocalPtr(t *time.Time) *time.Time {
+    if t == nil {
+        return nil
+    }
+    local := t.In(time.Local) // Non-deterministic
+    return &local
+}
+```
+
+### Good Example
+
+```go
+// ✅ GOOD: Always use UTC for storage layer
+func toBusMessage(db message) Message {
+    return Message{
+        ScheduledAt: db.ScheduledAt.UTC(), // Consistent everywhere
+        DateCreated: db.DateCreated.UTC(),
+    }
+}
+
+func toUTCPtr(t *time.Time) *time.Time {
+    if t == nil {
+        return nil
+    }
+    utc := t.UTC()
+    return &utc
+}
+```
+
+### Checklist
+
+- [ ] Store all timestamps in UTC in the database
+- [ ] Convert to UTC when writing: `time.Now().UTC()` or `.UTC()`
+- [ ] Return UTC from store layer, let presentation layer handle timezone display
+- [ ] Never use `time.Local` in business or store layers
+
+---
+
+## 10. Idempotency: Duplicate Scheduled Messages
+
+### Severity: 🟠 Major (Data Integrity)
+
+### Problem
+
+Scheduled operations (like sending daily notifications) can create duplicate records if the job runs multiple times within the same time window without idempotency controls.
+
+### Bad Example
+
+```go
+// ❌ BAD: No duplicate prevention
+func (w *Worker) scheduleMorningMessage(ctx context.Context, userID uuid.UUID) error {
+    // If job runs at 08:03 and 08:07, two messages are created!
+    _, err = w.notificationBus.Create(ctx, notificationbus.NewMessage{
+        UserID:      userID,
+        MessageType: notificationbus.MessageTypeMorning,
+        Content:     content,
+        ScheduledAt: time.Now(),
+    })
+    return err
+}
+```
+
+### Good Example
+
+**1. Add unique constraint in SQL:**
+
+```sql
+-- Prevent duplicate messages per user/type/date
+CREATE UNIQUE INDEX IF NOT EXISTS notification_messages_schedule_unique_idx
+  ON notification_messages(user_id, message_type, DATE(scheduled_at))
+  WHERE status = 'pending';
+```
+
+**2. Handle constraint violation gracefully:**
+
+```go
+// ✅ GOOD: Idempotent - duplicate is expected behavior
+func (w *Worker) scheduleMorningMessage(ctx context.Context, userID uuid.UUID) error {
+    _, err = w.notificationBus.Create(ctx, notificationbus.NewMessage{
+        UserID:      userID,
+        MessageType: notificationbus.MessageTypeMorning,
+        Content:     content,
+        ScheduledAt: time.Now(),
+    })
+    if err != nil {
+        if errors.Is(err, notificationbus.ErrDuplicateSchedule) {
+            // Already scheduled for today - not an error
+            return nil
+        }
+        return fmt.Errorf("create message: %w", err)
+    }
+    return nil
+}
+```
+
+**3. Detect unique violation in store:**
+
+```go
+func (s *Store) Create(ctx context.Context, msg Message) error {
+    if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, dbMsg); err != nil {
+        if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
+            return ErrDuplicateSchedule
+        }
+        return fmt.Errorf("namedexeccontext: %w", err)
+    }
+    return nil
+}
+```
+
+### Checklist
+
+- [ ] Add unique constraint on scheduling key (user_id, type, date)
+- [ ] Define sentinel error (e.g., `ErrDuplicateSchedule`)
+- [ ] Store layer detects `ErrDBDuplicatedEntry` and returns sentinel
+- [ ] Worker treats duplicate as success, not error
+
+---
+
+## 11. Input Validation: Missing Business Layer Validation
+
+### Severity: 🟠 Major (Data Integrity)
+
+### Problem
+
+Persisting data without validation in the business layer allows invalid data to reach the database, relying solely on database constraints (if any) for validation.
+
+### Bad Example
+
+```go
+// ❌ BAD: No validation - trusts all input
+func (b *Business) Create(ctx context.Context, nm NewMessage) (Message, error) {
+    msg := Message{
+        ID:          uuid.New(),
+        MessageType: nm.MessageType, // Could be invalid!
+        Content:     nm.Content,     // Could be empty!
+    }
+    return b.storer.Create(ctx, msg)
+}
+```
+
+### Good Example
+
+```go
+// ✅ GOOD: Validate before persisting
+func (b *Business) Create(ctx context.Context, nm NewMessage) (Message, error) {
+    // Validate MessageType
+    if !nm.MessageType.Valid() {
+        return Message{}, ErrInvalidMessageType
+    }
+
+    // Validate Content
+    if strings.TrimSpace(nm.Content) == "" {
+        return Message{}, ErrContentEmpty
+    }
+
+    msg := Message{
+        ID:          uuid.New(),
+        MessageType: nm.MessageType,
+        Content:     nm.Content,
+    }
+
+    if err := b.storer.Create(ctx, msg); err != nil {
+        return Message{}, fmt.Errorf("create: %w", err)
+    }
+    return msg, nil
+}
+
+// Add Valid() method to enum types
+func (mt MessageType) Valid() bool {
+    switch mt {
+    case MessageTypeMorning, MessageTypeEvening, MessageTypeTest:
+        return true
+    }
+    return false
+}
+```
+
+### Checklist
+
+- [ ] Enum types have `Valid()` method
+- [ ] Business layer validates all input before persisting
+- [ ] Define sentinel errors for each validation failure
+- [ ] Empty/whitespace strings are rejected where required
+
+---
+
+## 12. SQL Views: ORDER BY in View Definition
+
+### Severity: 🟢 Low (Performance/Maintainability)
+
+### Problem
+
+Including `ORDER BY` in a SQL view definition is often ignored by the database optimizer and can mislead developers about result ordering.
+
+### Bad Example
+
+```sql
+-- ❌ BAD: ORDER BY in view is often ignored
+CREATE OR REPLACE VIEW view_notification_content AS
+SELECT user_id, value_id, content, display_order
+FROM values
+ORDER BY user_id, display_order;  -- May be ignored!
+```
+
+### Good Example
+
+```sql
+-- ✅ GOOD: View defines projection only
+CREATE OR REPLACE VIEW view_notification_content AS
+SELECT user_id, value_id, content, display_order
+FROM values;
+-- Note: ORDER BY intentionally omitted - consumers should order when querying
+```
+
+```go
+// Consumer applies ordering
+const q = `
+SELECT * FROM view_notification_content
+WHERE user_id = :user_id
+ORDER BY display_order`  // Explicit ordering at query time
+```
+
+### Checklist
+
+- [ ] Remove ORDER BY from view definitions
+- [ ] Add comment explaining ordering is consumer's responsibility
+- [ ] Apply ORDER BY in the query/store layer instead
+
+---
+
+## 13. Shell Scripts: Unvalidated Environment Variables
+
+### Severity: 🟠 Major (Runtime Failure)
+
+### Problem
+
+Using environment variables in shell scripts without validation leads to cryptic errors when variables are missing or empty.
+
+### Bad Example
+
+```bash
+# ❌ BAD: No validation - cryptic error if vars missing
+if [ -n "$PARTNER_DB_HOST" ]; then
+    DB_URL="postgresql://${PARTNER_DB_USER}:${PARTNER_DB_PASSWORD}@${PARTNER_DB_HOST}:${PARTNER_DB_PORT}/${PARTNER_DB_NAME}"
+    psql "$DB_URL" -c "$SQL"  # Fails with confusing error
+fi
+```
+
+### Good Example
+
+```bash
+# ✅ GOOD: Validate all required variables
+if [ -n "$PARTNER_DB_HOST" ]; then
+    echo "Using external database: $PARTNER_DB_HOST"
+
+    # Validate required database variables
+    for var in PARTNER_DB_USER PARTNER_DB_PASSWORD PARTNER_DB_NAME PARTNER_DB_PORT; do
+        if [ -z "${!var}" ]; then
+            echo -e "${RED}Error: $var is not set${NC}"
+            exit 1
+        fi
+    done
+
+    DB_URL="postgresql://${PARTNER_DB_USER}:${PARTNER_DB_PASSWORD}@${PARTNER_DB_HOST}:${PARTNER_DB_PORT}/${PARTNER_DB_NAME}"
+    psql "$DB_URL" -c "$SQL"
+fi
+```
+
+### Checklist
+
+- [ ] Validate all required environment variables before use
+- [ ] Provide clear error messages indicating which variable is missing
+- [ ] Use `${VAR:-default}` for optional variables with defaults
+- [ ] Exit early with non-zero code on validation failure
+
+---
+
 ## Quick Reference Checklist (Backend)
 
 When implementing new features, verify:
@@ -592,6 +951,11 @@ When implementing new features, verify:
 - [ ] **App Layer**: Handle all business errors with appropriate HTTP status codes
 - [ ] **Logging**: Business layer methods include structured entry/error/success logging
 - [ ] **DRY**: Extract helpers for patterns repeated 3+ times
+- [ ] **Thread Safety**: Use `math/rand/v2` (Go 1.22+) or sync.Mutex with custom rand sources
+- [ ] **Timezones**: Use UTC for database storage, never `time.Local`
+- [ ] **Idempotency**: Scheduled/repeated operations use unique constraints to prevent duplicates
+- [ ] **Validation**: Business layer validates inputs before persisting (MessageType, Content, etc.)
+- [ ] **View Models**: Read-only query models should have comments explaining primitive type usage
 
 ---
 

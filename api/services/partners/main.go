@@ -23,6 +23,8 @@ import (
 	"github.com/francowini/rafiki/business/domain/lifevisionbus/stores/lifevisiondb"
 	"github.com/francowini/rafiki/business/domain/momentbus"
 	"github.com/francowini/rafiki/business/domain/momentbus/stores/momentdb"
+	"github.com/francowini/rafiki/business/domain/notificationbus"
+	"github.com/francowini/rafiki/business/domain/notificationbus/stores/notificationdb"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
 	"github.com/francowini/rafiki/business/domain/userbus"
@@ -31,7 +33,10 @@ import (
 	"github.com/francowini/rafiki/business/domain/valuebus/stores/valuedb"
 	"github.com/francowini/rafiki/business/domain/vexportbus"
 	"github.com/francowini/rafiki/business/domain/vexportbus/stores/vexportdb"
+	"github.com/francowini/rafiki/business/domain/vnotificationbus"
+	"github.com/francowini/rafiki/business/domain/vnotificationbus/stores/vnotificationdb"
 	"github.com/francowini/rafiki/business/jobs/healthcheck"
+	"github.com/francowini/rafiki/business/jobs/telegramnotify"
 	"github.com/francowini/rafiki/business/sdk/delegate"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/migrate"
@@ -40,6 +45,7 @@ import (
 	"github.com/francowini/rafiki/foundation/keystore"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/otel"
+	"github.com/francowini/rafiki/foundation/telegram"
 )
 
 var (
@@ -111,6 +117,12 @@ func run(ctx context.Context, log *logger.Logger) error {
 			// Shouldn't use a high Probability value in non-developer systems.
 			// 0.05 should be enough for most systems. Some might want to have
 			// this even lower.
+		}
+		Telegram struct {
+			BotToken    string `conf:"env:TELEGRAM_BOTTOKEN,mask"`
+			MorningTime string `conf:"default:08:00,env:TELEGRAM_MORNINGTIME"`
+			EveningTime string `conf:"default:21:00,env:TELEGRAM_EVENINGTIME"`
+			Timezone    string `conf:"default:America/Argentina/Buenos_Aires,env:TELEGRAM_TIMEZONE"`
 		}
 	}{
 		Version: conf.Version{
@@ -186,72 +198,6 @@ func run(ctx context.Context, log *logger.Logger) error {
 	log.Info(ctx, "startup", "status", "database migrations completed")
 
 	// -------------------------------------------------------------------------
-	// Initialize Job Queue
-
-	log.Info(ctx, "startup", "status", "initializing job queue")
-
-	pgxPool, err := sqldb.OpenPgxPool(ctx, dbConfig)
-	if err != nil {
-		return fmt.Errorf("create pgx pool for job queue: %w", err)
-	}
-	defer pgxPool.Close()
-
-	// Configure job queue with default settings
-	jqConfig := jobqueue.DefaultConfig()
-
-	// Register workers
-	workers := jobqueue.NewWorkers()
-	jobqueue.AddWorker(workers, healthcheck.NewWorker(log))
-
-	// Create and start job queue
-	jq, err := jobqueue.NewClient(ctx, log, pgxPool, jqConfig, workers)
-	if err != nil {
-		return fmt.Errorf("create job queue: %w", err)
-	}
-
-	if err := jq.Start(ctx); err != nil {
-		return fmt.Errorf("start job queue: %w", err)
-	}
-
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := jq.Stop(shutdownCtx); err != nil {
-			log.Error(shutdownCtx, "shutdown", "component", "jobqueue", "err", err)
-		}
-	}()
-
-	log.Info(ctx, "startup", "status", "job queue started")
-
-	// -------------------------------------------------------------------------
-	// Start Job Queue Heartbeat
-	// Inserts a healthcheck job every 5 minutes to verify the queue is alive.
-
-	heartbeatCtx, cancelHeartbeat := context.WithCancel(ctx)
-	defer cancelHeartbeat() // Ensure cleanup on any exit path
-
-	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-
-		// Insert first heartbeat immediately on startup
-		if _, err := jq.Insert(heartbeatCtx, healthcheck.Args{Message: "heartbeat"}, nil); err != nil {
-			log.Error(heartbeatCtx, "heartbeat", "status", "insert_failed", "err", err)
-		}
-
-		for {
-			select {
-			case <-ticker.C:
-				if _, err := jq.Insert(heartbeatCtx, healthcheck.Args{Message: "heartbeat"}, nil); err != nil {
-					log.Error(heartbeatCtx, "heartbeat", "status", "insert_failed", "err", err)
-				}
-			case <-heartbeatCtx.Done():
-				return
-			}
-		}
-	}()
-
-	// -------------------------------------------------------------------------
 	// Initialize Encryption Support
 
 	log.Info(ctx, "startup", "status", "initializing encryption")
@@ -308,6 +254,145 @@ func run(ctx context.Context, log *logger.Logger) error {
 	// Create vexport domain (query-only view domain)
 	vexportStore := vexportdb.NewStore(log, db, encryptor)
 	vexportBus := vexportbus.NewBusiness(log, vexportStore)
+
+	// Create notification domains (Support Domain for Telegram notifications)
+	notificationStore := notificationdb.NewStore(log, db)
+	notificationBus := notificationbus.NewBusiness(log, notificationStore)
+
+	vnotificationStore := vnotificationdb.NewStore(log, db, encryptor)
+	vnotificationBus := vnotificationbus.NewBusiness(log, vnotificationStore)
+
+	// -------------------------------------------------------------------------
+	// Initialize Telegram Client (optional - only if token configured)
+
+	var telegramClient *telegram.Client
+	if cfg.Telegram.BotToken != "" {
+		var err error
+		telegramClient, err = telegram.NewClient(cfg.Telegram.BotToken)
+		if err != nil {
+			return fmt.Errorf("create telegram client: %w", err)
+		}
+		log.Info(ctx, "startup", "status", "telegram client initialized")
+	}
+
+	// -------------------------------------------------------------------------
+	// Initialize Job Queue
+
+	log.Info(ctx, "startup", "status", "initializing job queue")
+
+	pgxPool, err := sqldb.OpenPgxPool(ctx, dbConfig)
+	if err != nil {
+		return fmt.Errorf("create pgx pool for job queue: %w", err)
+	}
+	defer pgxPool.Close()
+
+	// Configure job queue with default settings
+	jqConfig := jobqueue.DefaultConfig()
+
+	// Register workers
+	workers := jobqueue.NewWorkers()
+	jobqueue.AddWorker(workers, healthcheck.NewWorker(log))
+
+	// Add Telegram notification worker if client is configured
+	if telegramClient != nil {
+		telegramWorker, err := telegramnotify.NewWorker(
+			log,
+			notificationBus,
+			vnotificationBus,
+			telegramClient,
+			telegramnotify.Config{
+				MorningTime: cfg.Telegram.MorningTime,
+				EveningTime: cfg.Telegram.EveningTime,
+				Timezone:    cfg.Telegram.Timezone,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("create telegram worker: %w", err)
+		}
+		jobqueue.AddWorker(workers, telegramWorker)
+		log.Info(ctx, "startup", "status", "telegram notification worker registered",
+			"morning", cfg.Telegram.MorningTime,
+			"evening", cfg.Telegram.EveningTime,
+			"timezone", cfg.Telegram.Timezone,
+		)
+	}
+
+	// Create and start job queue
+	jq, err := jobqueue.NewClient(ctx, log, pgxPool, jqConfig, workers)
+	if err != nil {
+		return fmt.Errorf("create job queue: %w", err)
+	}
+
+	if err := jq.Start(ctx); err != nil {
+		return fmt.Errorf("start job queue: %w", err)
+	}
+
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := jq.Stop(shutdownCtx); err != nil {
+			log.Error(shutdownCtx, "shutdown", "component", "jobqueue", "err", err)
+		}
+	}()
+
+	log.Info(ctx, "startup", "status", "job queue started")
+
+	// -------------------------------------------------------------------------
+	// Start Job Queue Heartbeat
+	// Inserts a healthcheck job every 5 minutes to verify the queue is alive.
+
+	heartbeatCtx, cancelHeartbeat := context.WithCancel(ctx)
+	defer cancelHeartbeat() // Ensure cleanup on any exit path
+
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+
+		// Insert first heartbeat immediately on startup
+		if _, err := jq.Insert(heartbeatCtx, healthcheck.Args{Message: "heartbeat"}, nil); err != nil {
+			log.Error(heartbeatCtx, "heartbeat", "status", "insert_failed", "err", err)
+		}
+
+		for {
+			select {
+			case <-ticker.C:
+				if _, err := jq.Insert(heartbeatCtx, healthcheck.Args{Message: "heartbeat"}, nil); err != nil {
+					log.Error(heartbeatCtx, "heartbeat", "status", "insert_failed", "err", err)
+				}
+			case <-heartbeatCtx.Done():
+				return
+			}
+		}
+	}()
+
+	// -------------------------------------------------------------------------
+	// Start Telegram Notification Scheduler
+	// Inserts a telegram_notify job every 10 minutes to check for notifications.
+
+	if telegramClient != nil {
+		go func() {
+			ticker := time.NewTicker(10 * time.Minute)
+			defer ticker.Stop()
+
+			// Insert first notification check immediately on startup
+			if _, err := jq.Insert(heartbeatCtx, telegramnotify.Args{}, nil); err != nil {
+				log.Error(heartbeatCtx, "telegram_scheduler", "status", "insert_failed", "err", err)
+			}
+
+			for {
+				select {
+				case <-ticker.C:
+					if _, err := jq.Insert(heartbeatCtx, telegramnotify.Args{}, nil); err != nil {
+						log.Error(heartbeatCtx, "telegram_scheduler", "status", "insert_failed", "err", err)
+					}
+				case <-heartbeatCtx.Done():
+					return
+				}
+			}
+		}()
+
+		log.Info(ctx, "startup", "status", "telegram notification scheduler started")
+	}
 
 	// -------------------------------------------------------------------------
 	// Initialize authentication support

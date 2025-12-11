@@ -198,6 +198,12 @@ func ExecContext(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, qu
 // NamedExecContext is a helper function to execute a CUD operation with
 // logging and tracing where field replacement is necessary.
 func NamedExecContext(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any) (err error) {
+	_, err = NamedExecContextWithResult(ctx, log, db, query, data)
+	return err
+}
+
+// NamedExecContextWithResult is like NamedExecContext but returns rows affected.
+func NamedExecContextWithResult(ctx context.Context, log *logger.Logger, db sqlx.ExtContext, query string, data any) (rowsAffected int64, err error) {
 	q := queryString(query, data)
 
 	defer func() {
@@ -214,20 +220,26 @@ func NamedExecContext(ctx context.Context, log *logger.Logger, db sqlx.ExtContex
 	ctx, span := otel.AddSpan(ctx, "business.sdk.sqldb.exec", attribute.String("query", q))
 	defer span.End()
 
-	if _, err := sqlx.NamedExecContext(ctx, db, query, data); err != nil {
+	result, err := sqlx.NamedExecContext(ctx, db, query, data)
+	if err != nil {
 		var pqerr *pgconn.PgError
 		if errors.As(err, &pqerr) {
 			switch pqerr.Code {
 			case undefinedTable:
-				return ErrUndefinedTable
+				return 0, ErrUndefinedTable
 			case uniqueViolation:
-				return ErrDBDuplicatedEntry
+				return 0, ErrDBDuplicatedEntry
 			}
 		}
-		return err
+		return 0, err
 	}
 
-	return nil
+	rowsAffected, err = result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("rows affected: %w", err)
+	}
+
+	return rowsAffected, nil
 }
 
 // QuerySlice is a helper function for executing queries that return a
