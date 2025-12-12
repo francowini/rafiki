@@ -15,12 +15,22 @@ This document catalogs critical errors discovered during code review that should
 5. [SQL: WHERE Clause Building](#5-sql-where-clause-building)
 6. [Logging: Missing Structured Logging in Business Layer](#6-logging-missing-structured-logging-in-business-layer)
 7. [Code Duplication: Repeated Decrypt-Parse Patterns](#7-code-duplication-repeated-decrypt-parse-patterns)
+8. [Thread Safety: Package-Level Random Sources](#8-thread-safety-package-level-random-sources)
+9. [Timezone: Using time.Local in Database Conversions](#9-timezone-using-timelocal-in-database-conversions)
+10. [Idempotency: Duplicate Scheduled Messages](#10-idempotency-duplicate-scheduled-messages)
+11. [Input Validation: Missing Business Layer Validation](#11-input-validation-missing-business-layer-validation)
+12. [SQL Views: ORDER BY in View Definition](#12-sql-views-order-by-in-view-definition)
+13. [Shell Scripts: Unvalidated Environment Variables](#13-shell-scripts-unvalidated-environment-variables)
+14. [API Parameters: Missing Max Limits](#14-api-parameters-missing-max-limits)
+15. [Strong Types: When NOT to Use Them](#15-strong-types-when-not-to-use-them)
 
 ### Frontend (TypeScript/React)
 
 F1. [Security: Markdown Injection in User Content](#f1-security-markdown-injection-in-user-content)
 F2. [Async: Stale Responses in useEffect](#f2-async-stale-responses-in-useeffect)
 F3. [Data: Silent Data Truncation](#f3-data-silent-data-truncation)
+F4. [State: useSyncExternalStore + useState Duplication](#f4-state-usesyncexternalstore--usestate-duplication)
+F5. [Accessibility: Clickable Div Without Keyboard Support](#f5-accessibility-clickable-div-without-keyboard-support)
 
 ---
 
@@ -939,6 +949,121 @@ fi
 
 ---
 
+## 14. API Parameters: Missing Max Limits
+
+### Severity: 🟠 Major (Resource Exhaustion / DoS Risk)
+
+### Problem
+
+API endpoints that accept numeric parameters (like `days`, `limit`, `count`) without maximum bounds can be abused to cause excessive resource consumption or denial of service.
+
+### Bad Example
+
+```go
+// ❌ BAD: No max limit - attacker could request days=999999
+func (a *app) queryStats(ctx context.Context, r *http.Request) web.Encoder {
+    days := 30
+    if daysStr := r.URL.Query().Get("days"); daysStr != "" {
+        parsedDays, err := strconv.Atoi(daysStr)
+        if err != nil || parsedDays < 1 {
+            return errs.New(errs.InvalidArgument, fmt.Errorf("days must be a positive integer"))
+        }
+        days = parsedDays  // No upper bound!
+    }
+    // ...
+}
+```
+
+### Good Example
+
+```go
+// ✅ GOOD: Define and enforce max limit with field-specific error
+const maxStatsDays = 365
+
+func (a *app) queryStats(ctx context.Context, r *http.Request) web.Encoder {
+    days := 30
+    if daysStr := r.URL.Query().Get("days"); daysStr != "" {
+        parsedDays, err := strconv.Atoi(daysStr)
+        if err != nil || parsedDays < 1 {
+            return errs.NewFieldErrors("days", fmt.Errorf("must be a positive integer"))
+        }
+        if parsedDays > maxStatsDays {
+            return errs.NewFieldErrors("days", fmt.Errorf("must be <= %d", maxStatsDays))
+        }
+        days = parsedDays
+    }
+    // ...
+}
+```
+
+### Checklist
+
+- [ ] All numeric API parameters have sensible max limits defined as constants
+- [ ] Return field-specific validation errors (not generic InvalidArgument)
+- [ ] Document limits in API documentation
+
+---
+
+## 15. Strong Types: When NOT to Use Them
+
+### Severity: 🟢 Low (Over-Engineering)
+
+### Problem
+
+Creating strong types for simple values that have no validation rules adds unnecessary complexity. The pattern in CLAUDE.md is for types that have business validation (like intensity 0-10, content length limits). Simple counts, totals, or database-returned aggregates don't need strong types.
+
+### Bad Example
+
+```go
+// ❌ BAD: Over-engineering - Count has no validation rules
+package count
+
+type Count struct {
+    value int
+}
+
+func Parse(value int) (Count, error) {
+    if value < 0 {
+        return Count{}, errors.New("count cannot be negative")
+    }
+    return Count{value: value}, nil
+}
+
+// Stats using unnecessary strong type
+type Stats struct {
+    ThisWeek   count.Count  // Over-engineered
+    ThisMonth  count.Count  // Over-engineered
+    Last30Days count.Count  // Over-engineered
+}
+```
+
+### Good Example
+
+```go
+// ✅ GOOD: Simple int is appropriate for counts
+// Counts are database aggregates - they're naturally non-negative
+// No business rules to enforce beyond what SQL provides
+type Stats struct {
+    ThisWeek   int  // Simple, appropriate
+    ThisMonth  int  // Simple, appropriate
+    Last30Days int  // Simple, appropriate
+}
+```
+
+### When to Use Strong Types
+
+Use strong types when:
+- Value has validation rules (intensity 0-10, content min/max length)
+- Value requires parsing/formatting (dates, UUIDs, enums)
+- Type safety prevents mixing different concepts (UserID vs OrderID)
+
+Don't use strong types when:
+- Value is a simple count/total from database
+- No validation beyond basic type (int, string)
+- Adding type doesn't prevent any real bugs
+
+---
+
 ## Quick Reference Checklist (Backend)
 
 When implementing new features, verify:
@@ -946,6 +1071,7 @@ When implementing new features, verify:
 - [ ] **Security**: Child entities validate parent ownership against authenticated user
 - [ ] **UTF-8**: String length validation uses `utf8.RuneCountInString()`
 - [ ] **Strong Types**: Include both `Value()` and `String()` methods
+- [ ] **Strong Types**: Don't over-engineer - simple counts don't need custom types
 - [ ] **SQL**: Use `strings.Join()` for WHERE clause construction
 - [ ] **Errors**: Define domain-specific errors (e.g., `ErrNotValueOwner`)
 - [ ] **App Layer**: Handle all business errors with appropriate HTTP status codes
@@ -956,6 +1082,7 @@ When implementing new features, verify:
 - [ ] **Idempotency**: Scheduled/repeated operations use unique constraints to prevent duplicates
 - [ ] **Validation**: Business layer validates inputs before persisting (MessageType, Content, etc.)
 - [ ] **View Models**: Read-only query models should have comments explaining primitive type usage
+- [ ] **API Parameters**: Numeric parameters have sensible max limits (e.g., days <= 365)
 
 ---
 
@@ -1193,6 +1320,156 @@ const fetchAllItems = async (params: ExportParams): Promise<ExportItem[]> => {
 
 ---
 
+## F4. State: useSyncExternalStore + useState Duplication
+
+### Severity: 🟠 Major (State Sync Bug)
+
+### Problem
+
+When using `useSyncExternalStore` to read external state (like localStorage), creating a separate `useState` that copies the initial value creates a state duplication bug. The local state never updates when the external store changes.
+
+### Bad Example
+
+```typescript
+// ❌ BAD: useState duplicates external store state and never syncs
+function getSidebarCollapsed(): boolean {
+  const saved = localStorage.getItem('sidebar-collapsed');
+  return saved !== null ? JSON.parse(saved) : false;
+}
+
+function subscribeSidebarState(callback: () => void) {
+  window.addEventListener('storage', callback);
+  return () => window.removeEventListener('storage', callback);
+}
+
+export function AppSidebar() {
+  // BUG: initialCollapsed is read once, then copied to useState
+  const initialCollapsed = useSyncExternalStore(subscribeSidebarState, getSidebarCollapsed, () => false);
+  const [collapsed, setCollapsed] = useState(initialCollapsed); // Never updates!
+
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed); // Only updates local state
+    localStorage.setItem('sidebar-collapsed', JSON.stringify(!collapsed));
+  };
+}
+```
+
+### Good Example
+
+```typescript
+// ✅ GOOD: Use useSyncExternalStore directly, no useState duplication
+const STORAGE_KEY = 'sidebar-collapsed';
+
+function getSidebarCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  const saved = localStorage.getItem(STORAGE_KEY);
+  return saved !== null ? JSON.parse(saved) : false;
+}
+
+function subscribeSidebarState(callback: () => void) {
+  const handler = () => callback();
+  window.addEventListener('storage', handler);
+  window.addEventListener('sidebar-state-change', handler); // Custom event for same-tab
+  return () => {
+    window.removeEventListener('storage', handler);
+    window.removeEventListener('sidebar-state-change', handler);
+  };
+}
+
+export function AppSidebar() {
+  // Single source of truth - directly from external store
+  const collapsed = useSyncExternalStore(subscribeSidebarState, getSidebarCollapsed, () => false);
+
+  const toggleCollapsed = useCallback(() => {
+    const newState = !getSidebarCollapsed();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+    // Dispatch custom event for same-tab updates (storage event only fires cross-tab)
+    window.dispatchEvent(new Event('sidebar-state-change'));
+  }, []);
+}
+```
+
+### Checklist
+
+- [ ] Never copy `useSyncExternalStore` result into `useState`
+- [ ] Use custom events to trigger same-tab updates (storage events are cross-tab only)
+- [ ] Read fresh value from external store when updating (not stale closure)
+
+---
+
+## F5. Accessibility: Clickable Div Without Keyboard Support
+
+### Severity: 🟠 Major (Accessibility Violation)
+
+### Problem
+
+Using a `<div>` with `onClick` for interactive elements without proper ARIA attributes and keyboard handlers makes the component inaccessible to keyboard users and screen readers.
+
+### Bad Example
+
+```typescript
+// ❌ BAD: Clickable div without accessibility
+return (
+  <div className="cursor-pointer" onClick={() => setExpanded(!expanded)}>
+    <h3>{title}</h3>
+    <ChevronDown className={expanded && 'rotate-180'} />
+  </div>
+);
+```
+
+### Good Example
+
+```typescript
+// ✅ GOOD: Proper accessibility for clickable element
+const handleKeyDown = (e: React.KeyboardEvent) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault(); // Prevent scroll on Space
+    setExpanded(!expanded);
+  }
+};
+
+return (
+  <div
+    role="button"
+    tabIndex={0}
+    aria-expanded={expanded}
+    className="cursor-pointer"
+    onClick={() => setExpanded(!expanded)}
+    onKeyDown={handleKeyDown}
+  >
+    <h3>{title}</h3>
+    <ChevronDown className={expanded && 'rotate-180'} />
+  </div>
+);
+```
+
+### Alternative: Use a Button
+
+```typescript
+// ✅ BETTER: Use semantic HTML when possible
+return (
+  <button
+    type="button"
+    aria-expanded={expanded}
+    className="w-full text-left cursor-pointer"
+    onClick={() => setExpanded(!expanded)}
+  >
+    <h3>{title}</h3>
+    <ChevronDown className={expanded && 'rotate-180'} />
+  </button>
+);
+```
+
+### Checklist
+
+- [ ] Clickable divs have `role="button"` and `tabIndex={0}`
+- [ ] Include `onKeyDown` handler for Enter and Space keys
+- [ ] Use `aria-expanded` for expandable elements
+- [ ] Call `e.preventDefault()` for Space to prevent page scroll
+- [ ] Prefer semantic `<button>` when styling allows
+
+---
+
 ## Quick Reference Checklist (Frontend)
 
 When implementing new features, verify:
@@ -1203,4 +1480,6 @@ When implementing new features, verify:
 - [ ] **Types**: Use `import type` for type-only imports (not `React.ReactNode`)
 - [ ] **State Sync**: Local state derived from props syncs via useEffect when props change
 - [ ] **Cleanup**: File downloads use try-catch-finally for resource cleanup
+- [ ] **External Store**: Never copy `useSyncExternalStore` result into `useState`
+- [ ] **Accessibility**: Clickable divs have `role="button"`, `tabIndex={0}`, and keyboard handlers
 - [ ] **Validation**: API params are clamped/validated before sending (e.g., rows limit)
