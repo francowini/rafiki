@@ -1,41 +1,42 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Heart, Sparkles, Brain, Clock, ChevronLeft } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { navItems } from '@/lib/navigation';
 
-const navItems = [
-  { label: 'Dashboard', icon: Home, href: '/', color: 'text-gray-700' },
-  { label: 'Values', icon: Heart, href: '/values', color: 'text-rose-600' },
-  { label: 'Life Visions', icon: Sparkles, href: '/life-visions', color: 'text-purple-600' },
-  { label: 'Thinks', icon: Brain, href: '/thinks', color: 'text-blue-600' },
-  { label: 'Moments', icon: Clock, href: '/momentos', color: 'text-teal-600' },
-];
+const STORAGE_KEY = 'sidebar-collapsed';
 
 function getSidebarCollapsed(): boolean {
   if (typeof window === 'undefined') return false;
-  const saved = localStorage.getItem('sidebar-collapsed');
+  const saved = localStorage.getItem(STORAGE_KEY);
   return saved !== null ? JSON.parse(saved) : false;
 }
 
 function subscribeSidebarState(callback: () => void) {
-  window.addEventListener('storage', callback);
-  return () => window.removeEventListener('storage', callback);
+  // Listen for storage events (cross-tab) and custom events (same-tab)
+  const handler = () => callback();
+  window.addEventListener('storage', handler);
+  window.addEventListener('sidebar-state-change', handler);
+  return () => {
+    window.removeEventListener('storage', handler);
+    window.removeEventListener('sidebar-state-change', handler);
+  };
 }
 
 export function AppSidebar() {
-  const initialCollapsed = useSyncExternalStore(subscribeSidebarState, getSidebarCollapsed, () => false);
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const collapsed = useSyncExternalStore(subscribeSidebarState, getSidebarCollapsed, () => false);
   const pathname = usePathname();
 
-  const toggleCollapsed = () => {
-    const newState = !collapsed;
-    setCollapsed(newState);
-    localStorage.setItem('sidebar-collapsed', JSON.stringify(newState));
-  };
+  const toggleCollapsed = useCallback(() => {
+    const newState = !getSidebarCollapsed();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+    // Dispatch custom event to notify current tab (storage event only fires for other tabs)
+    window.dispatchEvent(new Event('sidebar-state-change'));
+  }, []);
 
   return (
     <aside

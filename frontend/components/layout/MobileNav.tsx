@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, Home, Heart, Sparkles, Brain, Clock } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -13,14 +13,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-
-const navItems = [
-  { label: 'Dashboard', icon: Home, href: '/', color: 'text-gray-700' },
-  { label: 'Values', icon: Heart, href: '/values', color: 'text-rose-600' },
-  { label: 'Life Visions', icon: Sparkles, href: '/life-visions', color: 'text-purple-600' },
-  { label: 'Thinks', icon: Brain, href: '/thinks', color: 'text-blue-600' },
-  { label: 'Moments', icon: Clock, href: '/momentos', color: 'text-teal-600' },
-];
+import { navItems } from '@/lib/navigation';
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);

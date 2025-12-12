@@ -194,68 +194,44 @@ func (s *Store) Count(ctx context.Context, filter momentbus.QueryFilter) (int, e
 
 // QueryStats returns moment statistics for a user over a time period.
 func (s *Store) QueryStats(ctx context.Context, userID uuid.UUID, days int) (momentbus.Stats, error) {
+	s.log.Info(ctx, "momentdb.querystats", "userID", userID, "days", days)
+
 	data := map[string]any{
 		"user_id": userID,
 		"days":    days,
 	}
 
-	// Query for this week (last 7 days)
-	const qWeek = `
+	// Combined query for all stats in a single round-trip
+	const q = `
 	SELECT
-		COUNT(*) as count
+		COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '7 days') as this_week,
+		COUNT(*) FILTER (WHERE DATE_TRUNC('month', moment_date) = DATE_TRUNC('month', NOW())) as this_month,
+		COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '1 day' * :days) as last_n_days
 	FROM
 		moments
 	WHERE
-		user_id = :user_id
-		AND moment_date >= NOW() - INTERVAL '7 days'`
+		user_id = :user_id`
 
-	var weekRow struct {
-		Count int `db:"count"`
+	var statsRow struct {
+		ThisWeek   int `db:"this_week"`
+		ThisMonth  int `db:"this_month"`
+		LastNDays  int `db:"last_n_days"`
 	}
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, qWeek, data, &weekRow); err != nil {
-		return momentbus.Stats{}, fmt.Errorf("namedquerystruct week: %w", err)
-	}
-
-	// Query for this month (current calendar month)
-	const qMonth = `
-	SELECT
-		COUNT(*) as count
-	FROM
-		moments
-	WHERE
-		user_id = :user_id
-		AND DATE_TRUNC('month', moment_date) = DATE_TRUNC('month', NOW())`
-
-	var monthRow struct {
-		Count int `db:"count"`
-	}
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, qMonth, data, &monthRow); err != nil {
-		return momentbus.Stats{}, fmt.Errorf("namedquerystruct month: %w", err)
+	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &statsRow); err != nil {
+		s.log.Error(ctx, "momentdb.querystats", "err", err, "userID", userID)
+		return momentbus.Stats{}, fmt.Errorf("namedquerystruct: %w", err)
 	}
 
-	// Query for total in period (last N days)
-	const qTotal = `
-	SELECT
-		COUNT(*) as count
-	FROM
-		moments
-	WHERE
-		user_id = :user_id
-		AND moment_date >= NOW() - INTERVAL '1 day' * :days`
-
-	var totalRow struct {
-		Count int `db:"count"`
-	}
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, qTotal, data, &totalRow); err != nil {
-		return momentbus.Stats{}, fmt.Errorf("namedquerystruct total: %w", err)
-	}
-
-	return momentbus.Stats{
-		ThisWeek:   weekRow.Count,
-		ThisMonth:  monthRow.Count,
-		Last30Days: totalRow.Count,
+	stats := momentbus.Stats{
+		ThisWeek:   statsRow.ThisWeek,
+		ThisMonth:  statsRow.ThisMonth,
+		Last30Days: statsRow.LastNDays,
 		ByDay:      nil,
-	}, nil
+	}
+
+	s.log.Info(ctx, "momentdb.querystats.success", "userID", userID, "thisWeek", stats.ThisWeek, "thisMonth", stats.ThisMonth, "lastNDays", stats.Last30Days)
+
+	return stats, nil
 }
 
 // buildWhereClause constructs the WHERE clause for filtering moments and
