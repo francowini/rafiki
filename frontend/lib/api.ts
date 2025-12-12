@@ -1,10 +1,11 @@
-import {
+import type {
   Think,
   ThinkListResponse,
   NewThink,
   PaginationParams,
   Moment,
   MomentListResponse,
+  MomentStats,
   NewMoment,
   UpdateMoment,
   Value,
@@ -176,6 +177,13 @@ export const api = {
       return fetchAPI<void>(`/v1/moments/${id}`, {
         method: 'DELETE',
       });
+    },
+
+    /**
+     * Get moment statistics
+     */
+    getStats: async (): Promise<MomentStats> => {
+      return fetchAPI<MomentStats>('/v1/moments/stats');
     },
   },
 

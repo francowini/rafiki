@@ -3,7 +3,9 @@ package momentapp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 
@@ -183,6 +185,30 @@ func (a *app) queryByID(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	return toAppMoment(moment)
+}
+
+func (a *app) queryStats(ctx context.Context, r *http.Request) web.Encoder {
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
+	// Parse days parameter (default 30)
+	days := 30
+	if daysStr := r.URL.Query().Get("days"); daysStr != "" {
+		parsedDays, err := strconv.Atoi(daysStr)
+		if err != nil || parsedDays < 1 {
+			return errs.New(errs.InvalidArgument, fmt.Errorf("days must be a positive integer"))
+		}
+		days = parsedDays
+	}
+
+	stats, err := a.momentBus.QueryStats(ctx, userID, days)
+	if err != nil {
+		return errs.Newf(errs.Internal, "query stats: %s", err)
+	}
+
+	return toAppStats(stats)
 }
 
 // =============================================================================

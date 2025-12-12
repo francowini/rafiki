@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
-import { Moment } from '@/lib/types';
-import { MomentCard } from './MomentCard';
+import type { Moment } from '@/lib/types';
+import { MomentListItem } from './MomentListItem';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ interface MomentListProps {
 
 export function MomentList({
   refresh,
-  onMomentClick,
+  onMomentClick: _onMomentClick,
   onMomentEdit,
   onMomentDelete,
 }: MomentListProps) {
@@ -26,8 +26,11 @@ export function MomentList({
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const requestIdRef = useRef(0);
 
   const loadMoments = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
+
     setIsLoading(true);
     setError(null);
 
@@ -39,12 +42,18 @@ export function MomentList({
         orderDirection: 'desc',
       });
 
-      setMoments(response.items);
-      setTotal(response.total);
-    } catch (err: any) {
-      setError(err.message || 'Error loading moments');
+      if (currentRequestId === requestIdRef.current) {
+        setMoments(response.items);
+        setTotal(response.total);
+      }
+    } catch (err: unknown) {
+      if (currentRequestId === requestIdRef.current) {
+        setError(err instanceof Error ? err.message : 'Error loading moments');
+      }
     } finally {
-      setIsLoading(false);
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [page]);
 
@@ -54,9 +63,9 @@ export function MomentList({
 
   if (isLoading && moments.length === 0) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(6)].map((_, i) => (
-          <Skeleton key={i} className="h-48 rounded-lg" />
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-lg" />
         ))}
       </div>
     );
@@ -90,19 +99,17 @@ export function MomentList({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-3">
         {moments.map((moment) => (
-          <MomentCard
+          <MomentListItem
             key={moment.id}
             moment={moment}
-            onClick={() => onMomentClick?.(moment)}
             onEdit={() => onMomentEdit?.(moment)}
             onDelete={() => onMomentDelete?.(moment)}
           />
         ))}
       </div>
 
-      {/* Pagination */}
       {total > 20 && (
         <div className="flex items-center justify-between">
           <Button

@@ -27,6 +27,7 @@ func Routes(app *web.App, cfg Config) {
 	// Apply bearer middleware to all routes
 	app.HandlerFunc(http.MethodPost, version, "/moments", api.create, bearer)
 	app.HandlerFunc(http.MethodGet, version, "/moments", api.query, bearer)
+	app.HandlerFunc(http.MethodGet, version, "/moments/stats", api.queryStats, bearer)
 	app.HandlerFunc(http.MethodGet, version, "/moments/{moment_id}", api.queryByID, bearer)
 	app.HandlerFunc(http.MethodPut, version, "/moments/{moment_id}", api.update, bearer)
 	app.HandlerFunc(http.MethodDelete, version, "/moments/{moment_id}", api.delete, bearer)

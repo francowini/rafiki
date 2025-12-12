@@ -84,6 +84,19 @@ func (um UpdateMoment) Validate() error {
 	return nil
 }
 
+// AppStats represents moment statistics for the API response.
+type AppStats struct {
+	ThisWeek   int `json:"thisWeek"`
+	ThisMonth  int `json:"thisMonth"`
+	Last30Days int `json:"last30Days"`
+}
+
+// Encode implements the encoder interface.
+func (s AppStats) Encode() ([]byte, string, error) {
+	data, err := json.Marshal(s)
+	return data, "application/json", err
+}
+
 // =============================================================================
 
 func toAppMoment(moment momentbus.Moment) Moment {
@@ -259,4 +272,12 @@ func toBusUpdateMoment(ctx context.Context, um UpdateMoment) (momentbus.UpdateMo
 	}
 
 	return bus, nil
+}
+
+func toAppStats(stats momentbus.Stats) AppStats {
+	return AppStats{
+		ThisWeek:   stats.ThisWeek,
+		ThisMonth:  stats.ThisMonth,
+		Last30Days: stats.Last30Days,
+	}
 }

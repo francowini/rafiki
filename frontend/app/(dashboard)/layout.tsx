@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Header } from '@/components/layout/Header';
+import { AppSidebar } from '@/components/layout/AppSidebar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,9 +35,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+    <div className="min-h-screen bg-gray-50 flex">
+      <AppSidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header />
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
