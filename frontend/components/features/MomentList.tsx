@@ -38,8 +38,7 @@ export function MomentList({
       const response = await api.moments.getAll({
         page,
         rows: 20,
-        orderBy: 'moment_date',
-        orderDirection: 'desc',
+        orderBy: 'moment_date,DESC',
       });
 
       if (currentRequestId === requestIdRef.current) {
