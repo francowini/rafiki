@@ -50,8 +50,9 @@ export function AppSidebar() {
     window.dispatchEvent(new Event('sidebar-state-change'));
   }, []);
 
-  // Helper for nested route detection
+  // Helper for nested route detection (guards against null pathname)
   const isRouteActive = (href: string) => {
+    if (pathname == null) return false;
     if (href === '/') return pathname === '/';
     return pathname === href || pathname.startsWith(href + '/');
   };
@@ -82,6 +83,7 @@ export function AppSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              aria-label={collapsed ? item.label : undefined}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
@@ -90,9 +92,11 @@ export function AppSidebar() {
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                 collapsed && 'justify-center',
               )}
-              title={collapsed ? item.label : undefined}
             >
-              <Icon className={cn('h-5 w-5 flex-shrink-0', item.color)} />
+              <Icon
+                className={cn('h-5 w-5 flex-shrink-0', item.color)}
+                aria-hidden={collapsed}
+              />
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );
@@ -110,6 +114,7 @@ export function AppSidebar() {
         >
           <ChevronLeft
             className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')}
+            aria-hidden="true"
           />
           {!collapsed && <span className="ml-2">Collapse</span>}
         </Button>

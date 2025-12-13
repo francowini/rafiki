@@ -23,6 +23,7 @@ This document catalogs critical errors discovered during code review that should
 13. [Shell Scripts: Unvalidated Environment Variables](#13-shell-scripts-unvalidated-environment-variables)
 14. [API Parameters: Missing Max Limits](#14-api-parameters-missing-max-limits)
 15. [Strong Types: When NOT to Use Them](#15-strong-types-when-not-to-use-them)
+16. [SQL Performance: Unbounded Aggregate Queries](#16-sql-performance-unbounded-aggregate-queries)
 
 ### Frontend (TypeScript/React)
 
@@ -1066,6 +1067,65 @@ Don't use strong types when:
 
 ---
 
+## 16. SQL Performance: Unbounded Aggregate Queries
+
+### Severity: 🟠 Major (Scalability / Performance)
+
+### Problem
+
+Aggregate queries (COUNT, SUM, etc.) without time bounds require scanning all rows matching the filter. For per-user queries, this means scanning all of a user's historical data even when only recent data is needed.
+
+### Bad Example
+
+```sql
+-- ❌ BAD: Scans ALL moments for user, even though we only need recent ones
+SELECT
+    COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '7 days') as this_week,
+    COUNT(*) FILTER (WHERE DATE_TRUNC('month', moment_date) = DATE_TRUNC('month', NOW())) as this_month,
+    COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '1 day' * :days) as last_n_days
+FROM
+    moments
+WHERE
+    user_id = :user_id
+```
+
+### Good Example
+
+```sql
+-- ✅ GOOD: LEAST() bounds scan to earliest time window needed
+SELECT
+    COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '7 days') as this_week,
+    COUNT(*) FILTER (
+        WHERE moment_date >= DATE_TRUNC('month', NOW())
+          AND moment_date < DATE_TRUNC('month', NOW()) + INTERVAL '1 month'
+    ) as this_month,
+    COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '1 day' * :days) as last_n_days
+FROM
+    moments
+WHERE
+    user_id = :user_id
+    AND moment_date >= LEAST(
+        DATE_TRUNC('month', NOW()),
+        NOW() - INTERVAL '7 days',
+        NOW() - INTERVAL '1 day' * :days
+    )
+```
+
+### Why This Matters
+
+- Users with years of data would trigger full table scans
+- Index on `(user_id, moment_date)` can't help without a lower bound
+- Query time grows linearly with data volume
+- With the bound, PostgreSQL can use an index range scan
+
+### Checklist
+
+- [ ] Aggregate queries have explicit time bounds in WHERE clause
+- [ ] Use LEAST() to find the earliest boundary across multiple time windows
+- [ ] Ensure appropriate composite index exists (e.g., `user_id, moment_date`)
+
+---
+
 ## Quick Reference Checklist (Backend)
 
 When implementing new features, verify:
@@ -1085,6 +1145,7 @@ When implementing new features, verify:
 - [ ] **Validation**: Business layer validates inputs before persisting (MessageType, Content, etc.)
 - [ ] **View Models**: Read-only query models should have comments explaining primitive type usage
 - [ ] **API Parameters**: Numeric parameters have sensible max limits (e.g., days <= 365)
+- [ ] **SQL Performance**: Aggregate queries have time bounds in WHERE clause (use LEAST for multiple windows)
 
 ---
 

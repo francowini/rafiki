@@ -211,15 +211,25 @@ func (s *Store) QueryStats(ctx context.Context, userID uuid.UUID, days int) (mom
 
 	// Combined query for all stats in a single round-trip.
 	// Note: this_week = rolling 7 days, last_n_days = configurable via :days param.
+	// Performance: LEAST() bounds the scan to the earliest of the three time windows,
+	// avoiding full-table (per-user) scans when the user has many historical moments.
 	const q = `
 	SELECT
 		COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '7 days') as this_week,
-		COUNT(*) FILTER (WHERE DATE_TRUNC('month', moment_date) = DATE_TRUNC('month', NOW())) as this_month,
+		COUNT(*) FILTER (
+			WHERE moment_date >= DATE_TRUNC('month', NOW())
+			  AND moment_date < DATE_TRUNC('month', NOW()) + INTERVAL '1 month'
+		) as this_month,
 		COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '1 day' * :days) as last_n_days
 	FROM
 		moments
 	WHERE
-		user_id = :user_id`
+		user_id = :user_id
+		AND moment_date >= LEAST(
+			DATE_TRUNC('month', NOW()),
+			NOW() - INTERVAL '7 days',
+			NOW() - INTERVAL '1 day' * :days
+		)`
 
 	var statsRow struct {
 		ThisWeek   int `db:"this_week"`

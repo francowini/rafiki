@@ -19,8 +19,9 @@ export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Helper for nested route detection
+  // Helper for nested route detection (guards against null pathname)
   const isRouteActive = (href: string) => {
+    if (pathname == null) return false;
     if (href === '/') return pathname === '/';
     return pathname === href || pathname.startsWith(href + '/');
   };
@@ -29,7 +30,7 @@ export function MobileNav() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="lg:hidden">
-          <Menu className="h-5 w-5" />
+          <Menu className="h-5 w-5" aria-hidden="true" focusable={false} />
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
@@ -55,7 +56,7 @@ export function MobileNav() {
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                 )}
               >
-                <Icon className={cn('h-5 w-5', item.color)} />
+                <Icon className={cn('h-5 w-5', item.color)} aria-hidden="true" />
                 <span>{item.label}</span>
               </Link>
             );
