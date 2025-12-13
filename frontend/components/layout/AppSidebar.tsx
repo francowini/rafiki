@@ -12,11 +12,23 @@ const STORAGE_KEY = 'sidebar-collapsed';
 
 function getSidebarCollapsed(): boolean {
   if (typeof window === 'undefined') return false;
-  const saved = localStorage.getItem(STORAGE_KEY);
-  return saved !== null ? JSON.parse(saved) : false;
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved !== null ? JSON.parse(saved) : false;
+  } catch {
+    // Handle corrupted localStorage value
+    localStorage.removeItem(STORAGE_KEY);
+    return false;
+  }
 }
 
 function subscribeSidebarState(callback: () => void) {
+  // Guard for SSR - return no-op cleanup when window is unavailable
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
   // Listen for storage events (cross-tab) and custom events (same-tab)
   const handler = () => callback();
   window.addEventListener('storage', handler);
@@ -38,6 +50,12 @@ export function AppSidebar() {
     window.dispatchEvent(new Event('sidebar-state-change'));
   }, []);
 
+  // Helper for nested route detection
+  const isRouteActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname === href || pathname.startsWith(href + '/');
+  };
+
   return (
     <aside
       className={cn(
@@ -58,12 +76,13 @@ export function AppSidebar() {
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = isRouteActive(item.href);
 
           return (
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
                 isActive
@@ -82,9 +101,11 @@ export function AppSidebar() {
 
       <div className="p-4 border-t">
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleCollapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           className={cn('w-full', collapsed && 'justify-center')}
         >
           <ChevronLeft

@@ -193,6 +193,14 @@ func (s *Store) Count(ctx context.Context, filter momentbus.QueryFilter) (int, e
 }
 
 // QueryStats returns moment statistics for a user over a time period.
+//
+// Field naming semantics:
+//   - ThisWeek: rolling 7-day window (not calendar week)
+//   - ThisMonth: current calendar month
+//   - Last30Days: configurable N-day window (default 30, controlled by days param)
+//
+// Timezone: Uses database server time (UTC recommended). All moment_date values
+// should be stored in UTC. For user-local time display, convert in the frontend.
 func (s *Store) QueryStats(ctx context.Context, userID uuid.UUID, days int) (momentbus.Stats, error) {
 	s.log.Info(ctx, "momentdb.querystats", "userID", userID, "days", days)
 
@@ -201,7 +209,8 @@ func (s *Store) QueryStats(ctx context.Context, userID uuid.UUID, days int) (mom
 		"days":    days,
 	}
 
-	// Combined query for all stats in a single round-trip
+	// Combined query for all stats in a single round-trip.
+	// Note: this_week = rolling 7 days, last_n_days = configurable via :days param.
 	const q = `
 	SELECT
 		COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '7 days') as this_week,

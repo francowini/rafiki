@@ -13,19 +13,31 @@ interface MomentListItemProps {
   onDelete?: () => void;
 }
 
-export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps) {
-  const [expanded, setExpanded] = useState(false);
+function formatDate(dateValue: string): { dateStr: string; timeStr: string } {
+  const date = new Date(dateValue);
 
-  const momentDate = new Date(moment.momentDate);
-  const dateStr = momentDate.toLocaleDateString('en-US', {
+  // Guard against invalid dates
+  if (isNaN(date.getTime())) {
+    return { dateStr: 'Invalid date', timeStr: '' };
+  }
+
+  const dateStr = date.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
-  const timeStr = momentDate.toLocaleTimeString('en-US', {
+  const timeStr = date.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });
+
+  return { dateStr, timeStr };
+}
+
+export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const { dateStr, timeStr } = formatDate(moment.momentDate);
 
   const situationPreview =
     moment.situation.length > 150 ? moment.situation.slice(0, 150) + '...' : moment.situation;
@@ -39,28 +51,19 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
     return 'bg-green-100 text-green-800 border-green-300';
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      setExpanded(!expanded);
-    }
-  };
-
   return (
     <div className="border rounded-lg bg-white hover:shadow-sm transition-shadow">
-      <div
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
         aria-expanded={expanded}
-        className="p-4 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-        onKeyDown={handleKeyDown}
+        className="w-full p-4 cursor-pointer text-left"
+        onClick={() => setExpanded((prev) => !prev)}
       >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="font-medium text-gray-900">{dateStr}</h3>
-              <span className="text-sm text-gray-500">{timeStr}</span>
+              {timeStr && <span className="text-sm text-gray-500">{timeStr}</span>}
               <Badge variant="outline" className={getIntensityColor(moment.intensity)}>
                 {moment.intensity}/10
               </Badge>
@@ -86,7 +89,7 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
             </div>
           )}
         </div>
-      </div>
+      </button>
 
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t pt-3">
@@ -118,6 +121,7 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
           <div className="flex gap-2 pt-2">
             {onEdit && (
               <Button
+                type="button"
                 size="sm"
                 variant="outline"
                 onClick={(e) => {
@@ -132,8 +136,11 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
             )}
             {onDelete && (
               <Button
+                type="button"
                 size="sm"
                 variant="outline"
+                aria-label="Delete moment"
+                title="Delete moment"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete();

@@ -31,6 +31,8 @@ F2. [Async: Stale Responses in useEffect](#f2-async-stale-responses-in-useeffect
 F3. [Data: Silent Data Truncation](#f3-data-silent-data-truncation)
 F4. [State: useSyncExternalStore + useState Duplication](#f4-state-usesyncexternalstore--usestate-duplication)
 F5. [Accessibility: Clickable Div Without Keyboard Support](#f5-accessibility-clickable-div-without-keyboard-support)
+F6. [Storage: Unguarded localStorage JSON.parse](#f6-storage-unguarded-localstorage-jsonparse)
+F7. [Dates: Unvalidated Date Parsing](#f7-dates-unvalidated-date-parsing)
 
 ---
 
@@ -1470,6 +1472,107 @@ return (
 
 ---
 
+## F6. Storage: Unguarded localStorage JSON.parse
+
+### Severity: 🟠 Major (Runtime Exception)
+
+### Problem
+
+Calling `JSON.parse()` on localStorage values without error handling can throw exceptions when the stored data is corrupted, manually edited, or from a different app version.
+
+### Bad Example
+
+```typescript
+// ❌ BAD: JSON.parse can throw on corrupted data
+function getSidebarCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  const saved = localStorage.getItem('sidebar-collapsed');
+  return saved !== null ? JSON.parse(saved) : false; // Throws if saved = "not-json"
+}
+```
+
+### Good Example
+
+```typescript
+// ✅ GOOD: Wrap in try/catch and clean up corrupted values
+const STORAGE_KEY = 'sidebar-collapsed';
+
+function getSidebarCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved !== null ? JSON.parse(saved) : false;
+  } catch {
+    // Handle corrupted localStorage value
+    localStorage.removeItem(STORAGE_KEY);
+    return false;
+  }
+}
+```
+
+### Checklist
+
+- [ ] All `JSON.parse(localStorage.getItem(...))` wrapped in try/catch
+- [ ] Return sensible default on parse error
+- [ ] Optionally remove corrupted key to prevent repeated errors
+
+---
+
+## F7. Dates: Unvalidated Date Parsing
+
+### Severity: 🟠 Major (UI Crash / Bad UX)
+
+### Problem
+
+Calling `toLocaleDateString()` or `toLocaleTimeString()` on an invalid Date object displays "Invalid Date" to users. API responses may contain malformed or missing date strings.
+
+### Bad Example
+
+```typescript
+// ❌ BAD: No validation - shows "Invalid Date" if momentDate is malformed
+const momentDate = new Date(moment.momentDate);
+const dateStr = momentDate.toLocaleDateString('en-US', { ... });
+const timeStr = momentDate.toLocaleTimeString('en-US', { ... });
+```
+
+### Good Example
+
+```typescript
+// ✅ GOOD: Validate date before formatting
+function formatDate(dateValue: string): { dateStr: string; timeStr: string } {
+  const date = new Date(dateValue);
+
+  // Guard against invalid dates
+  if (isNaN(date.getTime())) {
+    return { dateStr: 'Invalid date', timeStr: '' };
+  }
+
+  const dateStr = date.toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return { dateStr, timeStr };
+}
+
+// Usage
+const { dateStr, timeStr } = formatDate(moment.momentDate);
+```
+
+### Checklist
+
+- [ ] All Date parsing validates with `isNaN(date.getTime())`
+- [ ] Provide user-friendly fallback for invalid dates
+- [ ] Consider extracting to reusable utility function
+
+---
+
 ## Quick Reference Checklist (Frontend)
 
 When implementing new features, verify:
@@ -1483,3 +1586,5 @@ When implementing new features, verify:
 - [ ] **External Store**: Never copy `useSyncExternalStore` result into `useState`
 - [ ] **Accessibility**: Clickable divs have `role="button"`, `tabIndex={0}`, and keyboard handlers
 - [ ] **Validation**: API params are clamped/validated before sending (e.g., rows limit)
+- [ ] **localStorage**: Wrap `JSON.parse(localStorage.getItem(...))` in try/catch
+- [ ] **Dates**: Validate dates with `isNaN(date.getTime())` before formatting
