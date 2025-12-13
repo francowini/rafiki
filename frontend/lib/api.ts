@@ -123,19 +123,20 @@ export const api = {
   moments: {
     /**
      * Get all moments with pagination
+     * @param orderBy - Combined field and direction, e.g., 'moment_date,DESC'
+     *                  Available fields: moment_date, intensity, date_created, date_updated
+     *                  Directions: ASC, DESC
      */
     getAll: async (params?: {
       page?: number;
       rows?: number;
-      orderBy?: 'moment_date' | 'intensity' | 'date_created' | 'date_updated';
-      orderDirection?: 'asc' | 'desc';
+      orderBy?: string;
     }): Promise<MomentListResponse> => {
       const queryParams = new URLSearchParams();
 
       if (params?.page) queryParams.set('page', params.page.toString());
       if (params?.rows) queryParams.set('rows', params.rows.toString());
       if (params?.orderBy) queryParams.set('orderBy', params.orderBy);
-      if (params?.orderDirection) queryParams.set('orderDirection', params.orderDirection);
 
       const query = queryParams.toString();
       const endpoint = `/v1/moments${query ? `?${query}` : ''}`;

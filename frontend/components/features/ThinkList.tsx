@@ -26,7 +26,7 @@ export function ThinkList({ refresh = 0 }: ThinkListProps) {
       const response = await api.thinks.getAll({
         page: pageNum,
         rows: 10,
-        orderBy: 'date_created',
+        orderBy: 'date_created,DESC',
       });
       setData(response);
     } catch (err) {

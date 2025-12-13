@@ -43,10 +43,16 @@ export interface ThinkListResponse {
   rowsPerPage: number;
 }
 
+/**
+ * Pagination parameters for list endpoints.
+ * @param orderBy - Combined field and direction, e.g., 'date_created,DESC'
+ *                  Format: "field,DIRECTION" where DIRECTION is ASC or DESC
+ *                  Available fields vary by endpoint (e.g., think_id, category, date_created, date_updated)
+ */
 export interface PaginationParams {
   page?: number;
   rows?: number;
-  orderBy?: 'think_id' | 'category' | 'date_created' | 'date_updated';
+  orderBy?: string;
 }
 
 // ============================================================================
