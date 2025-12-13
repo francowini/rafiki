@@ -9,7 +9,15 @@ interface MomentStatsProps {
   isLoading?: boolean;
 }
 
-function StatCard({ label, value, isLoading }: { label: string; value: number; isLoading?: boolean }) {
+function StatCard({
+  label,
+  value,
+  isLoading,
+}: {
+  label: string;
+  value: number;
+  isLoading?: boolean;
+}) {
   return (
     <div className="bg-white border rounded-lg p-4">
       <p className="text-sm font-medium text-gray-600 mb-1">{label}</p>

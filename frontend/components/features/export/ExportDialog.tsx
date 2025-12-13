@@ -184,17 +184,17 @@ export function ExportDialog({ children }: ExportDialogProps) {
               }
               className="gap-2"
             >
-            {isExporting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Exporting...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                Export to Markdown
-              </>
-            )}
+              {isExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Export to Markdown
+                </>
+              )}
             </Button>
           </div>
         </DialogFooter>

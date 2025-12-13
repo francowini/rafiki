@@ -51,6 +51,13 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
     return 'bg-green-100 text-green-800 border-green-300';
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setExpanded((prev) => !prev);
+    }
+  };
+
   return (
     <div className="border rounded-lg bg-white hover:shadow-sm transition-shadow">
       <button
@@ -58,6 +65,7 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
         aria-expanded={expanded}
         className="w-full p-4 cursor-pointer text-left"
         onClick={() => setExpanded((prev) => !prev)}
+        onKeyDown={handleKeyDown}
       >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">

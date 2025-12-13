@@ -93,10 +93,7 @@ export function AppSidebar() {
                 collapsed && 'justify-center',
               )}
             >
-              <Icon
-                className={cn('h-5 w-5 flex-shrink-0', item.color)}
-                aria-hidden={collapsed}
-              />
+              <Icon className={cn('h-5 w-5 flex-shrink-0', item.color)} aria-hidden={collapsed} />
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );
