@@ -21,6 +21,7 @@ type Storer interface {
 	Query(ctx context.Context, filter QueryFilter) ([]Moment, error)
 	QueryByID(ctx context.Context, momentID uuid.UUID) (Moment, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
+	QueryStats(ctx context.Context, userID uuid.UUID, days int) (Stats, error)
 }
 
 // Business manages the set of APIs for moment access.
@@ -154,4 +155,14 @@ func (b *Business) Count(ctx context.Context, filter QueryFilter) (int, error) {
 	}
 
 	return count, nil
+}
+
+// QueryStats returns moment statistics for a user over a time period.
+func (b *Business) QueryStats(ctx context.Context, userID uuid.UUID, days int) (Stats, error) {
+	stats, err := b.storer.QueryStats(ctx, userID, days)
+	if err != nil {
+		return Stats{}, fmt.Errorf("query stats: %w", err)
+	}
+
+	return stats, nil
 }

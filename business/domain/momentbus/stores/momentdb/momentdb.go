@@ -192,6 +192,67 @@ func (s *Store) Count(ctx context.Context, filter momentbus.QueryFilter) (int, e
 	return count.Count, nil
 }
 
+// QueryStats returns moment statistics for a user over a time period.
+//
+// Field naming semantics:
+//   - ThisWeek: rolling 7-day window (not calendar week)
+//   - ThisMonth: current calendar month
+//   - Last30Days: configurable N-day window (default 30, controlled by days param)
+//
+// Timezone: Uses database server time (UTC recommended). All moment_date values
+// should be stored in UTC. For user-local time display, convert in the frontend.
+func (s *Store) QueryStats(ctx context.Context, userID uuid.UUID, days int) (momentbus.Stats, error) {
+	s.log.Info(ctx, "momentdb.querystats", "userID", userID, "days", days)
+
+	data := map[string]any{
+		"user_id": userID,
+		"days":    days,
+	}
+
+	// Combined query for all stats in a single round-trip.
+	// Note: this_week = rolling 7 days, last_n_days = configurable via :days param.
+	// Performance: LEAST() bounds the scan to the earliest of the three time windows,
+	// avoiding full-table (per-user) scans when the user has many historical moments.
+	const q = `
+	SELECT
+		COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '7 days') as this_week,
+		COUNT(*) FILTER (
+			WHERE moment_date >= DATE_TRUNC('month', NOW())
+			  AND moment_date < DATE_TRUNC('month', NOW()) + INTERVAL '1 month'
+		) as this_month,
+		COUNT(*) FILTER (WHERE moment_date >= NOW() - INTERVAL '1 day' * :days) as last_n_days
+	FROM
+		moments
+	WHERE
+		user_id = :user_id
+		AND moment_date >= LEAST(
+			DATE_TRUNC('month', NOW()),
+			NOW() - INTERVAL '7 days',
+			NOW() - INTERVAL '1 day' * :days
+		)`
+
+	var statsRow struct {
+		ThisWeek   int `db:"this_week"`
+		ThisMonth  int `db:"this_month"`
+		LastNDays  int `db:"last_n_days"`
+	}
+	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &statsRow); err != nil {
+		s.log.Error(ctx, "momentdb.querystats", "err", err, "userID", userID)
+		return momentbus.Stats{}, fmt.Errorf("namedquerystruct: %w", err)
+	}
+
+	stats := momentbus.Stats{
+		ThisWeek:   statsRow.ThisWeek,
+		ThisMonth:  statsRow.ThisMonth,
+		Last30Days: statsRow.LastNDays,
+		ByDay:      nil,
+	}
+
+	s.log.Info(ctx, "momentdb.querystats.success", "userID", userID, "thisWeek", stats.ThisWeek, "thisMonth", stats.ThisMonth, "lastNDays", stats.Last30Days)
+
+	return stats, nil
+}
+
 // buildWhereClause constructs the WHERE clause for filtering moments and
 // populates the data map with the appropriate filter values.
 func buildWhereClause(filter momentbus.QueryFilter, data map[string]any) string {

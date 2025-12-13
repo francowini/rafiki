@@ -96,6 +96,12 @@ export interface MomentListResponse {
   rowsPerPage: number;
 }
 
+export interface MomentStats {
+  thisWeek: number;
+  thisMonth: number;
+  last30Days: number;
+}
+
 // ============================================================================
 // Value Types
 // ============================================================================

@@ -57,3 +57,17 @@ type UpdateMoment struct {
 	ValuesReflection *content.Content
 	Intensity        *intensity.Intensity
 }
+
+// DayStat represents the count of moments for a specific date.
+type DayStat struct {
+	Date  time.Time
+	Count int
+}
+
+// Stats represents moment statistics for a user over a time period.
+type Stats struct {
+	ThisWeek   int
+	ThisMonth  int
+	Last30Days int
+	ByDay      []DayStat
+}

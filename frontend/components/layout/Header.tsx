@@ -1,43 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 import { UserMenu } from '@/components/auth/UserMenu';
+import { MobileNav } from '@/components/layout/MobileNav';
 
 export function Header() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <header className="border-b bg-white">
+    <header className="border-b bg-white sticky top-0 z-10">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="text-2xl font-bold text-gray-900">
+        <div className="flex items-center gap-4">
+          {isAuthenticated && <MobileNav />}
+          <Link href="/" className="text-2xl font-bold text-gray-900 lg:hidden">
             Rafiki
           </Link>
-          {isAuthenticated && (
-            <nav className="flex gap-4">
-              <Link href="/values">
-                <Button variant="ghost">Values</Button>
-              </Link>
-              <Link href="/life-visions">
-                <Button variant="ghost">Life Visions</Button>
-              </Link>
-              <Link href="/thinks">
-                <Button variant="ghost">Thinks</Button>
-              </Link>
-            </nav>
-          )}
         </div>
-        <div className="flex items-center gap-4">
-          {isAuthenticated ? (
-            <UserMenu />
-          ) : (
-            <Link href="/login">
-              <Button>Login</Button>
-            </Link>
-          )}
-        </div>
+
+        <div className="flex items-center gap-4">{isAuthenticated && <UserMenu />}</div>
       </div>
     </header>
   );
