@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { NewThink, ThinkCategory } from '@/lib/types';
+import { NewThink, ThinkCategory, THINK_CATEGORY_LABELS } from '@/lib/types';
 import { api, APIError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -83,20 +83,11 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
                 <SelectValue placeholder="Selecciona una categoría" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => {
-                  const categoryLabels: Record<ThinkCategory, string> = {
-                    personal: 'Personal',
-                    work: 'Trabajo',
-                    ideas: 'Ideas',
-                    learning: 'Aprendizaje',
-                    reflection: 'Reflexión',
-                  };
-                  return (
-                    <SelectItem key={cat} value={cat}>
-                      {categoryLabels[cat]}
-                    </SelectItem>
-                  );
-                })}
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {THINK_CATEGORY_LABELS[cat]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

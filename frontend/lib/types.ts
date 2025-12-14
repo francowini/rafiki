@@ -23,6 +23,14 @@ export interface DecodedToken {
 // Think types
 export type ThinkCategory = 'personal' | 'work' | 'ideas' | 'learning' | 'reflection';
 
+export const THINK_CATEGORY_LABELS: Record<ThinkCategory, string> = {
+  personal: 'Personal',
+  work: 'Trabajo',
+  ideas: 'Ideas',
+  learning: 'Aprendizaje',
+  reflection: 'Reflexión',
+};
+
 export interface Think {
   id: string;
   category: ThinkCategory;

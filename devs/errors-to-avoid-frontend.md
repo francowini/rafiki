@@ -22,7 +22,13 @@ This document catalogs critical errors specific to frontend (TypeScript/React) d
 
 ### Problem
 
-When generating Markdown from user-provided content, failing to escape special characters allows users to inject malicious Markdown.
+When generating Markdown from user-provided content, failing to escape special characters allows users to inject malicious Markdown structure. Additionally, if your Markdown renderer permits raw HTML or unsafe link protocols (e.g., `javascript:`, `data:`), escaping Markdown alone does NOT prevent XSS attacks.
+
+### Security Layers
+
+1. **Markdown Structure Injection**: Escaping special characters prevents users from creating headings, links, images, etc.
+2. **XSS via HTML**: Many Markdown renderers allow raw HTML - use the renderer's safe mode or a sanitizer
+3. **Unsafe Links**: Links with `javascript:` or `data:` protocols can execute code - whitelist protocols (http, https, mailto)
 
 ### Bad Example
 
@@ -38,11 +44,16 @@ function formatMoment(moment: ExportItem): string[] {
 }
 ```
 
-### Good Example
+### Simple Example (Markdown Structure Only)
 
 ```typescript
-// GOOD: Escape Markdown special characters in user content
-function escapeMarkdown(text: string): string {
+// SIMPLE EXAMPLE: Basic escape for common Markdown characters
+// NOTE: This is a minimal, non-exhaustive escape. It does NOT handle:
+// - GFM extensions (tables, strikethrough ~, task lists)
+// - Autolinks, code block language specifiers
+// - Parser-specific syntax variations
+// For production, use a well-maintained library (see recommendations below)
+function escapeMarkdownBasic(text: string): string {
   return text.replace(/([\\*_\[\]()#+-.,!`>|{}])/g, '\\$1');
 }
 
@@ -50,16 +61,36 @@ function formatMoment(moment: ExportItem): string[] {
   const lines: string[] = [];
   if (moment.situation) {
     lines.push('**Situation:**');
-    lines.push(escapeMarkdown(moment.situation)); // Safe
+    lines.push(escapeMarkdownBasic(moment.situation)); // Prevents structure injection
   }
   return lines;
 }
 ```
 
+### Production Recommendations
+
+For robust security, use established libraries:
+
+- **Markdown escaping**: Use your Markdown parser's API (e.g., `markdown-it` plugins, `rehype-sanitize`)
+- **HTML sanitization**: `DOMPurify`, `sanitize-html`, or `isomorphic-dompurify`
+- **Safe links**: Add `rel="noopener noreferrer"` and whitelist protocols (http, https, mailto)
+
+```typescript
+// PRODUCTION: Use DOMPurify for HTML output
+import DOMPurify from 'dompurify';
+
+const sanitizedHtml = DOMPurify.sanitize(markdownToHtml(userContent), {
+  ALLOWED_TAGS: ['p', 'strong', 'em', 'ul', 'ol', 'li'],
+  ALLOWED_ATTR: [],
+});
+```
+
 ### Checklist
 
-- [ ] All user-provided content is escaped before insertion into Markdown
-- [ ] Escape function covers all Markdown special characters
+- [ ] User content is escaped before insertion into Markdown (prevents structure injection)
+- [ ] Markdown renderer is configured in safe mode OR output is sanitized (prevents XSS)
+- [ ] Links use `rel="noopener noreferrer"` and only allow safe protocols
+- [ ] For production, use a well-maintained sanitization library instead of custom regex
 
 ---
 
@@ -137,10 +168,12 @@ useEffect(() => {
 }, [filter]);
 ```
 
+**Important**: These freshness guards also prevent state updates after the component unmounts, avoiding the React warning "Can't perform a React state update on an unmounted component" and keeping logs/tests clean.
+
 ### Checklist
 
 - [ ] All async useEffect hooks have a freshness guard (requestId or AbortController)
-- [ ] State updates are conditional on the request still being current
+- [ ] State updates are conditional on the request still being current and the component not unmounted
 
 ---
 
@@ -291,28 +324,38 @@ const handleKeyDown = (e: React.KeyboardEvent) => {
 
 ### Problem
 
-Calling `JSON.parse()` on localStorage values without error handling can throw exceptions when the stored data is corrupted.
+Calling `JSON.parse()` on localStorage values without error handling can throw exceptions when the stored data is corrupted. Additionally, even when parsing succeeds, the value may not be the expected type (e.g., stored as `"yes"` or `123` instead of a boolean).
 
 ### Bad Example
 
 ```typescript
-// BAD: JSON.parse can throw on corrupted data
+// BAD: JSON.parse can throw on corrupted data AND may return wrong type
 function getPreference(): boolean {
   const saved = localStorage.getItem('preference');
-  return saved !== null ? JSON.parse(saved) : false; // Throws if corrupted
+  return saved !== null ? JSON.parse(saved) : false; // Throws if corrupted, or returns "yes"/123/{}
 }
 ```
 
 ### Good Example
 
 ```typescript
-// GOOD: Wrap in try/catch and clean up corrupted values
+// GOOD: Wrap in try/catch, validate type, and clean up invalid values
 function getPreference(): boolean {
   if (typeof window === 'undefined') return false;
 
   try {
     const saved = localStorage.getItem('preference');
-    return saved !== null ? JSON.parse(saved) : false;
+    if (saved === null) return false;
+
+    const parsed = JSON.parse(saved);
+
+    // Validate the parsed value is actually a boolean
+    if (typeof parsed !== 'boolean') {
+      localStorage.removeItem('preference');
+      return false;
+    }
+
+    return parsed;
   } catch {
     localStorage.removeItem('preference');
     return false;
@@ -323,8 +366,9 @@ function getPreference(): boolean {
 ### Checklist
 
 - [ ] All `JSON.parse(localStorage.getItem(...))` wrapped in try/catch
-- [ ] Return sensible default on parse error
-- [ ] Optionally remove corrupted key
+- [ ] Validate parsed value's type matches expected type (e.g., `typeof parsed === 'boolean'`)
+- [ ] Return sensible default when type is invalid
+- [ ] Remove corrupted or invalid keys from localStorage
 
 ---
 
@@ -341,26 +385,28 @@ Calling `toLocaleDateString()` on an invalid Date object displays "Invalid Date"
 ```typescript
 // BAD: No validation - shows "Invalid Date" if malformed
 const momentDate = new Date(moment.momentDate);
-const dateStr = momentDate.toLocaleDateString('en-US', { ... });
+const dateStr = momentDate.toLocaleDateString('es-MX', { ... });
 ```
 
 ### Good Example
 
 ```typescript
-// GOOD: Validate date before formatting
+// GOOD: Validate date before formatting, use app locale constant
+import { APP_LOCALE } from '@/lib/constants'; // e.g., 'es-MX'
+
 function formatDate(dateValue: string): { dateStr: string; timeStr: string } {
   const date = new Date(dateValue);
 
   if (isNaN(date.getTime())) {
-    return { dateStr: 'Invalid date', timeStr: '' };
+    return { dateStr: 'Fecha inválida', timeStr: '' };
   }
 
-  const dateStr = date.toLocaleDateString('en-US', {
+  const dateStr = date.toLocaleDateString(APP_LOCALE, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
-  const timeStr = date.toLocaleTimeString('en-US', {
+  const timeStr = date.toLocaleTimeString(APP_LOCALE, {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -373,17 +419,18 @@ function formatDate(dateValue: string): { dateStr: string; timeStr: string } {
 
 - [ ] All Date parsing validates with `isNaN(date.getTime())`
 - [ ] Provide user-friendly fallback for invalid dates
-- [ ] Consider extracting to reusable utility function
+- [ ] Use the app's locale constant (e.g., `APP_LOCALE`) instead of hardcoded locale strings
+- [ ] Consider extracting to reusable utility function in `lib/date-utils.ts`
 
 ---
 
 ## Quick Reference Checklist
 
-- [ ] **Markdown**: User content is escaped before insertion into Markdown
-- [ ] **Async**: useEffect with fetch uses requestId or AbortController
+- [ ] **Markdown**: User content is escaped AND renderer is in safe mode or output is sanitized
+- [ ] **Async**: useEffect with fetch uses requestId or AbortController (also prevents unmount warnings)
 - [ ] **Pagination**: Exports handle truncation (warn or fetch all pages)
 - [ ] **External Store**: Never copy `useSyncExternalStore` result into `useState`
 - [ ] **Accessibility**: Clickable divs have `role="button"`, `tabIndex={0}`, keyboard handlers
 - [ ] **Accessibility**: Prefer semantic `<button>` elements
-- [ ] **localStorage**: Wrap `JSON.parse(localStorage.getItem(...))` in try/catch
-- [ ] **Dates**: Validate dates with `isNaN(date.getTime())` before formatting
+- [ ] **localStorage**: Wrap `JSON.parse` in try/catch AND validate parsed type
+- [ ] **Dates**: Validate dates with `isNaN(date.getTime())` and use app locale constant
