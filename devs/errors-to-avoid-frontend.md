@@ -391,22 +391,20 @@ const dateStr = momentDate.toLocaleDateString('es-MX', { ... });
 ### Good Example
 
 ```typescript
-// GOOD: Validate date before formatting, use app locale constant
-import { APP_LOCALE } from '@/lib/constants'; // e.g., 'es-MX'
-
-function formatDate(dateValue: string): { dateStr: string; timeStr: string } {
+// GOOD: Validate date before formatting, use consistent locale via default parameter
+function formatDate(dateValue: string, locale = 'es-MX'): { dateStr: string; timeStr: string } {
   const date = new Date(dateValue);
 
   if (isNaN(date.getTime())) {
     return { dateStr: 'Fecha inválida', timeStr: '' };
   }
 
-  const dateStr = date.toLocaleDateString(APP_LOCALE, {
+  const dateStr = date.toLocaleDateString(locale, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
-  const timeStr = date.toLocaleTimeString(APP_LOCALE, {
+  const timeStr = date.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -419,7 +417,7 @@ function formatDate(dateValue: string): { dateStr: string; timeStr: string } {
 
 - [ ] All Date parsing validates with `isNaN(date.getTime())`
 - [ ] Provide user-friendly fallback for invalid dates
-- [ ] Use the app's locale constant (e.g., `APP_LOCALE`) instead of hardcoded locale strings
+- [ ] Use consistent locale across the app (default parameter or shared constant)
 - [ ] Consider extracting to reusable utility function in `lib/date-utils.ts`
 
 ---
