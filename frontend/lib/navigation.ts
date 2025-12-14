@@ -9,9 +9,9 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: Home, href: '/', color: 'text-gray-700' },
-  { label: 'Values', icon: Heart, href: '/values', color: 'text-rose-600' },
-  { label: 'Life Visions', icon: Sparkles, href: '/life-visions', color: 'text-purple-600' },
-  { label: 'Thinks', icon: Brain, href: '/thinks', color: 'text-blue-600' },
-  { label: 'Moments', icon: Clock, href: '/momentos', color: 'text-teal-600' },
+  { label: 'Panel', icon: Home, href: '/', color: 'text-gray-700' },
+  { label: 'Valores', icon: Heart, href: '/values', color: 'text-rose-600' },
+  { label: 'Visiones de Vida', icon: Sparkles, href: '/life-visions', color: 'text-purple-600' },
+  { label: 'Pensamientos', icon: Brain, href: '/thinks', color: 'text-blue-600' },
+  { label: 'Momentos', icon: Clock, href: '/momentos', color: 'text-teal-600' },
 ];

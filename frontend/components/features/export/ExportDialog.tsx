@@ -85,8 +85,8 @@ export function ExportDialog({ children }: ExportDialogProps) {
     if (!exportData || exportData.items.length === 0) {
       toast({
         variant: 'destructive',
-        title: 'No data to export',
-        description: 'There are no entries in the selected date range.',
+        title: 'Sin datos para exportar',
+        description: 'No hay entradas en el rango de fechas seleccionado.',
       });
       return;
     }
@@ -101,8 +101,8 @@ export function ExportDialog({ children }: ExportDialogProps) {
       downloadMarkdown(markdown, filename);
 
       toast({
-        title: 'Export successful',
-        description: `Downloaded ${exportData.items.length} entries to ${filename}`,
+        title: 'Exportación exitosa',
+        description: `Se descargaron ${exportData.items.length} entradas a ${filename}`,
       });
 
       setOpen(false);
@@ -110,7 +110,7 @@ export function ExportDialog({ children }: ExportDialogProps) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred';
       toast({
         variant: 'destructive',
-        title: 'Export failed',
+        title: 'Error en la exportación',
         description: message,
       });
     } finally {
@@ -128,15 +128,16 @@ export function ExportDialog({ children }: ExportDialogProps) {
         {children || (
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
-            Export
+            Exportar
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Export Journal</DialogTitle>
+          <DialogTitle>Exportar Diario</DialogTitle>
           <DialogDescription>
-            Export your moments and thinks to a markdown file. Select a date range to get started.
+            Exporta tus momentos y pensamientos a un archivo markdown. Selecciona un rango de fechas
+            para comenzar.
           </DialogDescription>
         </DialogHeader>
 
@@ -170,12 +171,13 @@ export function ExportDialog({ children }: ExportDialogProps) {
         <DialogFooter className="flex-col sm:flex-row gap-2">
           {hasMoreItems && (
             <p className="text-sm text-muted-foreground text-left sm:mr-auto">
-              Export is limited to {EXPORT_ROWS_DEFAULT} entries. Please narrow your date range.
+              La exportación está limitada a {EXPORT_ROWS_DEFAULT} entradas. Por favor reduce el
+              rango de fechas.
             </p>
           )}
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={isExporting}>
-              Cancel
+              Cancelar
             </Button>
             <Button
               onClick={handleExport}
@@ -187,12 +189,12 @@ export function ExportDialog({ children }: ExportDialogProps) {
               {isExporting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Exporting...
+                  Exportando...
                 </>
               ) : (
                 <>
                   <Download className="h-4 w-4" />
-                  Export to Markdown
+                  Exportar a Markdown
                 </>
               )}
             </Button>

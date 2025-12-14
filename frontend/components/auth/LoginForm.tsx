@@ -24,7 +24,9 @@ export function LoginForm() {
       // Navigation happens in auth context
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please check your credentials and try again.');
+      setError(
+        err.message || 'Error de inicio de sesión. Verifica tus credenciales e intenta de nuevo.',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -39,7 +41,7 @@ export function LoginForm() {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Correo electrónico</Label>
         <Input
           id="email"
           type="email"
@@ -53,7 +55,7 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Contraseña</Label>
         <Input
           id="password"
           type="password"
@@ -70,10 +72,10 @@ export function LoginForm() {
         {isLoading ? (
           <span className="flex items-center justify-center">
             <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-            Logging in...
+            Iniciando sesión...
           </span>
         ) : (
-          'Login'
+          'Iniciar sesión'
         )}
       </Button>
     </form>

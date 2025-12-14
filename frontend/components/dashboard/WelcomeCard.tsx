@@ -6,12 +6,12 @@ interface WelcomeCardProps {
 
 export function WelcomeCard({ userName }: WelcomeCardProps) {
   const currentHour = new Date().getHours();
-  let greeting = 'Good evening';
+  let greeting = 'Buenas noches';
 
   if (currentHour < 12) {
-    greeting = 'Good morning';
+    greeting = 'Buenos días';
   } else if (currentHour < 18) {
-    greeting = 'Good afternoon';
+    greeting = 'Buenas tardes';
   }
 
   return (
@@ -21,12 +21,12 @@ export function WelcomeCard({ userName }: WelcomeCardProps) {
           {greeting}, {userName}!
         </CardTitle>
         <CardDescription className="text-blue-100">
-          Welcome back to your personal development journey
+          Bienvenido de vuelta a tu viaje de desarrollo personal
         </CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-blue-50">
-          Track your thoughts, define your values, and achieve your goals all in one place.
+          Registra tus pensamientos, define tus valores y alcanza tus metas en un solo lugar.
         </p>
       </CardContent>
     </Card>

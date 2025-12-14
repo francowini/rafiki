@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { NewThink, ThinkCategory } from '@/lib/types';
+import { NewThink, ThinkCategory, THINK_CATEGORY_LABELS } from '@/lib/types';
 import { api, APIError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,7 +32,7 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
     setError(null);
 
     if (!content.trim()) {
-      setError('Content cannot be empty');
+      setError('El contenido no puede estar vacío');
       return;
     }
 
@@ -52,9 +52,9 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
       }
     } catch (err) {
       if (err instanceof APIError) {
-        setError(`Failed to create think: ${err.message}`);
+        setError(`Error al crear el pensamiento: ${err.message}`);
       } else {
-        setError('An unexpected error occurred');
+        setError('Ocurrió un error inesperado');
       }
     } finally {
       setIsSubmitting(false);
@@ -64,7 +64,7 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create New Think</CardTitle>
+        <CardTitle>Crear Nuevo Pensamiento</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -76,16 +76,16 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
 
           <div className="space-y-2">
             <label htmlFor="category" className="text-sm font-medium">
-              Category
+              Categoría
             </label>
             <Select value={category} onValueChange={(v) => setCategory(v as ThinkCategory)}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
+                <SelectValue placeholder="Selecciona una categoría" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    {THINK_CATEGORY_LABELS[cat]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -94,20 +94,20 @@ export function ThinkForm({ onSuccess }: ThinkFormProps) {
 
           <div className="space-y-2">
             <label htmlFor="content" className="text-sm font-medium">
-              Content
+              Contenido
             </label>
             <Textarea
               id="content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="What's on your mind?"
+              placeholder="¿Qué estás pensando?"
               rows={5}
               className="resize-none"
             />
           </div>
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? 'Creating...' : 'Create Think'}
+            {isSubmitting ? 'Creando...' : 'Crear Pensamiento'}
           </Button>
         </form>
       </CardContent>

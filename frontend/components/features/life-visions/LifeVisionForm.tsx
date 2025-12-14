@@ -23,9 +23,9 @@ import { useToast } from '@/hooks/use-toast';
 const lifeVisionSchema = z.object({
   content: z
     .string()
-    .min(10, 'Vision must be at least 10 characters')
-    .max(500, 'Vision must be less than 500 characters'),
-  valueId: z.string().uuid('Please select a value'),
+    .min(10, 'La visión debe tener al menos 10 caracteres')
+    .max(500, 'La visión debe tener menos de 500 caracteres'),
+  valueId: z.string().uuid('Por favor selecciona un valor'),
 });
 
 type LifeVisionFormData = z.infer<typeof lifeVisionSchema>;
@@ -94,8 +94,8 @@ export function LifeVisionForm({
           valueId: data.valueId,
         });
         toast({
-          title: 'Vision updated',
-          description: 'Your life vision has been successfully updated.',
+          title: 'Visión actualizada',
+          description: 'Tu visión de vida ha sido actualizada exitosamente.',
         });
       } else {
         const newVision: NewLifeVision = {
@@ -104,8 +104,8 @@ export function LifeVisionForm({
         };
         await api.lifeVisions.create(newVision);
         toast({
-          title: 'Vision created',
-          description: 'Your life vision has been successfully created.',
+          title: 'Visión creada',
+          description: 'Tu visión de vida ha sido creada exitosamente.',
         });
       }
 
@@ -114,7 +114,9 @@ export function LifeVisionForm({
       }
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : `Error ${isEditMode ? 'updating' : 'creating'} vision`;
+        err instanceof Error
+          ? err.message
+          : `Error al ${isEditMode ? 'actualizar' : 'crear'} la visión`;
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -125,7 +127,7 @@ export function LifeVisionForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <Alert className="bg-gray-50 border-gray-200">
         <AlertDescription className="text-sm text-gray-700">
-          Your life visions are private and only visible to you.
+          Tus visiones de vida son privadas y solo visibles para ti.
         </AlertDescription>
       </Alert>
 
@@ -137,11 +139,11 @@ export function LifeVisionForm({
 
       <div className="space-y-2">
         <Label htmlFor="valueId" className="text-base font-medium">
-          Value
+          Valor
         </Label>
         <Select value={selectedValueId} onValueChange={(value) => setValue('valueId', value)}>
           <SelectTrigger id="valueId">
-            <SelectValue placeholder="Select a value" />
+            <SelectValue placeholder="Selecciona un valor" />
           </SelectTrigger>
           <SelectContent>
             {values.map((value) => {
@@ -168,18 +170,18 @@ export function LifeVisionForm({
 
       <div className="space-y-2">
         <Label htmlFor="content" className="text-base font-medium">
-          Your vision
+          Tu visión
         </Label>
         <Textarea
           id="content"
           {...register('content')}
-          placeholder="Example: In 5 years, I see myself leading a team that builds products that help millions of people live healthier lives..."
+          placeholder="Ejemplo: En 5 años, me veo liderando un equipo que construye productos que ayudan a millones de personas a vivir vidas más saludables..."
           className="min-h-32 text-base"
           maxLength={500}
         />
         <p className="text-sm text-muted-foreground">
-          Describe how you want to live this value. Be specific and paint a picture (10-500
-          characters). We recommend max 2 visions per value for clarity.
+          Describe cómo quieres vivir este valor. Sé específico y pinta una imagen (10-500
+          caracteres). Recomendamos máximo 2 visiones por valor para mayor claridad.
         </p>
         {errors.content && <p className="text-sm text-destructive">{errors.content.message}</p>}
       </div>
@@ -187,7 +189,7 @@ export function LifeVisionForm({
       <div className="flex gap-3 pt-4">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
-            Cancel
+            Cancelar
           </Button>
         )}
         <Button
@@ -197,11 +199,11 @@ export function LifeVisionForm({
         >
           {isSubmitting
             ? isEditMode
-              ? 'Updating...'
-              : 'Saving...'
+              ? 'Actualizando...'
+              : 'Guardando...'
             : isEditMode
-              ? 'Update vision'
-              : 'Save vision'}
+              ? 'Actualizar visión'
+              : 'Guardar visión'}
         </Button>
       </div>
     </form>

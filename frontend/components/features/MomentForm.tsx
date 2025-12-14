@@ -12,15 +12,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 const momentSchema = z.object({
-  momentDate: z.string().min(1, 'Date is required'),
-  situation: z.string().min(1, 'This field is required'),
-  thoughts: z.string().min(1, 'This field is required'),
-  physicalSymptoms: z.string().min(1, 'This field is required'),
-  behavior: z.string().min(1, 'This field is required'),
-  consequences: z.string().min(1, 'This field is required'),
-  valuesReflection: z.string().min(1, 'This field is required'),
+  momentDate: z.string().min(1, 'La fecha es requerida'),
+  situation: z.string().min(1, 'Este campo es requerido'),
+  thoughts: z.string().min(1, 'Este campo es requerido'),
+  physicalSymptoms: z.string().min(1, 'Este campo es requerido'),
+  behavior: z.string().min(1, 'Este campo es requerido'),
+  consequences: z.string().min(1, 'Este campo es requerido'),
+  valuesReflection: z.string().min(1, 'Este campo es requerido'),
   intensity: z.number().min(0).max(10),
 });
 
@@ -122,7 +123,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         onSuccess();
       }
     } catch (err: any) {
-      setError(err.message || `Error ${isEditMode ? 'updating' : 'saving'} the moment`);
+      setError(err.message || `Error al ${isEditMode ? 'actualizar' : 'guardar'} el momento`);
     } finally {
       setIsSubmitting(false);
     }
@@ -133,7 +134,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
       {/* Privacy Message */}
       <Alert className="bg-purple-50 border-purple-200">
         <AlertDescription className="text-sm text-purple-900">
-          Only you can see this. Your data is safe and private.
+          Solo tú puedes ver esto. Tus datos están seguros y son privados.
         </AlertDescription>
       </Alert>
 
@@ -147,7 +148,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
       {/* Date/Time Field */}
       <div className="space-y-2">
         <Label htmlFor="momentDate" className="text-base font-medium">
-          Date and time
+          Fecha y hora
         </Label>
         <Input
           id="momentDate"
@@ -162,51 +163,54 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
 
       {/* Situation Field */}
       <div className="space-y-2">
-        <Label htmlFor="situation" className="text-base font-medium">
-          Situation (Where were you? What happened before?)
+        <Label htmlFor="situation" className="text-base font-medium flex items-center gap-2">
+          Situación (¿Dónde estabas? ¿Qué pasó antes?)
+          <HelpTooltip content="Describe el contexto: lugar, personas presentes, momento del día" />
         </Label>
         <Textarea
           id="situation"
           {...register('situation')}
-          placeholder="Example: I was at home, I had just eaten lunch alone..."
+          placeholder="Ejemplo: Estaba en casa, había almorzado solo..."
           className="min-h-24 text-base"
         />
         <p className="text-sm text-muted-foreground">
-          Briefly describe where you were and what was happening before you felt bad.
+          Describe brevemente dónde estabas y qué estaba pasando antes de sentirte mal.
         </p>
         {errors.situation && <p className="text-sm text-destructive">{errors.situation.message}</p>}
       </div>
 
       {/* Thoughts Field */}
       <div className="space-y-2">
-        <Label htmlFor="thoughts" className="text-base font-medium">
-          Thoughts that appeared (What did I think?)
+        <Label htmlFor="thoughts" className="text-base font-medium flex items-center gap-2">
+          Pensamientos que aparecieron (¿Qué pensé?)
+          <HelpTooltip content="Registra los pensamientos automáticos que surgieron, aunque parezcan irracionales" />
         </Label>
         <Textarea
           id="thoughts"
           {...register('thoughts')}
-          placeholder="Example: I'm wasting my time, I don't know what I'm going to do with my life..."
+          placeholder="Ejemplo: Estoy perdiendo el tiempo, no sé qué voy a hacer con mi vida..."
           className="min-h-24 text-base"
         />
         <p className="text-sm text-muted-foreground">
-          What thoughts came to your mind? What were you telling yourself?
+          ¿Qué pensamientos vinieron a tu mente? ¿Qué te estabas diciendo?
         </p>
         {errors.thoughts && <p className="text-sm text-destructive">{errors.thoughts.message}</p>}
       </div>
 
       {/* Physical Symptoms Field */}
       <div className="space-y-2">
-        <Label htmlFor="physicalSymptoms" className="text-base font-medium">
-          Physical symptoms or emotions (What did I feel?)
+        <Label htmlFor="physicalSymptoms" className="text-base font-medium flex items-center gap-2">
+          Síntomas físicos o emociones (¿Qué sentí?)
+          <HelpTooltip content="Las sensaciones físicas son señales importantes de tu estado emocional" />
         </Label>
         <Textarea
           id="physicalSymptoms"
           {...register('physicalSymptoms')}
-          placeholder="Example: Heart palpitations, sweaty palms, anxiety, sadness..."
+          placeholder="Ejemplo: Palpitaciones, manos sudorosas, ansiedad, tristeza..."
           className="min-h-24 text-base"
         />
         <p className="text-sm text-muted-foreground">
-          How did your body feel? What emotions did you experience?
+          ¿Cómo se sentía tu cuerpo? ¿Qué emociones experimentaste?
         </p>
         {errors.physicalSymptoms && (
           <p className="text-sm text-destructive">{errors.physicalSymptoms.message}</p>
@@ -215,34 +219,36 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
 
       {/* Behavior Field */}
       <div className="space-y-2">
-        <Label htmlFor="behavior" className="text-base font-medium">
-          What you did (What did I do?)
+        <Label htmlFor="behavior" className="text-base font-medium flex items-center gap-2">
+          Lo que hiciste (¿Qué hice?)
+          <HelpTooltip content="No juzgues tus acciones, solo obsérvalas y descríbelas" />
         </Label>
         <Textarea
           id="behavior"
           {...register('behavior')}
-          placeholder="Example: I started cleaning, went for a walk, called a friend..."
+          placeholder="Ejemplo: Empecé a limpiar, salí a caminar, llamé a un amigo..."
           className="min-h-24 text-base"
         />
         <p className="text-sm text-muted-foreground">
-          What did you do in response? Describe your actions.
+          ¿Qué hiciste en respuesta? Describe tus acciones.
         </p>
         {errors.behavior && <p className="text-sm text-destructive">{errors.behavior.message}</p>}
       </div>
 
       {/* Consequences Field */}
       <div className="space-y-2">
-        <Label htmlFor="consequences" className="text-base font-medium">
-          Immediate consequences
+        <Label htmlFor="consequences" className="text-base font-medium flex items-center gap-2">
+          Consecuencias inmediatas
+          <HelpTooltip content="Las consecuencias a corto plazo pueden ser diferentes de las de largo plazo" />
         </Label>
         <Textarea
           id="consequences"
           {...register('consequences')}
-          placeholder="Example: I felt a bit better, but then I felt sadder..."
+          placeholder="Ejemplo: Me sentí un poco mejor, pero luego me sentí más triste..."
           className="min-h-24 text-base"
         />
         <p className="text-sm text-muted-foreground">
-          How did you feel right after doing that? What changed?
+          ¿Cómo te sentiste justo después de hacer eso? ¿Qué cambió?
         </p>
         {errors.consequences && (
           <p className="text-sm text-destructive">{errors.consequences.message}</p>
@@ -251,17 +257,18 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
 
       {/* Values Reflection Field */}
       <div className="space-y-2">
-        <Label htmlFor="valuesReflection" className="text-base font-medium">
-          Did I avoid or approach something important to me?
+        <Label htmlFor="valuesReflection" className="text-base font-medium flex items-center gap-2">
+          ¿Evité o me acerqué a algo importante para mí?
+          <HelpTooltip content="Reflexiona si tu comportamiento te acercó o alejó de tus valores personales" />
         </Label>
         <Textarea
           id="valuesReflection"
           {...register('valuesReflection')}
-          placeholder="Example: I avoided being with myself, I didn't progress on anything I want for myself..."
+          placeholder="Ejemplo: Evité estar conmigo mismo, no avancé en nada que quiero para mí..."
           className="min-h-24 text-base"
         />
         <p className="text-sm text-muted-foreground">
-          Think about whether what you did brought you closer or further from something you value.
+          Piensa si lo que hiciste te acercó o alejó de algo que valoras.
         </p>
         {errors.valuesReflection && (
           <p className="text-sm text-destructive">{errors.valuesReflection.message}</p>
@@ -271,7 +278,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
       {/* Intensity Slider */}
       <div className="space-y-4">
         <Label htmlFor="intensity" className="text-base font-medium">
-          Distress intensity: {intensity}/10
+          Intensidad del malestar: {intensity}/10
         </Label>
         <Slider
           id="intensity"
@@ -283,9 +290,9 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
           className="py-4"
         />
         <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Mild</span>
-          <span>Moderate</span>
-          <span>Intense</span>
+          <span>Leve</span>
+          <span>Moderado</span>
+          <span>Intenso</span>
         </div>
         {errors.intensity && <p className="text-sm text-destructive">{errors.intensity.message}</p>}
       </div>
@@ -294,7 +301,7 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
       <div className="flex gap-3 pt-4">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
-            Cancel
+            Cancelar
           </Button>
         )}
         <Button
@@ -304,11 +311,11 @@ export function MomentForm({ moment, onSuccess, onCancel }: MomentFormProps) {
         >
           {isSubmitting
             ? isEditMode
-              ? 'Updating...'
-              : 'Saving...'
+              ? 'Actualizando...'
+              : 'Guardando...'
             : isEditMode
-              ? 'Update moment'
-              : 'Save moment'}
+              ? 'Actualizar momento'
+              : 'Guardar momento'}
         </Button>
       </div>
     </form>

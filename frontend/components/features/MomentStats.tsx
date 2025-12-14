@@ -35,13 +35,13 @@ export function MomentStats({ thisWeek, thisMonth, last30Days, isLoading }: Mome
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Clock className="h-5 w-5 text-gray-600" />
-        <h2 className="text-lg font-semibold text-gray-900">Your Reflections</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Tus Reflexiones</h2>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <StatCard label="This Week" value={thisWeek} isLoading={isLoading} />
-        <StatCard label="This Month" value={thisMonth} isLoading={isLoading} />
-        <StatCard label="Last 30 Days" value={last30Days} isLoading={isLoading} />
+        <StatCard label="Esta Semana" value={thisWeek} isLoading={isLoading} />
+        <StatCard label="Este Mes" value={thisMonth} isLoading={isLoading} />
+        <StatCard label="Últimos 30 Días" value={last30Days} isLoading={isLoading} />
       </div>
     </div>
   );

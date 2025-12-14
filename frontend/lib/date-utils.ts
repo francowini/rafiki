@@ -61,10 +61,10 @@ export function parseDateFromInput(value: string): Date {
 }
 
 /**
- * Formats a Date for display in markdown exports (e.g., "Monday, November 27, 2025").
- * Uses 'en-US' locale. For i18n support, pass locale as a parameter.
+ * Formats a Date for display in markdown exports (e.g., "lunes, 27 de noviembre de 2025").
+ * Uses 'es-MX' locale. For i18n support, pass locale as a parameter.
  */
-export function formatDateForMarkdown(date: Date | string, locale = 'en-US'): string {
+export function formatDateForMarkdown(date: Date | string, locale = 'es-MX'): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString(locale, {
     weekday: 'long',
@@ -76,10 +76,10 @@ export function formatDateForMarkdown(date: Date | string, locale = 'en-US'): st
 
 /**
  * Formats a Date with time for display in markdown exports
- * (e.g., "Monday, November 27, 2025, 03:45 PM").
- * Uses 'en-US' locale. For i18n support, pass locale as a parameter.
+ * (e.g., "lunes, 27 de noviembre de 2025, 03:45 p.m.").
+ * Uses 'es-MX' locale. For i18n support, pass locale as a parameter.
  */
-export function formatDateTimeForMarkdown(date: Date | string, locale = 'en-US'): string {
+export function formatDateTimeForMarkdown(date: Date | string, locale = 'es-MX'): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleString(locale, {
     weekday: 'long',
@@ -96,14 +96,14 @@ export function formatDateTimeForMarkdown(date: Date | string, locale = 'en-US')
  */
 export function validateDateRange(startDate: Date, endDate: Date): string | null {
   if (startDate > endDate) {
-    return 'Start date must be before end date';
+    return 'La fecha de inicio debe ser antes de la fecha de fin';
   }
 
   const maxDays = 365;
   const diffDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays > maxDays) {
-    return `Date range cannot exceed ${maxDays} days`;
+    return `El rango de fechas no puede exceder ${maxDays} días`;
   }
 
   return null;

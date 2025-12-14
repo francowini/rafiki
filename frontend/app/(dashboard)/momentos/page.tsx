@@ -69,8 +69,10 @@ export default function MomentosPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Moments</h1>
-          <p className="text-muted-foreground mt-1">Record and reflect on your difficult moments</p>
+          <h1 className="text-3xl font-bold tracking-tight">Momentos</h1>
+          <p className="text-muted-foreground mt-1">
+            Registra y reflexiona sobre tus momentos difíciles
+          </p>
         </div>
 
         <div className="flex gap-3">
@@ -78,7 +80,7 @@ export default function MomentosPage() {
           <ExportDialog>
             <Button variant="outline" size="lg">
               <Download className="h-5 w-5 mr-2" />
-              Export
+              Exportar
             </Button>
           </ExportDialog>
 
@@ -87,14 +89,15 @@ export default function MomentosPage() {
             <SheetTrigger asChild>
               <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
                 <Plus className="h-5 w-5 mr-2" />
-                New moment
+                Nuevo momento
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
               <SheetHeader>
-                <SheetTitle className="text-xl">Record a moment</SheetTitle>
+                <SheetTitle className="text-xl">Registrar un momento</SheetTitle>
                 <SheetDescription>
-                  Take your time to describe what happened. There are no right or wrong answers.
+                  Tómate tu tiempo para describir lo que pasó. No hay respuestas correctas o
+                  incorrectas.
                 </SheetDescription>
               </SheetHeader>
               <div className="mt-6">
@@ -124,8 +127,8 @@ export default function MomentosPage() {
       <Sheet open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="text-xl">Edit moment</SheetTitle>
-            <SheetDescription>Update your moment information.</SheetDescription>
+            <SheetTitle className="text-xl">Editar momento</SheetTitle>
+            <SheetDescription>Actualiza la información de tu momento.</SheetDescription>
           </SheetHeader>
           <div className="mt-6">
             <MomentForm
@@ -147,18 +150,18 @@ export default function MomentosPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The moment will be permanently deleted.
+              Esta acción no se puede deshacer. El momento será eliminado permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Delete
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
