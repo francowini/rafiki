@@ -25,7 +25,7 @@ export function MobileNav() {
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="lg:hidden">
           <Menu className="h-5 w-5" aria-hidden="true" focusable={false} />
-          <span className="sr-only">Toggle menu</span>
+          <span className="sr-only">Alternar menú</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-64">

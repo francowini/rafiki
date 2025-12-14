@@ -106,14 +106,14 @@ export function AppSidebar() {
           variant="ghost"
           size="sm"
           onClick={toggleCollapsed}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expandir barra lateral' : 'Contraer barra lateral'}
           className={cn('w-full', collapsed && 'justify-center')}
         >
           <ChevronLeft
             className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')}
             aria-hidden="true"
           />
-          {!collapsed && <span className="ml-2">Collapse</span>}
+          {!collapsed && <span className="ml-2">Contraer</span>}
         </Button>
       </div>
     </aside>

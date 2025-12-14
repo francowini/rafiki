@@ -50,10 +50,13 @@ export default function LifeVisionsPage() {
       setValues(valuesRes.items);
       setVisions(visionsRes.items);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load data. Please try again.';
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'No se pudieron cargar los datos. Por favor intenta de nuevo.';
       toast({
         variant: 'destructive',
-        title: 'Error loading data',
+        title: 'Error al cargar datos',
         description: message,
       });
     } finally {
@@ -88,17 +91,19 @@ export default function LifeVisionsPage() {
     try {
       await api.lifeVisions.delete(visionToDelete.id);
       toast({
-        title: 'Vision deleted',
-        description: 'Your life vision has been successfully deleted.',
+        title: 'Visión eliminada',
+        description: 'Tu visión de vida ha sido eliminada exitosamente.',
       });
       setVisionToDelete(null);
       fetchData();
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Failed to delete vision. Please try again.';
+        err instanceof Error
+          ? err.message
+          : 'No se pudo eliminar la visión. Por favor intenta de nuevo.';
       toast({
         variant: 'destructive',
-        title: 'Error deleting vision',
+        title: 'Error al eliminar visión',
         description: message,
       });
     } finally {
@@ -133,19 +138,19 @@ export default function LifeVisionsPage() {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-8 w-8 text-gray-600" />
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Life Visions</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Visiones de Vida</h1>
           </div>
-          <p className="text-muted-foreground">Define how you want to live each of your values</p>
+          <p className="text-muted-foreground">Define cómo quieres vivir cada uno de tus valores</p>
         </div>
 
         <div className="border rounded-lg p-8 text-center">
           <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">No values defined yet</h3>
+          <h3 className="text-lg font-medium mb-2">Aún no hay valores definidos</h3>
           <p className="text-muted-foreground mb-6">
-            You need to create values first before adding life visions.
+            Necesitas crear valores primero antes de agregar visiones de vida.
           </p>
           <Link href="/values">
-            <Button>Define your values</Button>
+            <Button>Define tus valores</Button>
           </Link>
         </div>
       </div>
@@ -159,24 +164,26 @@ export default function LifeVisionsPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="h-8 w-8 text-gray-600" />
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Life Visions</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Visiones de Vida</h1>
             </div>
-            <p className="text-muted-foreground">Define how you want to live each of your values</p>
+            <p className="text-muted-foreground">
+              Define cómo quieres vivir cada uno de tus valores
+            </p>
           </div>
 
           <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
             <SheetTrigger asChild>
               <Button size="lg">
                 <Plus className="h-5 w-5 mr-2" />
-                New vision
+                Nueva visión
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
               <SheetHeader>
-                <SheetTitle className="text-xl">Create a life vision</SheetTitle>
+                <SheetTitle className="text-xl">Crear una visión de vida</SheetTitle>
                 <SheetDescription>
-                  Describe how you want to live a specific value. Paint a picture of your ideal
-                  future.
+                  Describe cómo quieres vivir un valor específico. Pinta una imagen de tu futuro
+                  ideal.
                 </SheetDescription>
               </SheetHeader>
               <div className="mt-6">
@@ -193,8 +200,9 @@ export default function LifeVisionsPage() {
         <Alert className="bg-gray-50 border-gray-200">
           <Info className="h-4 w-4 text-gray-600" />
           <AlertDescription className="text-sm text-gray-700">
-            Each value can have multiple visions, but we recommend max 2 per value for clarity.
-            Visions help you translate abstract values into concrete life goals.
+            Cada valor puede tener múltiples visiones, pero recomendamos máximo 2 por valor para
+            mayor claridad. Las visiones te ayudan a traducir valores abstractos en metas de vida
+            concretas.
           </AlertDescription>
         </Alert>
       </div>
@@ -214,9 +222,9 @@ export default function LifeVisionsPage() {
       <Sheet open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="text-xl">Edit life vision</SheetTitle>
+            <SheetTitle className="text-xl">Editar visión de vida</SheetTitle>
             <SheetDescription>
-              Update your vision statement or move it to a different value.
+              Actualiza tu declaración de visión o muévela a un valor diferente.
             </SheetDescription>
           </SheetHeader>
           <div className="mt-6">
@@ -239,13 +247,13 @@ export default function LifeVisionsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this life vision. This action cannot be undone.
+              Esto eliminará permanentemente esta visión de vida. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
@@ -254,10 +262,10 @@ export default function LifeVisionsPage() {
               {isDeleting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
+                  Eliminando...
                 </>
               ) : (
-                'Delete'
+                'Eliminar'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

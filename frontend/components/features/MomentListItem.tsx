@@ -18,15 +18,15 @@ function formatDate(dateValue: string): { dateStr: string; timeStr: string } {
 
   // Guard against invalid dates
   if (isNaN(date.getTime())) {
-    return { dateStr: 'Invalid date', timeStr: '' };
+    return { dateStr: 'Fecha inválida', timeStr: '' };
   }
 
-  const dateStr = date.toLocaleDateString('en-US', {
+  const dateStr = date.toLocaleDateString('es-MX', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
-  const timeStr = date.toLocaleTimeString('en-US', {
+  const timeStr = date.toLocaleTimeString('es-MX', {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -87,12 +87,12 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
 
         <div className="space-y-2 text-sm">
           <div>
-            <span className="font-medium text-gray-700">Situation: </span>
+            <span className="font-medium text-gray-700">Situación: </span>
             <span className="text-gray-600">{situationPreview}</span>
           </div>
           {!expanded && (
             <div>
-              <span className="font-medium text-gray-700">Thoughts: </span>
+              <span className="font-medium text-gray-700">Pensamientos: </span>
               <span className="text-gray-600">{thoughtsPreview}</span>
             </div>
           )}
@@ -102,27 +102,29 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t pt-3">
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Thoughts</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Pensamientos</p>
             <p className="text-sm text-gray-700">{moment.thoughts}</p>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Physical Symptoms</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Síntomas Físicos</p>
             <p className="text-sm text-gray-700">{moment.physicalSymptoms}</p>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Behavior</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Comportamiento</p>
             <p className="text-sm text-gray-700">{moment.behavior}</p>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Consequences</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Consecuencias</p>
             <p className="text-sm text-gray-700">{moment.consequences}</p>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Values Reflection</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
+              Reflexión de Valores
+            </p>
             <p className="text-sm text-gray-700">{moment.valuesReflection}</p>
           </div>
 
@@ -139,7 +141,7 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
                 className="flex-1"
               >
                 <Edit className="h-4 w-4 mr-1" />
-                Edit
+                Editar
               </Button>
             )}
             {onDelete && (
@@ -147,8 +149,8 @@ export function MomentListItem({ moment, onEdit, onDelete }: MomentListItemProps
                 type="button"
                 size="sm"
                 variant="outline"
-                aria-label="Delete moment"
-                title="Delete moment"
+                aria-label="Eliminar momento"
+                title="Eliminar momento"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete();

@@ -36,14 +36,16 @@ export function UserMenu() {
         {user.roles.includes('ADMIN') && (
           <>
             <DropdownMenuItem disabled>
-              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Admin</span>
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                Administrador
+              </span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
         )}
         <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600">
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Logout</span>
+          <span>Cerrar sesión</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

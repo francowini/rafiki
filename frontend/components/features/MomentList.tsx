@@ -47,7 +47,7 @@ export function MomentList({
       }
     } catch (err: unknown) {
       if (currentRequestId === requestIdRef.current) {
-        setError(err instanceof Error ? err.message : 'Error loading moments');
+        setError(err instanceof Error ? err.message : 'Error al cargar los momentos');
       }
     } finally {
       if (currentRequestId === requestIdRef.current) {
@@ -76,7 +76,7 @@ export function MomentList({
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
         <Button onClick={loadMoments} variant="outline" className="mt-4">
-          Retry
+          Reintentar
         </Button>
       </Alert>
     );
@@ -86,10 +86,10 @@ export function MomentList({
     return (
       <div className="text-center py-12">
         <div className="mx-auto max-w-md space-y-4">
-          <h3 className="text-lg font-medium text-muted-foreground">No moments recorded</h3>
+          <h3 className="text-lg font-medium text-muted-foreground">No hay momentos registrados</h3>
           <p className="text-sm text-muted-foreground">
-            When you&apos;re ready, this space is here for you. Record your difficult moments to
-            better understand them and find patterns.
+            Cuando estés listo, este espacio está aquí para ti. Registra tus momentos difíciles para
+            entenderlos mejor y encontrar patrones.
           </p>
         </div>
       </div>
@@ -116,17 +116,17 @@ export function MomentList({
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
           >
-            Previous
+            Anterior
           </Button>
           <span className="text-sm text-muted-foreground">
-            Page {page} of {Math.ceil(total / 20)}
+            Página {page} de {Math.ceil(total / 20)}
           </span>
           <Button
             variant="outline"
             onClick={() => setPage((p) => p + 1)}
             disabled={page >= Math.ceil(total / 20)}
           >
-            Next
+            Siguiente
           </Button>
         </div>
       )}

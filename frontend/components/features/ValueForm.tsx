@@ -22,8 +22,8 @@ import { getAllFacets, getFacetConfig } from '@/lib/value-utils';
 const valueSchema = z.object({
   content: z
     .string()
-    .min(3, 'Value must be at least 3 characters')
-    .max(200, 'Value must be less than 200 characters'),
+    .min(3, 'El valor debe tener al menos 3 caracteres')
+    .max(200, 'El valor debe tener menos de 200 caracteres'),
   facet: z.enum(FACETS),
   displayOrder: z.number().int().min(1).max(10),
 });
@@ -89,7 +89,9 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
     try {
       // Check limit (only for create mode)
       if (!isEditMode && existingValuesCount >= 10) {
-        setError('You can only have up to 10 values. Please delete one before adding a new value.');
+        setError(
+          'Solo puedes tener hasta 10 valores. Por favor elimina uno antes de agregar uno nuevo.',
+        );
         setIsSubmitting(false);
         return;
       }
@@ -115,7 +117,7 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
         onSuccess();
       }
     } catch (err: any) {
-      setError(err.message || `Error ${isEditMode ? 'updating' : 'creating'} value`);
+      setError(err.message || `Error al ${isEditMode ? 'actualizar' : 'crear'} el valor`);
     } finally {
       setIsSubmitting(false);
     }
@@ -129,7 +131,7 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
       {/* Privacy Message */}
       <Alert className="bg-rose-50 border-rose-200">
         <AlertDescription className="text-sm text-rose-900">
-          Your values are private and only visible to you.
+          Tus valores son privados y solo visibles para ti.
         </AlertDescription>
       </Alert>
 
@@ -143,17 +145,17 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
       {/* Content Field */}
       <div className="space-y-2">
         <Label htmlFor="content" className="text-base font-medium">
-          Your value statement
+          Tu declaración de valor
         </Label>
         <Textarea
           id="content"
           {...register('content')}
-          placeholder="Example: Live with integrity and authenticity in all my relationships"
+          placeholder="Ejemplo: Vivir con integridad y autenticidad en todas mis relaciones"
           className="min-h-24 text-base"
           maxLength={200}
         />
         <p className="text-sm text-muted-foreground">
-          Describe what matters most to you (3-200 characters)
+          Describe lo que más te importa (3-200 caracteres)
         </p>
         {errors.content && <p className="text-sm text-destructive">{errors.content.message}</p>}
       </div>
@@ -161,11 +163,11 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
       {/* Facet Selection */}
       <div className="space-y-2">
         <Label htmlFor="facet" className="text-base font-medium">
-          Life area
+          Área de vida
         </Label>
         <Select value={selectedFacet} onValueChange={(value) => setValue('facet', value as Facet)}>
           <SelectTrigger id="facet">
-            <SelectValue placeholder="Select a life area" />
+            <SelectValue placeholder="Selecciona un área de vida" />
           </SelectTrigger>
           <SelectContent>
             {allFacets.map((facet) => {
@@ -193,7 +195,7 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
       {/* Display Order Field */}
       <div className="space-y-2">
         <Label htmlFor="displayOrder" className="text-base font-medium">
-          Priority (1 = most important)
+          Prioridad (1 = más importante)
         </Label>
         <Select
           value={watch('displayOrder').toString()}
@@ -205,13 +207,13 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
           <SelectContent>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
               <SelectItem key={num} value={num.toString()}>
-                #{num} {num === 1 && '(Core Value)'}
+                #{num} {num === 1 && '(Valor Fundamental)'}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">
-          Rank your values from most to least important
+          Ordena tus valores de más a menos importante
         </p>
         {errors.displayOrder && (
           <p className="text-sm text-destructive">{errors.displayOrder.message}</p>
@@ -222,7 +224,7 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
       <div className="flex gap-3 pt-4">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
-            Cancel
+            Cancelar
           </Button>
         )}
         <Button
@@ -232,11 +234,11 @@ export function ValueForm({ value, existingValuesCount, onSuccess, onCancel }: V
         >
           {isSubmitting
             ? isEditMode
-              ? 'Updating...'
-              : 'Saving...'
+              ? 'Actualizando...'
+              : 'Guardando...'
             : isEditMode
-              ? 'Update value'
-              : 'Save value'}
+              ? 'Actualizar valor'
+              : 'Guardar valor'}
         </Button>
       </div>
     </form>

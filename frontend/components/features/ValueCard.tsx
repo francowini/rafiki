@@ -72,7 +72,7 @@ export function ValueCard({ value, rank, onEdit, onDelete, isDragging = false }:
                 {onEdit && (
                   <DropdownMenuItem onClick={onEdit}>
                     <Edit className="h-4 w-4 mr-2" />
-                    Edit
+                    Editar
                   </DropdownMenuItem>
                 )}
                 {onDelete && (
@@ -81,7 +81,7 @@ export function ValueCard({ value, rank, onEdit, onDelete, isDragging = false }:
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
+                    Eliminar
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -93,14 +93,14 @@ export function ValueCard({ value, rank, onEdit, onDelete, isDragging = false }:
       <CardContent className="space-y-4">
         <p className="text-sm text-foreground leading-relaxed">{value.content}</p>
         <p className="text-xs text-muted-foreground">
-          Updated{' '}
+          Actualizado{' '}
           {(() => {
             try {
               const date = new Date(value.dateUpdated);
-              if (isNaN(date.getTime())) return 'recently';
-              return date.toLocaleDateString();
+              if (isNaN(date.getTime())) return 'recientemente';
+              return date.toLocaleDateString('es-MX');
             } catch {
-              return 'recently';
+              return 'recientemente';
             }
           })()}
         </p>

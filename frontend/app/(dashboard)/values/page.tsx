@@ -61,16 +61,16 @@ export default function ValuesPage() {
     try {
       await api.values.delete(valueToDelete.id);
       toast({
-        title: 'Value deleted',
-        description: 'Your value has been successfully deleted.',
+        title: 'Valor eliminado',
+        description: 'Tu valor ha sido eliminado exitosamente.',
       });
       setValueToDelete(null);
       setRefresh((prev) => prev + 1);
     } catch (err: any) {
       toast({
         variant: 'destructive',
-        title: 'Error deleting value',
-        description: err.message || 'Failed to delete value. Please try again.',
+        title: 'Error al eliminar valor',
+        description: err.message || 'No se pudo eliminar el valor. Por favor intenta de nuevo.',
       });
     } finally {
       setIsDeleting(false);
@@ -83,8 +83,8 @@ export default function ValuesPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Values</h1>
-            <p className="text-muted-foreground mt-1">Define what matters most in your life</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Valores</h1>
+            <p className="text-muted-foreground mt-1">Define lo que más importa en tu vida</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -106,14 +106,14 @@ export default function ValuesPage() {
                   className="bg-rose-600 hover:bg-rose-700"
                 >
                   <Plus className="h-5 w-5 mr-2" />
-                  New value
+                  Nuevo valor
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
                 <SheetHeader>
-                  <SheetTitle className="text-xl">Define a value</SheetTitle>
+                  <SheetTitle className="text-xl">Define un valor</SheetTitle>
                   <SheetDescription>
-                    What do you care about? What guides your decisions and actions?
+                    ¿Qué te importa? ¿Qué guía tus decisiones y acciones?
                   </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6">
@@ -126,7 +126,7 @@ export default function ValuesPage() {
               </SheetContent>
             </Sheet>
             {valuesCount >= 10 && (
-              <p className="text-sm text-muted-foreground italic">Maximum of 10 values reached</p>
+              <p className="text-sm text-muted-foreground italic">Máximo de 10 valores alcanzado</p>
             )}
           </div>
         </div>
@@ -135,8 +135,8 @@ export default function ValuesPage() {
         <Alert className="bg-gray-50 border-gray-200">
           <Info className="h-4 w-4 text-gray-600" />
           <AlertDescription className="text-sm text-gray-700">
-            You can define up to <strong>10 core values</strong>. Drag to reorder and set your
-            priorities. Gaps are allowed when you delete values.
+            Puedes definir hasta <strong>10 valores fundamentales</strong>. Arrastra para reordenar
+            y establecer tus prioridades. Se permiten espacios cuando eliminas valores.
           </AlertDescription>
         </Alert>
       </div>
@@ -153,8 +153,8 @@ export default function ValuesPage() {
       <Sheet open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="text-xl">Edit value</SheetTitle>
-            <SheetDescription>Update your value statement or priority.</SheetDescription>
+            <SheetTitle className="text-xl">Editar valor</SheetTitle>
+            <SheetDescription>Actualiza tu declaración de valor o prioridad.</SheetDescription>
           </SheetHeader>
           <div className="mt-6">
             <ValueForm
@@ -174,19 +174,19 @@ export default function ValuesPage() {
       <AlertDialog open={!!valueToDelete} onOpenChange={(open) => !open && setValueToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this value. This action cannot be undone.
+              Esto eliminará permanentemente este valor. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? 'Eliminando...' : 'Eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
