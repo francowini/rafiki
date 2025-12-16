@@ -145,6 +145,132 @@ func (a *app) delete(ctx context.Context, r *http.Request) web.Encoder {
 	return nil
 }
 
+// archive handles PUT /v1/lifevisions/{lifevision_id}/archive
+func (a *app) archive(ctx context.Context, r *http.Request) web.Encoder {
+	lifeVisionID, err := uuid.Parse(web.Param(r, "lifevision_id"))
+	if err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
+	lifeVision, err := a.lifeVisionBus.QueryByID(ctx, lifeVisionID)
+	if err != nil {
+		if errors.Is(err, lifevisionbus.ErrNotFound) {
+			return errs.New(errs.NotFound, err)
+		}
+		return errs.Newf(errs.Internal, "querybyid: lifeVisionID[%s]: %s", lifeVisionID, err)
+	}
+
+	if lifeVision.UserID != userID {
+		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
+	}
+
+	lifeVision, err = a.lifeVisionBus.Archive(ctx, lifeVision)
+	if err != nil {
+		if errors.Is(err, lifevisionbus.ErrAlreadyArchived) {
+			return errs.New(errs.InvalidArgument, err)
+		}
+		return errs.Newf(errs.Internal, "archive: %s", err)
+	}
+
+	return toAppLifeVision(lifeVision)
+}
+
+// restore handles PUT /v1/lifevisions/{lifevision_id}/restore
+func (a *app) restore(ctx context.Context, r *http.Request) web.Encoder {
+	lifeVisionID, err := uuid.Parse(web.Param(r, "lifevision_id"))
+	if err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
+	// Query with includeArchived=true to find archived life visions
+	filter := lifevisionbus.QueryFilter{
+		ID:              &lifeVisionID,
+		UserID:          &userID,
+		IncludeArchived: true,
+	}
+	lifeVisions, err := a.lifeVisionBus.Query(ctx, filter, order.NewBy("", ""), page.MustParse("1", "1"))
+	if err != nil || len(lifeVisions) == 0 {
+		return errs.New(errs.NotFound, lifevisionbus.ErrNotFound)
+	}
+
+	lifeVision := lifeVisions[0]
+	if lifeVision.UserID != userID {
+		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
+	}
+
+	lifeVision, err = a.lifeVisionBus.Restore(ctx, lifeVision)
+	if err != nil {
+		if errors.Is(err, lifevisionbus.ErrNotArchived) {
+			return errs.New(errs.InvalidArgument, err)
+		}
+		return errs.Newf(errs.Internal, "restore: %s", err)
+	}
+
+	return toAppLifeVision(lifeVision)
+}
+
+// reassign handles PUT /v1/lifevisions/{lifevision_id}/reassign
+func (a *app) reassign(ctx context.Context, r *http.Request) web.Encoder {
+	lifeVisionID, err := uuid.Parse(web.Param(r, "lifevision_id"))
+	if err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	var req ReassignRequest
+	if err := web.Decode(r, &req); err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	newValueID, err := uuid.Parse(req.ValueID)
+	if err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
+	lifeVision, err := a.lifeVisionBus.QueryByID(ctx, lifeVisionID)
+	if err != nil {
+		if errors.Is(err, lifevisionbus.ErrNotFound) {
+			return errs.New(errs.NotFound, err)
+		}
+		return errs.Newf(errs.Internal, "querybyid: lifeVisionID[%s]: %s", lifeVisionID, err)
+	}
+
+	if lifeVision.UserID != userID {
+		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
+	}
+
+	lifeVision, err = a.lifeVisionBus.Reassign(ctx, lifeVision, newValueID)
+	if err != nil {
+		if errors.Is(err, lifevisionbus.ErrNotValueOwner) {
+			return errs.New(errs.PermissionDenied, err)
+		}
+		if errors.Is(err, lifevisionbus.ErrTargetValueNotActive) {
+			return errs.New(errs.FailedPrecondition, err)
+		}
+		return errs.Newf(errs.Internal, "reassign: %s", err)
+	}
+
+	return toAppLifeVision(lifeVision)
+}
+
 // query handles GET /v1/lifevisions
 func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	qp := parseQueryParams(r)
@@ -165,7 +291,8 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	filter := lifevisionbus.QueryFilter{
-		UserID: &userID,
+		UserID:          &userID,
+		IncludeArchived: qp.IncludeArchived == "true",
 	}
 
 	// Filter by value if provided
@@ -262,18 +389,20 @@ func (a *app) queryByValue(ctx context.Context, r *http.Request) web.Encoder {
 // ===== Query params parsing =====
 
 type queryParams struct {
-	Page    string
-	Rows    string
-	OrderBy string
-	ValueID string
+	Page            string
+	Rows            string
+	OrderBy         string
+	ValueID         string
+	IncludeArchived string
 }
 
 func parseQueryParams(r *http.Request) queryParams {
 	values := r.URL.Query()
 	return queryParams{
-		Page:    values.Get("page"),
-		Rows:    values.Get("rows"),
-		OrderBy: values.Get("orderBy"),
-		ValueID: values.Get("valueId"),
+		Page:            values.Get("page"),
+		Rows:            values.Get("rows"),
+		OrderBy:         values.Get("orderBy"),
+		ValueID:         values.Get("valueId"),
+		IncludeArchived: values.Get("includeArchived"),
 	}
 }

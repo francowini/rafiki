@@ -14,6 +14,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/entitystatus"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
@@ -53,9 +54,11 @@ func (s *Store) Create(ctx context.Context, value valuebus.Value) error {
 	const q = `
 	INSERT INTO values (
 		value_id, user_id, content, facet, display_order,
+		status, archived_at,
 		date_created, date_updated
 	) VALUES (
 		:value_id, :user_id, :content, :facet, :display_order,
+		:status, :archived_at,
 		:date_created, :date_updated
 	)`
 
@@ -81,6 +84,8 @@ func (s *Store) Update(ctx context.Context, value valuebus.Value) error {
 		content = :content,
 		facet = :facet,
 		display_order = :display_order,
+		status = :status,
+		archived_at = :archived_at,
 		date_updated = :date_updated
 	WHERE
 		value_id = :value_id`
@@ -193,6 +198,7 @@ func (s *Store) Query(ctx context.Context, filter valuebus.QueryFilter, orderBy 
 	q := fmt.Sprintf(`
 	SELECT
 		value_id, user_id, content, facet, display_order,
+		status, archived_at,
 		date_created, date_updated
 	FROM values
 	%s
@@ -212,6 +218,7 @@ func (s *Store) QueryByID(ctx context.Context, valueID uuid.UUID) (valuebus.Valu
 	const q = `
 	SELECT
 		value_id, user_id, content, facet, display_order,
+		status, archived_at,
 		date_created, date_updated
 	FROM values
 	WHERE value_id = :value_id`
@@ -274,6 +281,16 @@ func buildWhereClause(filter valuebus.QueryFilter, data map[string]any) string {
 	if filter.Facet != nil {
 		data["facet"] = filter.Facet.String()
 		conditions = append(conditions, "facet = :facet")
+	}
+
+	// Handle status filtering
+	if filter.Status != nil {
+		data["status"] = filter.Status.String()
+		conditions = append(conditions, "status = :status")
+	} else if !filter.IncludeArchived {
+		// Default: only show active items
+		data["status"] = entitystatus.Active.String()
+		conditions = append(conditions, "status = :status")
 	}
 
 	if len(conditions) == 0 {

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/francowini/rafiki/business/types/displayorder"
+	"github.com/francowini/rafiki/business/types/entitystatus"
 	"github.com/francowini/rafiki/business/types/facet"
 	"github.com/francowini/rafiki/business/types/valuecontent"
 )
@@ -18,11 +19,14 @@ const MaxValuesPerUser = 10
 
 // Domain errors
 var (
-	ErrNotFound       = errors.New("value not found")
-	ErrMaxValues      = fmt.Errorf("maximum %d values allowed per user", MaxValuesPerUser)
-	ErrDuplicateOrder = errors.New("display order already exists for this user")
-	ErrMissingUserID  = errors.New("userID is required for querying values")
-	ErrUserDisabled   = errors.New("user disabled")
+	ErrNotFound             = errors.New("value not found")
+	ErrMaxValues            = fmt.Errorf("maximum %d values allowed per user", MaxValuesPerUser)
+	ErrDuplicateOrder       = errors.New("display order already exists for this user")
+	ErrMissingUserID        = errors.New("userID is required for querying values")
+	ErrUserDisabled         = errors.New("user disabled")
+	ErrHasActiveLifeVisions = errors.New("cannot archive value with active life visions")
+	ErrAlreadyArchived      = errors.New("value is already archived")
+	ErrNotArchived          = errors.New("value is not archived")
 )
 
 // Value represents a personal value with facet categorization.
@@ -32,6 +36,8 @@ type Value struct {
 	Content      valuecontent.ValueContent
 	Facet        facet.Facet
 	DisplayOrder displayorder.DisplayOrder
+	Status       entitystatus.Status
+	ArchivedAt   *time.Time
 	DateCreated  time.Time
 	DateUpdated  time.Time
 }

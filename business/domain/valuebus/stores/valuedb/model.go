@@ -10,19 +10,22 @@ import (
 	"github.com/francowini/rafiki/business/domain/valuebus"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/types/displayorder"
+	"github.com/francowini/rafiki/business/types/entitystatus"
 	"github.com/francowini/rafiki/business/types/facet"
 	"github.com/francowini/rafiki/business/types/valuecontent"
 )
 
 // value represents the database model.
 type value struct {
-	ID           uuid.UUID `db:"value_id"`
-	UserID       uuid.UUID `db:"user_id"`
-	Content      string    `db:"content"` // encrypted
-	Facet        string    `db:"facet"`
-	DisplayOrder int       `db:"display_order"`
-	DateCreated  time.Time `db:"date_created"`
-	DateUpdated  time.Time `db:"date_updated"`
+	ID           uuid.UUID  `db:"value_id"`
+	UserID       uuid.UUID  `db:"user_id"`
+	Content      string     `db:"content"` // encrypted
+	Facet        string     `db:"facet"`
+	DisplayOrder int        `db:"display_order"`
+	Status       string     `db:"status"`
+	ArchivedAt   *time.Time `db:"archived_at"`
+	DateCreated  time.Time  `db:"date_created"`
+	DateUpdated  time.Time  `db:"date_updated"`
 }
 
 // toDBValueEncrypted converts business model to DB model with encryption.
@@ -33,12 +36,20 @@ func toDBValueEncrypted(bus valuebus.Value, enc encrypt.Encryptor) (value, error
 		return value{}, fmt.Errorf("encrypt content: %w", err)
 	}
 
+	var archivedAt *time.Time
+	if bus.ArchivedAt != nil {
+		t := bus.ArchivedAt.UTC()
+		archivedAt = &t
+	}
+
 	return value{
 		ID:           bus.ID,
 		UserID:       bus.UserID,
 		Content:      content,
 		Facet:        bus.Facet.String(),
 		DisplayOrder: bus.DisplayOrder.Value(),
+		Status:       bus.Status.String(),
+		ArchivedAt:   archivedAt,
 		DateCreated:  bus.DateCreated.UTC(),
 		DateUpdated:  bus.DateUpdated.UTC(),
 	}, nil
@@ -69,12 +80,26 @@ func toBusValueDecrypted(db value, enc encrypt.Encryptor) (valuebus.Value, error
 		return valuebus.Value{}, fmt.Errorf("parse display order: %w", err)
 	}
 
+	// Parse status
+	status, err := entitystatus.Parse(db.Status)
+	if err != nil {
+		return valuebus.Value{}, fmt.Errorf("parse status: %w", err)
+	}
+
+	var archivedAt *time.Time
+	if db.ArchivedAt != nil {
+		t := db.ArchivedAt.In(time.Local)
+		archivedAt = &t
+	}
+
 	return valuebus.Value{
 		ID:           db.ID,
 		UserID:       db.UserID,
 		Content:      content,
 		Facet:        facetVal,
 		DisplayOrder: displayOrder,
+		Status:       status,
+		ArchivedAt:   archivedAt,
 		DateCreated:  db.DateCreated.In(time.Local),
 		DateUpdated:  db.DateUpdated.In(time.Local),
 	}, nil

@@ -13,6 +13,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/entitystatus"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
@@ -52,9 +53,11 @@ func (s *Store) Create(ctx context.Context, lv lifevisionbus.LifeVision) error {
 	const q = `
 	INSERT INTO life_visions (
 		life_vision_id, user_id, value_id, content,
+		status, archived_at,
 		date_created, date_updated
 	) VALUES (
 		:life_vision_id, :user_id, :value_id, :content,
+		:status, :archived_at,
 		:date_created, :date_updated
 	)`
 
@@ -76,6 +79,8 @@ func (s *Store) Update(ctx context.Context, lv lifevisionbus.LifeVision) error {
 	UPDATE life_visions SET
 		content = :content,
 		value_id = :value_id,
+		status = :status,
+		archived_at = :archived_at,
 		date_updated = :date_updated
 	WHERE
 		life_vision_id = :life_vision_id`
@@ -133,6 +138,7 @@ func (s *Store) Query(ctx context.Context, filter lifevisionbus.QueryFilter, ord
 	q := fmt.Sprintf(`
 	SELECT
 		life_vision_id, user_id, value_id, content,
+		status, archived_at,
 		date_created, date_updated
 	FROM life_visions
 	%s
@@ -152,6 +158,7 @@ func (s *Store) QueryByID(ctx context.Context, lifeVisionID uuid.UUID) (lifevisi
 	const q = `
 	SELECT
 		life_vision_id, user_id, value_id, content,
+		status, archived_at,
 		date_created, date_updated
 	FROM life_visions
 	WHERE life_vision_id = :life_vision_id`
@@ -214,6 +221,16 @@ func buildWhereClause(filter lifevisionbus.QueryFilter, data map[string]any) str
 	if filter.ValueID != nil {
 		data["value_id"] = *filter.ValueID
 		conditions = append(conditions, "value_id = :value_id")
+	}
+
+	// Handle status filtering
+	if filter.Status != nil {
+		data["status"] = filter.Status.String()
+		conditions = append(conditions, "status = :status")
+	} else if !filter.IncludeArchived {
+		// Default: only show active items
+		data["status"] = entitystatus.Active.String()
+		conditions = append(conditions, "status = :status")
 	}
 
 	if len(conditions) == 0 {

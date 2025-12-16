@@ -133,13 +133,23 @@ export const FACETS = [
 
 export type Facet = (typeof FACETS)[number];
 
+// Entity status for soft delete functionality
+export type EntityStatus = 'active' | 'archived';
+
 export interface Value {
   id: string;
   content: string;
   facet: Facet;
   displayOrder: number;
+  status: EntityStatus;
+  archivedAt: string | null; // ISO 8601
   dateCreated: string; // ISO 8601
   dateUpdated: string; // ISO 8601
+}
+
+// Extended Value with life vision count (for UI display)
+export interface ValueWithLifeVisionCount extends Value {
+  activeLifeVisionCount?: number;
 }
 
 export interface NewValue {
@@ -167,6 +177,8 @@ export interface LifeVision {
   id: string;
   valueId: string;
   content: string;
+  status: EntityStatus;
+  archivedAt: string | null; // ISO 8601
   dateCreated: string;
   dateUpdated: string;
 }

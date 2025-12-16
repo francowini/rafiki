@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { ValueForm } from '@/components/features/ValueForm';
 import { ValueList } from '@/components/features/ValueList';
-import { Value } from '@/lib/types';
+import { ReassignmentDialog } from '@/components/features/ReassignmentDialog';
+import { Value, LifeVision } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -24,19 +25,27 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Info } from 'lucide-react';
-import { api } from '@/lib/api';
+import { Plus, Info, Archive, RotateCcw } from 'lucide-react';
+import { api, APIError } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ValuesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [valueToEdit, setValueToEdit] = useState<Value | null>(null);
-  const [valueToDelete, setValueToDelete] = useState<Value | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [valuesCount, setValuesCount] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+
+  // Archive/Restore state
+  const [showArchived, setShowArchived] = useState(false);
+  const [valueToArchive, setValueToArchive] = useState<Value | null>(null);
+  const [valueToRestore, setValueToRestore] = useState<Value | null>(null);
+  const [showReassignmentDialog, setShowReassignmentDialog] = useState(false);
+  const [activeLifeVisions, setActiveLifeVisions] = useState<LifeVision[]>([]);
+  const [availableValues, setAvailableValues] = useState<Value[]>([]);
+  const [_isArchiving, setIsArchiving] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const handleCreateSuccess = () => {
     setIsFormOpen(false);
@@ -54,26 +63,70 @@ export default function ValuesPage() {
     setIsEditFormOpen(true);
   };
 
-  const handleDelete = async () => {
-    if (!valueToDelete) return;
+  // Archive handler - handles 409 (has active life visions)
+  const handleArchive = async (value: Value) => {
+    setValueToArchive(value);
+    setIsArchiving(true);
 
-    setIsDeleting(true);
     try {
-      await api.values.delete(valueToDelete.id);
+      // Try to archive directly
+      await api.values.archive(value.id);
       toast({
-        title: 'Valor eliminado',
-        description: 'Tu valor ha sido eliminado exitosamente.',
+        title: 'Valor retirado',
+        description: 'Tu valor ha sido retirado exitosamente.',
       });
-      setValueToDelete(null);
+      setValueToArchive(null);
       setRefresh((prev) => prev + 1);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      // Check if has active life visions (409 Conflict)
+      if (err instanceof APIError && err.status === 409) {
+        // Fetch life visions for this value
+        const visionsRes = await api.lifeVisions.getAll({ valueId: value.id });
+        const activeVisions = visionsRes.items.filter((v) => v.status === 'active');
+
+        // Fetch available values for reassignment
+        const valuesRes = await api.values.getAll();
+        const available = valuesRes.items.filter(
+          (v) => v.id !== value.id && v.status === 'active',
+        );
+
+        setActiveLifeVisions(activeVisions);
+        setAvailableValues(available);
+        setShowReassignmentDialog(true);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error al retirar valor',
+          description: err instanceof Error ? err.message : 'Error desconocido',
+        });
+        setValueToArchive(null);
+      }
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  // Restore handler
+  const handleRestore = async () => {
+    if (!valueToRestore) return;
+    setIsRestoring(true);
+
+    try {
+      await api.values.restore(valueToRestore.id);
+      toast({
+        title: 'Valor restaurado',
+        description: 'Tu valor esta activo nuevamente.',
+      });
+      setValueToRestore(null);
+      setRefresh((prev) => prev + 1);
+    } catch (err: unknown) {
       toast({
         variant: 'destructive',
-        title: 'Error al eliminar valor',
-        description: err.message || 'No se pudo eliminar el valor. Por favor intenta de nuevo.',
+        title: 'Error al restaurar valor',
+        description: err instanceof Error ? err.message : 'Error desconocido',
       });
     } finally {
-      setIsDeleting(false);
+      setIsRestoring(false);
     }
   };
 
@@ -84,7 +137,7 @@ export default function ValuesPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Valores</h1>
-            <p className="text-muted-foreground mt-1">Define lo que más importa en tu vida</p>
+            <p className="text-muted-foreground mt-1">Define lo que mas importa en tu vida</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -113,7 +166,7 @@ export default function ValuesPage() {
                 <SheetHeader>
                   <SheetTitle className="text-xl">Define un valor</SheetTitle>
                   <SheetDescription>
-                    ¿Qué te importa? ¿Qué guía tus decisiones y acciones?
+                    ¿Que te importa? ¿Que guia tus decisiones y acciones?
                   </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6">
@@ -126,7 +179,7 @@ export default function ValuesPage() {
               </SheetContent>
             </Sheet>
             {valuesCount >= 10 && (
-              <p className="text-sm text-muted-foreground italic">Máximo de 10 valores alcanzado</p>
+              <p className="text-sm text-muted-foreground italic">Maximo de 10 valores alcanzado</p>
             )}
           </div>
         </div>
@@ -139,13 +192,30 @@ export default function ValuesPage() {
             y establecer tus prioridades. Se permiten espacios cuando eliminas valores.
           </AlertDescription>
         </Alert>
+
+        {/* Show Archived Toggle */}
+        <div className="flex items-center gap-2 mt-4">
+          <input
+            type="checkbox"
+            id="show-archived"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-rose-600 focus:ring-rose-500"
+          />
+          <label htmlFor="show-archived" className="text-sm cursor-pointer flex items-center gap-1">
+            <Archive className="h-4 w-4" />
+            Mostrar retirados
+          </label>
+        </div>
       </div>
 
       {/* Value List */}
       <ValueList
         refresh={refresh}
+        showArchived={showArchived}
         onValueEdit={handleEdit}
-        onValueDelete={setValueToDelete}
+        onValueArchive={handleArchive}
+        onValueRestore={setValueToRestore}
         onValuesCountChange={setValuesCount}
       />
 
@@ -154,7 +224,7 @@ export default function ValuesPage() {
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="text-xl">Editar valor</SheetTitle>
-            <SheetDescription>Actualiza tu declaración de valor o prioridad.</SheetDescription>
+            <SheetDescription>Actualiza tu declaracion de valor o prioridad.</SheetDescription>
           </SheetHeader>
           <div className="mt-6">
             <ValueForm
@@ -170,27 +240,57 @@ export default function ValuesPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!valueToDelete} onOpenChange={(open) => !open && setValueToDelete(null)}>
+      {/* Restore Confirmation Dialog */}
+      <AlertDialog
+        open={!!valueToRestore}
+        onOpenChange={(open) => !open && setValueToRestore(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-green-600" />
+              Restaurar valor
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Esto eliminará permanentemente este valor. Esta acción no se puede deshacer.
+              Este valor volvera a estar activo y podras asignarle nuevas visiones de vida.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isRestoring}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90"
+              onClick={handleRestore}
+              disabled={isRestoring}
+              className="bg-green-600 hover:bg-green-700"
             >
-              {isDeleting ? 'Eliminando...' : 'Eliminar'}
+              {isRestoring ? 'Restaurando...' : 'Restaurar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reassignment Dialog */}
+      {valueToArchive && (
+        <ReassignmentDialog
+          open={showReassignmentDialog}
+          onOpenChange={(open) => {
+            setShowReassignmentDialog(open);
+            if (!open) {
+              setValueToArchive(null);
+              setActiveLifeVisions([]);
+              setAvailableValues([]);
+            }
+          }}
+          valueToArchive={valueToArchive}
+          activeLifeVisions={activeLifeVisions}
+          availableValues={availableValues}
+          onComplete={() => {
+            setValueToArchive(null);
+            setActiveLifeVisions([]);
+            setAvailableValues([]);
+            setRefresh((prev) => prev + 1);
+          }}
+        />
+      )}
     </div>
   );
 }

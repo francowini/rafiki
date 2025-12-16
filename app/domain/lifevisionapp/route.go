@@ -29,6 +29,11 @@ func Routes(app *web.App, cfg Config) {
 	app.HandlerFunc(http.MethodPut, version, "/lifevisions/{lifevision_id}", api.update, bearer)
 	app.HandlerFunc(http.MethodDelete, version, "/lifevisions/{lifevision_id}", api.delete, bearer)
 
+	// Archive, restore, and reassign endpoints
+	app.HandlerFunc(http.MethodPut, version, "/lifevisions/{lifevision_id}/archive", api.archive, bearer)
+	app.HandlerFunc(http.MethodPut, version, "/lifevisions/{lifevision_id}/restore", api.restore, bearer)
+	app.HandlerFunc(http.MethodPut, version, "/lifevisions/{lifevision_id}/reassign", api.reassign, bearer)
+
 	// Query by value (nested endpoint)
 	app.HandlerFunc(http.MethodGet, version, "/values/{value_id}/lifevisions", api.queryByValue, bearer)
 }

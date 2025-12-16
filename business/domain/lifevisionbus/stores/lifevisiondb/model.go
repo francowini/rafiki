@@ -9,17 +9,20 @@ import (
 
 	"github.com/francowini/rafiki/business/domain/lifevisionbus"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
+	"github.com/francowini/rafiki/business/types/entitystatus"
 	"github.com/francowini/rafiki/business/types/lifevisioncontent"
 )
 
 // lifeVision represents the database model.
 type lifeVision struct {
-	ID          uuid.UUID `db:"life_vision_id"`
-	UserID      uuid.UUID `db:"user_id"`
-	ValueID     uuid.UUID `db:"value_id"`
-	Content     string    `db:"content"` // encrypted
-	DateCreated time.Time `db:"date_created"`
-	DateUpdated time.Time `db:"date_updated"`
+	ID          uuid.UUID  `db:"life_vision_id"`
+	UserID      uuid.UUID  `db:"user_id"`
+	ValueID     uuid.UUID  `db:"value_id"`
+	Content     string     `db:"content"` // encrypted
+	Status      string     `db:"status"`
+	ArchivedAt  *time.Time `db:"archived_at"`
+	DateCreated time.Time  `db:"date_created"`
+	DateUpdated time.Time  `db:"date_updated"`
 }
 
 // toDBLifeVisionEncrypted converts business model to DB model with encryption.
@@ -30,11 +33,19 @@ func toDBLifeVisionEncrypted(bus lifevisionbus.LifeVision, enc encrypt.Encryptor
 		return lifeVision{}, fmt.Errorf("encrypt content: %w", err)
 	}
 
+	var archivedAt *time.Time
+	if bus.ArchivedAt != nil {
+		t := bus.ArchivedAt.UTC()
+		archivedAt = &t
+	}
+
 	return lifeVision{
 		ID:          bus.ID,
 		UserID:      bus.UserID,
 		ValueID:     bus.ValueID,
 		Content:     content,
+		Status:      bus.Status.String(),
+		ArchivedAt:  archivedAt,
 		DateCreated: bus.DateCreated.UTC(),
 		DateUpdated: bus.DateUpdated.UTC(),
 	}, nil
@@ -53,11 +64,25 @@ func toBusLifeVisionDecrypted(db lifeVision, enc encrypt.Encryptor) (lifevisionb
 		return lifevisionbus.LifeVision{}, fmt.Errorf("parse content: %w", err)
 	}
 
+	// Parse status
+	status, err := entitystatus.Parse(db.Status)
+	if err != nil {
+		return lifevisionbus.LifeVision{}, fmt.Errorf("parse status: %w", err)
+	}
+
+	var archivedAt *time.Time
+	if db.ArchivedAt != nil {
+		t := db.ArchivedAt.In(time.Local)
+		archivedAt = &t
+	}
+
 	return lifevisionbus.LifeVision{
 		ID:          db.ID,
 		UserID:      db.UserID,
 		ValueID:     db.ValueID,
 		Content:     content,
+		Status:      status,
+		ArchivedAt:  archivedAt,
 		DateCreated: db.DateCreated.In(time.Local),
 		DateUpdated: db.DateUpdated.In(time.Local),
 	}, nil

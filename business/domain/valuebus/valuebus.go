@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +15,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/business/types/displayorder"
+	"github.com/francowini/rafiki/business/types/entitystatus"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
@@ -37,6 +39,8 @@ type ExtBusiness interface {
 	Create(ctx context.Context, nv NewValue) (Value, error)
 	Update(ctx context.Context, value Value, uv UpdateValue) (Value, error)
 	Delete(ctx context.Context, value Value) error
+	Archive(ctx context.Context, value Value) (Value, error)
+	Restore(ctx context.Context, value Value) (Value, error)
 	Reorder(ctx context.Context, userID uuid.UUID, rr ReorderRequest) ([]Value, error)
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Value, error)
 	QueryByID(ctx context.Context, valueID uuid.UUID) (Value, error)
@@ -164,6 +168,8 @@ func (b *Business) Create(ctx context.Context, nv NewValue) (Value, error) {
 		Content:      nv.Content,
 		Facet:        nv.Facet,
 		DisplayOrder: nv.DisplayOrder,
+		Status:       entitystatus.Active,
+		ArchivedAt:   nil,
 		DateCreated:  now,
 		DateUpdated:  now,
 	}
@@ -236,6 +242,46 @@ func (b *Business) Delete(ctx context.Context, value Value) error {
 	}
 
 	return nil
+}
+
+// Archive sets a value's status to archived.
+// Returns ErrHasActiveLifeVisions if database trigger rejects (has active life visions).
+func (b *Business) Archive(ctx context.Context, value Value) (Value, error) {
+	if value.Status.IsArchived() {
+		return Value{}, ErrAlreadyArchived
+	}
+
+	now := time.Now().UTC()
+	value.Status = entitystatus.Archived
+	value.ArchivedAt = &now
+	value.DateUpdated = now
+
+	if err := b.storer.Update(ctx, value); err != nil {
+		// Database trigger will reject if has active life visions
+		if strings.Contains(err.Error(), "active life visions") {
+			return Value{}, ErrHasActiveLifeVisions
+		}
+		return Value{}, fmt.Errorf("update: %w", err)
+	}
+
+	return value, nil
+}
+
+// Restore sets an archived value's status back to active.
+func (b *Business) Restore(ctx context.Context, value Value) (Value, error) {
+	if !value.Status.IsArchived() {
+		return Value{}, ErrNotArchived
+	}
+
+	value.Status = entitystatus.Active
+	value.ArchivedAt = nil
+	value.DateUpdated = time.Now().UTC()
+
+	if err := b.storer.Update(ctx, value); err != nil {
+		return Value{}, fmt.Errorf("update: %w", err)
+	}
+
+	return value, nil
 }
 
 // Query retrieves a list of values based on filter criteria.
