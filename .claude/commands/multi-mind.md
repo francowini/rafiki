@@ -324,6 +324,39 @@ The moderator should:
 
 **If user requests additional rounds**: Continue the same pattern with more specific questions and refinements before final documentation.
 
+### Post-Documentation: Error Correction (MANDATORY after docs are generated)
+
+**This round runs AFTER documentation files are generated in `docs/` folder.**
+
+Launch error correction agents CONDITIONALLY to validate and EDIT the generated documentation:
+
+**Agent: Backend Error Corrector** (ONLY if `docs/[feature]-backend.md` was generated)
+- Prompt: "As a Backend Error Corrector, validate the generated backend documentation against `devs/errors-to-avoid-backend.md`.
+
+  1. Read `devs/errors-to-avoid-backend.md`
+  2. Read the generated `docs/[feature]-backend.md`
+  3. Check all code snippets and implementation details for violations
+  4. If violations found: Use the Edit tool to fix the documentation directly
+  5. Add an 'Errors-to-Avoid Compliance' section to the documentation
+
+  Use Read tool to examine both files, then Edit tool to apply corrections directly to the documentation."
+
+**Agent: Frontend Error Corrector** (ONLY if `docs/[feature]-frontend.md` was generated)
+- Prompt: "As a Frontend Error Corrector, validate the generated frontend documentation against `devs/errors-to-avoid-frontend.md`.
+
+  1. Read `devs/errors-to-avoid-frontend.md`
+  2. Read the generated `docs/[feature]-frontend.md`
+  3. Check all code snippets and implementation details for violations
+  4. If violations found: Use the Edit tool to fix the documentation directly
+  5. Add an 'Errors-to-Avoid Compliance' section to the documentation
+
+  Use Read tool to examine both files, then Edit tool to apply corrections directly to the documentation."
+
+**CRITICAL: Conditional Agent Launch**
+- If NO `docs/[feature]-backend.md` was generated → DO NOT launch Backend Error Corrector
+- If NO `docs/[feature]-frontend.md` was generated → DO NOT launch Frontend Error Corrector
+- If BOTH docs exist → Launch BOTH agents in parallel
+
 ## Anti-Repetition Mechanisms
 
 **Moderator Responsibilities**:
@@ -360,18 +393,27 @@ Architecture Validator checks BACKEND proposals only.
 User resolves architecture questions.
 Re-validate until ALIGNED.
 
---- FINAL OUTPUT: DOCUMENTATION FILES ---
+--- DOCUMENTATION FILES ---
 Generate ONLY the docs that have changes:
 
 docs/[feature-name]-backend.md    (if backend changes)
 docs/[feature-name]-frontend.md   (if frontend changes)
 docs/[feature-name]-devops.md     (if devops changes)
+
+--- POST-DOCUMENTATION: ERROR CORRECTION ---
+Launch error corrector agents to validate and edit generated docs:
+
+Backend Error Corrector → validates docs/[feature]-backend.md against devs/errors-to-avoid-backend.md
+Frontend Error Corrector → validates docs/[feature]-frontend.md against devs/errors-to-avoid-frontend.md
+
+Agents edit docs directly if violations found.
 ```
 
 **IMPORTANT**:
 - Do NOT generate frontend doc if no frontend changes needed
 - Do NOT generate devops doc if no infrastructure/deployment changes
 - Architecture Validator ONLY checks backend code (not frontend/devops)
+- Error Correctors run AFTER docs are generated and EDIT them directly
 
 ## Documentation Output
 
@@ -498,5 +540,6 @@ Generate ONLY the documentation files that are needed for the feature. Each file
 - **Product validation confirmed** - features support user mental wellness
 - **Architecture compliance confirmed** before final documentation
 - **Comprehensive documentation generated in docs/ folder**
+- **Error Correction Gate**: Error Corrector agents validate and edit docs against split error files (`devs/errors-to-avoid-backend.md`, `devs/errors-to-avoid-frontend.md`)
 
-Execute the six-agent analysis (Product Agent, Backend Engineer, UX/UI Designer, Frontend Engineer, DevOps Engineer, Architecture Validator) in rounds, with user interaction between rounds and mandatory product + architecture alignment before final documentation.
+Execute the six-agent analysis (Product Agent, Backend Engineer, UX/UI Designer, Frontend Engineer, DevOps Engineer, Architecture Validator) in rounds, with user interaction between rounds, mandatory product + architecture alignment, and final error correction to ensure compliance with errors-to-avoid guidelines.
