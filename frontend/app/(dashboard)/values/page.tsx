@@ -44,7 +44,6 @@ export default function ValuesPage() {
   const [showReassignmentDialog, setShowReassignmentDialog] = useState(false);
   const [activeLifeVisions, setActiveLifeVisions] = useState<LifeVision[]>([]);
   const [availableValues, setAvailableValues] = useState<Value[]>([]);
-  const [isArchiving, setIsArchiving] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
   const handleCreateSuccess = () => {
@@ -66,7 +65,6 @@ export default function ValuesPage() {
   // Archive handler - handles 409 (has active life visions)
   const handleArchive = async (value: Value) => {
     setValueToArchive(value);
-    setIsArchiving(true);
 
     try {
       // Try to archive directly
@@ -111,8 +109,6 @@ export default function ValuesPage() {
         });
         setValueToArchive(null);
       }
-    } finally {
-      setIsArchiving(false);
     }
   };
 

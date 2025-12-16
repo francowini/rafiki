@@ -26,7 +26,7 @@ export function ValueDragItem({
   onRestore,
   isDisabled = false,
 }: ValueDragItemProps) {
-  const isArchived = value.status === 'archived';
+  const isArchived = value.status === STATUS_ARCHIVED;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: value.id,
