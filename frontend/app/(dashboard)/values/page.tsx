@@ -25,6 +25,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Plus, Info, Archive, RotateCcw } from 'lucide-react';
 import { api, APIError } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -200,18 +202,17 @@ export default function ValuesPage() {
         </Alert>
 
         {/* Show Archived Toggle */}
-        <div className="flex items-center gap-2 mt-4">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-3 mt-4">
+          <Switch
             id="show-archived"
             checked={showArchived}
-            onChange={(e) => setShowArchived(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-rose-600 focus:ring-rose-500"
+            onCheckedChange={setShowArchived}
+            aria-label="Mostrar valores retirados"
           />
-          <label htmlFor="show-archived" className="text-sm cursor-pointer flex items-center gap-1">
+          <Label htmlFor="show-archived" className="cursor-pointer flex items-center gap-1.5">
             <Archive className="h-4 w-4" />
             Mostrar retirados
-          </label>
+          </Label>
         </div>
       </div>
 
