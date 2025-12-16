@@ -432,3 +432,229 @@ function formatDate(dateValue: string, locale = 'es-MX'): { dateStr: string; tim
 - [ ] **Accessibility**: Prefer semantic `<button>` elements
 - [ ] **localStorage**: Wrap `JSON.parse` in try/catch AND validate parsed type
 - [ ] **Dates**: Validate dates with `isNaN(date.getTime())` and use app locale constant
+
+---
+
+## F8. Async: Using Promise.all for Batch Operations with Partial Failure Risk
+
+### Severity: Major (Partial State, Data Integrity)
+
+### Problem
+
+Using `Promise.all` for batch operations can leave the system in a partial state if some requests fail. The entire operation fails on the first rejection, potentially leaving some items processed and others not.
+
+### Bad Example
+
+```typescript
+// BAD: Promise.all fails entirely on first rejection
+const handleProceed = async () => {
+  try {
+    await Promise.all(
+      activeLifeVisions.map((vision) => api.lifeVisions.archive(vision.id))
+    );
+    toast({ title: 'Success', description: 'All visions archived.' });
+
+    // Archive the value - but some visions might have failed!
+    await api.values.archive(valueToArchive.id);
+  } catch (err) {
+    toast({ variant: 'destructive', title: 'Error', description: err.message });
+  }
+};
+```
+
+### Good Example
+
+```typescript
+// GOOD: Promise.allSettled handles partial failures gracefully
+const handleProceed = async () => {
+  try {
+    const results = await Promise.allSettled(
+      activeLifeVisions.map((vision) => api.lifeVisions.archive(vision.id))
+    );
+
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+
+    if (failed > 0) {
+      console.error('Failed operations:', results.filter((r) => r.status === 'rejected'));
+      toast({
+        variant: 'destructive',
+        title: 'Error parcial',
+        description: `${succeeded} de ${total} completados. ${failed} fallaron.`,
+      });
+      return; // Don't proceed with dependent operation
+    }
+
+    // Only proceed if all operations succeeded
+    await api.values.archive(valueToArchive.id);
+    toast({ title: 'Success', description: 'All operations completed.' });
+  } catch (err) {
+    toast({ variant: 'destructive', title: 'Error', description: err.message });
+  }
+};
+```
+
+### Checklist
+
+- [ ] Use `Promise.allSettled` instead of `Promise.all` for batch operations
+- [ ] Count and report successes vs failures to the user
+- [ ] Log failed operations for debugging
+- [ ] Don't proceed with dependent operations unless all prerequisites succeeded
+
+---
+
+## F9. State Management: Not Resetting Dialog State on Close
+
+### Severity: Medium (Stale Data, UX Bug)
+
+### Problem
+
+When a dialog closes, local state (like selections) may not be reset, causing stale values to appear when the dialog reopens.
+
+### Bad Example
+
+```typescript
+// BAD: State persists after dialog closes
+const [selectedValueId, setSelectedValueId] = useState<string>('');
+
+const handleProceed = async () => {
+  // ... process ...
+  onComplete();
+  onOpenChange(false); // Dialog closes but selectedValueId keeps its value
+};
+```
+
+### Good Example
+
+```typescript
+// GOOD: Reset state before closing
+const [selectedValueId, setSelectedValueId] = useState<string>('');
+
+const handleProceed = async () => {
+  // ... process ...
+
+  // Reset local state before closing
+  setSelectedValueId('');
+  setArchiveVisions(false);
+  onComplete();
+  onOpenChange(false);
+};
+
+const handleCancel = () => {
+  // Also reset on cancel
+  setSelectedValueId('');
+  setArchiveVisions(false);
+  onOpenChange(false);
+};
+```
+
+### Checklist
+
+- [ ] Reset all local dialog state before calling `onOpenChange(false)`
+- [ ] Reset state in both success and cancel paths
+- [ ] Consider using a `resetState` helper function for consistency
+
+---
+
+## F10. Accessibility: Labels Not Associated with Form Controls
+
+### Severity: Medium (Accessibility Violation)
+
+### Problem
+
+Labels without `htmlFor` attributes are not programmatically associated with their form controls, making the UI inaccessible to screen readers.
+
+### Bad Example
+
+```tsx
+// BAD: Label not associated with Select
+<div className="space-y-2">
+  <label className="text-sm font-medium">Reasignar a:</label>
+  <Select value={selectedValueId} onValueChange={setSelectedValueId}>
+    <SelectTrigger>
+      <SelectValue placeholder="Selecciona..." />
+    </SelectTrigger>
+  </Select>
+</div>
+```
+
+### Good Example
+
+```tsx
+// GOOD: Label properly associated via htmlFor and id
+<div className="space-y-2">
+  <label htmlFor="reassign-value-select" className="text-sm font-medium">
+    Reasignar a:
+  </label>
+  <Select value={selectedValueId} onValueChange={setSelectedValueId}>
+    <SelectTrigger id="reassign-value-select">
+      <SelectValue placeholder="Selecciona..." />
+    </SelectTrigger>
+  </Select>
+</div>
+```
+
+### Checklist
+
+- [ ] Add `htmlFor` to all `<label>` elements
+- [ ] Add matching `id` to the associated form control
+- [ ] Use unique IDs within the component scope
+
+---
+
+## F11. Error Handling: Missing Try-Catch for Follow-up Async Calls
+
+### Severity: Medium (Unhandled Errors, Poor UX)
+
+### Problem
+
+When handling one error leads to additional async calls (e.g., fetching data for a dialog), those calls should also be wrapped in error handling.
+
+### Bad Example
+
+```typescript
+// BAD: Follow-up calls not wrapped in try-catch
+} catch (err) {
+  if (err instanceof APIError && err.status === 409) {
+    // These can throw but aren't caught!
+    const visionsRes = await api.lifeVisions.getAll({ valueId: value.id });
+    const valuesRes = await api.values.getAll();
+
+    setActiveLifeVisions(visionsRes.items);
+    setShowReassignmentDialog(true);
+  }
+}
+```
+
+### Good Example
+
+```typescript
+// GOOD: Nested try-catch for follow-up calls
+} catch (err) {
+  if (err instanceof APIError && err.status === 409) {
+    try {
+      const visionsRes = await api.lifeVisions.getAll({ valueId: value.id });
+      const valuesRes = await api.values.getAll();
+
+      setActiveLifeVisions(visionsRes.items);
+      setShowReassignmentDialog(true);
+    } catch (fetchErr) {
+      console.error('Failed to fetch data:', fetchErr);
+      toast({
+        variant: 'destructive',
+        title: 'Error al cargar datos',
+        description: 'No se pudieron cargar los datos. Intenta de nuevo.',
+      });
+      // Clean up state
+      setValueToArchive(null);
+    }
+  }
+}
+```
+
+### Checklist
+
+- [ ] Wrap all async calls in try-catch, including follow-up calls in catch blocks
+- [ ] Log errors for debugging
+- [ ] Show user-friendly error messages
+- [ ] Clean up state on error (clear loading flags, reset selections)

@@ -14,11 +14,13 @@ import (
 
 // LifeVision represents a life vision for API responses.
 type LifeVision struct {
-	ID          string `json:"id"`
-	ValueID     string `json:"valueId"`
-	Content     string `json:"content"`
-	DateCreated string `json:"dateCreated"`
-	DateUpdated string `json:"dateUpdated"`
+	ID          string  `json:"id"`
+	ValueID     string  `json:"valueId"`
+	Content     string  `json:"content"`
+	Status      string  `json:"status"`
+	ArchivedAt  *string `json:"archivedAt"`
+	DateCreated string  `json:"dateCreated"`
+	DateUpdated string  `json:"dateUpdated"`
 }
 
 // Encode implements the encoder interface.
@@ -68,10 +70,18 @@ func (ulv UpdateLifeVision) Validate() error {
 // ===== Business → App conversions =====
 
 func toAppLifeVision(lv lifevisionbus.LifeVision) LifeVision {
+	var archivedAt *string
+	if lv.ArchivedAt != nil {
+		t := lv.ArchivedAt.Format("2006-01-02T15:04:05Z07:00")
+		archivedAt = &t
+	}
+
 	return LifeVision{
 		ID:          lv.ID.String(),
 		ValueID:     lv.ValueID.String(),
 		Content:     lv.Content.String(),
+		Status:      lv.Status.String(),
+		ArchivedAt:  archivedAt,
 		DateCreated: lv.DateCreated.Format("2006-01-02T15:04:05Z07:00"),
 		DateUpdated: lv.DateUpdated.Format("2006-01-02T15:04:05Z07:00"),
 	}
@@ -83,6 +93,24 @@ func toAppLifeVisions(lvs []lifevisionbus.LifeVision) []LifeVision {
 		app[i] = toAppLifeVision(lv)
 	}
 	return app
+}
+
+// ReassignRequest represents data for reassigning a life vision to a different value.
+type ReassignRequest struct {
+	ValueID string `json:"valueId" validate:"required,uuid"`
+}
+
+// Decode implements the decoder interface.
+func (rr *ReassignRequest) Decode(data []byte) error {
+	return json.Unmarshal(data, rr)
+}
+
+// Validate checks the data for correctness.
+func (rr ReassignRequest) Validate() error {
+	if err := errs.Check(rr); err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
+	return nil
 }
 
 // ===== App → Business conversions =====

@@ -13,6 +13,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/entitystatus"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
@@ -34,6 +35,9 @@ type ExtBusiness interface {
 	Create(ctx context.Context, nlv NewLifeVision) (LifeVision, error)
 	Update(ctx context.Context, lifeVision LifeVision, ulv UpdateLifeVision) (LifeVision, error)
 	Delete(ctx context.Context, lifeVision LifeVision) error
+	Archive(ctx context.Context, lifeVision LifeVision) (LifeVision, error)
+	Restore(ctx context.Context, lifeVision LifeVision) (LifeVision, error)
+	Reassign(ctx context.Context, lifeVision LifeVision, newValueID uuid.UUID) (LifeVision, error)
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]LifeVision, error)
 	QueryByID(ctx context.Context, lifeVisionID uuid.UUID) (LifeVision, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
@@ -110,6 +114,8 @@ func (b *Business) Create(ctx context.Context, nlv NewLifeVision) (LifeVision, e
 		UserID:      value.UserID,
 		ValueID:     nlv.ValueID,
 		Content:     nlv.Content,
+		Status:      entitystatus.Active,
+		ArchivedAt:  nil,
 		DateCreated: now,
 		DateUpdated: now,
 	}
@@ -165,6 +171,77 @@ func (b *Business) Delete(ctx context.Context, lifeVision LifeVision) error {
 	}
 
 	return nil
+}
+
+// Archive sets a life vision's status to archived.
+func (b *Business) Archive(ctx context.Context, lifeVision LifeVision) (LifeVision, error) {
+	if lifeVision.Status.IsArchived() {
+		return LifeVision{}, ErrAlreadyArchived
+	}
+
+	now := time.Now().UTC()
+	lifeVision.Status = entitystatus.Archived
+	lifeVision.ArchivedAt = &now
+	lifeVision.DateUpdated = now
+
+	if err := b.storer.Update(ctx, lifeVision); err != nil {
+		return LifeVision{}, fmt.Errorf("update: %w", err)
+	}
+
+	return lifeVision, nil
+}
+
+// Restore sets an archived life vision's status back to active.
+func (b *Business) Restore(ctx context.Context, lifeVision LifeVision) (LifeVision, error) {
+	if !lifeVision.Status.IsArchived() {
+		return LifeVision{}, ErrNotArchived
+	}
+
+	// Validate parent value is still active before restoring
+	value, err := b.valueBus.QueryByID(ctx, lifeVision.ValueID)
+	if err != nil {
+		return LifeVision{}, fmt.Errorf("value.querybyid: valueID[%s]: %w", lifeVision.ValueID, err)
+	}
+
+	if !value.Status.IsActive() {
+		return LifeVision{}, ErrTargetValueNotActive
+	}
+
+	lifeVision.Status = entitystatus.Active
+	lifeVision.ArchivedAt = nil
+	lifeVision.DateUpdated = time.Now().UTC()
+
+	if err := b.storer.Update(ctx, lifeVision); err != nil {
+		return LifeVision{}, fmt.Errorf("update: %w", err)
+	}
+
+	return lifeVision, nil
+}
+
+// Reassign changes the value_id of a life vision to a different value.
+func (b *Business) Reassign(ctx context.Context, lifeVision LifeVision, newValueID uuid.UUID) (LifeVision, error) {
+	// Validate new value exists and user owns it
+	value, err := b.valueBus.QueryByID(ctx, newValueID)
+	if err != nil {
+		return LifeVision{}, fmt.Errorf("value.querybyid: valueID[%s]: %w", newValueID, err)
+	}
+
+	if value.UserID != lifeVision.UserID {
+		return LifeVision{}, ErrNotValueOwner
+	}
+
+	if !value.Status.IsActive() {
+		return LifeVision{}, ErrTargetValueNotActive
+	}
+
+	lifeVision.ValueID = newValueID
+	lifeVision.DateUpdated = time.Now().UTC()
+
+	if err := b.storer.Update(ctx, lifeVision); err != nil {
+		return LifeVision{}, fmt.Errorf("update: %w", err)
+	}
+
+	return lifeVision, nil
 }
 
 // Query retrieves life visions based on filter criteria.

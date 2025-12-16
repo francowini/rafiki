@@ -232,9 +232,9 @@ func (s *Store) QueryStats(ctx context.Context, userID uuid.UUID, days int) (mom
 		)`
 
 	var statsRow struct {
-		ThisWeek   int `db:"this_week"`
-		ThisMonth  int `db:"this_month"`
-		LastNDays  int `db:"last_n_days"`
+		ThisWeek  int `db:"this_week"`
+		ThisMonth int `db:"this_month"`
+		LastNDays int `db:"last_n_days"`
 	}
 	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &statsRow); err != nil {
 		s.log.Error(ctx, "momentdb.querystats", "err", err, "userID", userID)

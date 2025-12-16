@@ -368,3 +368,106 @@ ALTER TABLE notification_messages
   CHECK (status IN ('pending', 'sending', 'sent', 'failed'));
 
 COMMENT ON COLUMN notification_messages.status IS 'Message status: pending, sending, sent, or failed';
+
+
+-- Version: 12
+-- Description: Add soft delete (archive) support to values and life_visions
+
+-- =============================================================================
+-- Add status and archived_at columns
+-- =============================================================================
+
+-- Values table
+ALTER TABLE values
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL;
+
+ALTER TABLE values
+  DROP CONSTRAINT IF EXISTS values_status_check;
+
+ALTER TABLE values
+  ADD CONSTRAINT values_status_check
+  CHECK (status IN ('active', 'archived'));
+
+-- Life Visions table
+ALTER TABLE life_visions
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL;
+
+ALTER TABLE life_visions
+  DROP CONSTRAINT IF EXISTS life_visions_status_check;
+
+ALTER TABLE life_visions
+  ADD CONSTRAINT life_visions_status_check
+  CHECK (status IN ('active', 'archived'));
+
+-- =============================================================================
+-- Add performance indexes
+-- =============================================================================
+
+-- Values indexes
+CREATE INDEX IF NOT EXISTS values_user_active_idx
+  ON values(user_id)
+  WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS values_status_idx
+  ON values(status);
+
+-- Life Visions indexes
+CREATE INDEX IF NOT EXISTS life_visions_user_active_idx
+  ON life_visions(user_id)
+  WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS life_visions_value_active_idx
+  ON life_visions(value_id)
+  WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS life_visions_status_idx
+  ON life_visions(status);
+
+-- =============================================================================
+-- Change CASCADE to RESTRICT for life_visions -> values
+-- =============================================================================
+
+ALTER TABLE life_visions
+  DROP CONSTRAINT IF EXISTS life_visions_value_id_fkey;
+
+ALTER TABLE life_visions
+  ADD CONSTRAINT life_visions_value_id_fkey
+  FOREIGN KEY (value_id) REFERENCES values(value_id) ON DELETE RESTRICT;
+
+-- =============================================================================
+-- Database trigger: Prevent archiving value with active life visions
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION prevent_archive_with_active_life_visions()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'archived' AND (OLD.status IS NULL OR OLD.status != 'archived') THEN
+        IF EXISTS (
+            SELECT 1 FROM life_visions
+            WHERE value_id = NEW.value_id
+            AND status = 'active'
+        ) THEN
+            RAISE EXCEPTION 'Cannot archive value: has active life visions'
+                USING ERRCODE = '23503';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS check_archive_life_visions ON values;
+CREATE TRIGGER check_archive_life_visions
+    BEFORE UPDATE ON values
+    FOR EACH ROW
+    EXECUTE FUNCTION prevent_archive_with_active_life_visions();
+
+-- =============================================================================
+-- Comments
+-- =============================================================================
+
+COMMENT ON COLUMN values.status IS 'Entity status: active or archived (soft delete)';
+COMMENT ON COLUMN values.archived_at IS 'Timestamp when entity was archived (NULL if active)';
+COMMENT ON COLUMN life_visions.status IS 'Entity status: active or archived (soft delete)';
+COMMENT ON COLUMN life_visions.archived_at IS 'Timestamp when entity was archived (NULL if active)';

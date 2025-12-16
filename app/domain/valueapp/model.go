@@ -18,12 +18,14 @@ import (
 
 // Value represents a value for API responses.
 type Value struct {
-	ID           string `json:"id"`
-	Content      string `json:"content"`
-	Facet        string `json:"facet"`
-	DisplayOrder int    `json:"displayOrder"`
-	DateCreated  string `json:"dateCreated"`
-	DateUpdated  string `json:"dateUpdated"`
+	ID           string  `json:"id"`
+	Content      string  `json:"content"`
+	Facet        string  `json:"facet"`
+	DisplayOrder int     `json:"displayOrder"`
+	Status       string  `json:"status"`
+	ArchivedAt   *string `json:"archivedAt"`
+	DateCreated  string  `json:"dateCreated"`
+	DateUpdated  string  `json:"dateUpdated"`
 }
 
 // Encode implements the encoder interface.
@@ -75,11 +77,19 @@ func (uv UpdateValue) Validate() error {
 // ===== Business → App conversions =====
 
 func toAppValue(value valuebus.Value) Value {
+	var archivedAt *string
+	if value.ArchivedAt != nil {
+		t := value.ArchivedAt.Format("2006-01-02T15:04:05Z07:00")
+		archivedAt = &t
+	}
+
 	return Value{
 		ID:           value.ID.String(),
 		Content:      value.Content.String(),
 		Facet:        value.Facet.String(),
 		DisplayOrder: value.DisplayOrder.Value(),
+		Status:       value.Status.String(),
+		ArchivedAt:   archivedAt,
 		DateCreated:  value.DateCreated.Format("2006-01-02T15:04:05Z07:00"),
 		DateUpdated:  value.DateUpdated.Format("2006-01-02T15:04:05Z07:00"),
 	}

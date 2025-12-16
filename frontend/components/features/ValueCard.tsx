@@ -1,6 +1,6 @@
 'use client';
 
-import { Value } from '@/lib/types';
+import { Value, STATUS_ARCHIVED } from '@/lib/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, MoreVertical } from 'lucide-react';
+import { Edit, MoreVertical, Archive, RotateCcw, Layers } from 'lucide-react';
 import { getFacetConfig } from '@/lib/value-utils';
 
 const gradientMap: Record<string, string> = {
@@ -24,31 +24,64 @@ const gradientMap: Record<string, string> = {
   spirituality: 'bg-gradient-to-br from-indigo-50 to-white',
 };
 
+// Helper function with date validation
+function formatDateSafe(dateValue: string | null, locale = 'es-MX'): string {
+  if (!dateValue) return 'Fecha desconocida';
+
+  const date = new Date(dateValue);
+
+  // Validate date is valid before formatting
+  if (isNaN(date.getTime())) {
+    return 'Fecha inválida';
+  }
+
+  return date.toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 interface ValueCardProps {
   value: Value;
-  rank: number;
+  rank?: number;
+  activeLifeVisionCount?: number;
   onEdit?: () => void;
-  onDelete?: () => void;
+  onArchive?: () => void;
+  onRestore?: () => void;
   isDragging?: boolean;
 }
 
-export function ValueCard({ value, rank, onEdit, onDelete, isDragging = false }: ValueCardProps) {
+export function ValueCard({
+  value,
+  rank,
+  activeLifeVisionCount = 0,
+  onEdit,
+  onArchive,
+  onRestore,
+  isDragging = false,
+}: ValueCardProps) {
   const facetConfig = getFacetConfig(value.facet);
   const gradientClass = gradientMap[value.facet] || 'bg-white';
+  const isArchived = value.status === STATUS_ARCHIVED;
 
   return (
     <Card
-      className={`transition-all ${gradientClass} hover:border-rose-200 ${
-        isDragging ? 'shadow-lg border-rose-300' : 'hover:shadow-md'
-      }`}
+      className={`transition-all ${gradientClass} ${
+        isArchived
+          ? 'opacity-60 border-dashed border-2 border-gray-300 bg-gray-50/50'
+          : 'hover:border-rose-200'
+      } ${isDragging ? 'shadow-lg border-rose-300' : 'hover:shadow-md'}`}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap flex-1">
-            {/* Priority Badge - uniform styling for all */}
-            <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">
-              #{rank}
-            </Badge>
+            {/* Priority Badge - only shown for active values with a rank */}
+            {rank !== undefined && (
+              <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">
+                #{rank}
+              </Badge>
+            )}
 
             {/* Facet Badge */}
             <Badge
@@ -58,10 +91,26 @@ export function ValueCard({ value, rank, onEdit, onDelete, isDragging = false }:
               <span className="mr-1">{facetConfig.icon}</span>
               {facetConfig.label}
             </Badge>
+
+            {/* Archived Badge */}
+            {isArchived && (
+              <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-400">
+                <Archive className="h-3 w-3 mr-1" />
+                Retirado
+              </Badge>
+            )}
+
+            {/* Life Vision Count Badge (only for active values) */}
+            {!isArchived && activeLifeVisionCount > 0 && (
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                <Layers className="h-3 w-3 mr-1" />
+                {activeLifeVisionCount} vision{activeLifeVisionCount !== 1 ? 'es' : ''}
+              </Badge>
+            )}
           </div>
 
           {/* Dropdown menu for actions */}
-          {(onEdit || onDelete) && (
+          {(onEdit || onArchive || onRestore) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Actions">
@@ -69,19 +118,28 @@ export function ValueCard({ value, rank, onEdit, onDelete, isDragging = false }:
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {onEdit && (
+                {!isArchived && onEdit && (
                   <DropdownMenuItem onClick={onEdit}>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
                 )}
-                {onDelete && (
+                {!isArchived && onArchive && (
                   <DropdownMenuItem
-                    onClick={onDelete}
-                    className="text-destructive focus:text-destructive"
+                    onClick={onArchive}
+                    className="text-amber-600 focus:text-amber-600"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar
+                    <Archive className="h-4 w-4 mr-2" />
+                    Retirar
+                  </DropdownMenuItem>
+                )}
+                {isArchived && onRestore && (
+                  <DropdownMenuItem
+                    onClick={onRestore}
+                    className="text-green-600 focus:text-green-600"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Restaurar
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -92,18 +150,15 @@ export function ValueCard({ value, rank, onEdit, onDelete, isDragging = false }:
 
       <CardContent className="space-y-4">
         <p className="text-sm text-foreground leading-relaxed">{value.content}</p>
-        <p className="text-xs text-muted-foreground">
-          Actualizado{' '}
-          {(() => {
-            try {
-              const date = new Date(value.dateUpdated);
-              if (isNaN(date.getTime())) return 'recientemente';
-              return date.toLocaleDateString('es-MX');
-            } catch {
-              return 'recientemente';
-            }
-          })()}
-        </p>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Actualizado {formatDateSafe(value.dateUpdated)}</span>
+          {isArchived && value.archivedAt && (
+            <span className="flex items-center gap-1 text-gray-500">
+              <Archive className="h-3 w-3" />
+              Retirado el {formatDateSafe(value.archivedAt)}
+            </span>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

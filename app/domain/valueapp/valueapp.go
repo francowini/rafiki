@@ -140,6 +140,80 @@ func (a *app) delete(ctx context.Context, r *http.Request) web.Encoder {
 	return nil
 }
 
+// archive handles PUT /v1/values/{value_id}/archive
+func (a *app) archive(ctx context.Context, r *http.Request) web.Encoder {
+	valueID, err := uuid.Parse(web.Param(r, "value_id"))
+	if err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
+	value, err := a.valueBus.QueryByID(ctx, valueID)
+	if err != nil {
+		if errors.Is(err, valuebus.ErrNotFound) {
+			return errs.New(errs.NotFound, err)
+		}
+		return errs.Newf(errs.Internal, "querybyid: valueID[%s]: %s", valueID, err)
+	}
+
+	if value.UserID != userID {
+		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
+	}
+
+	value, err = a.valueBus.Archive(ctx, value)
+	if err != nil {
+		if errors.Is(err, valuebus.ErrHasActiveLifeVisions) {
+			return errs.New(errs.Aborted, err)
+		}
+		if errors.Is(err, valuebus.ErrAlreadyArchived) {
+			return errs.New(errs.InvalidArgument, err)
+		}
+		return errs.Newf(errs.Internal, "archive: %s", err)
+	}
+
+	return toAppValue(value)
+}
+
+// restore handles PUT /v1/values/{value_id}/restore
+func (a *app) restore(ctx context.Context, r *http.Request) web.Encoder {
+	valueID, err := uuid.Parse(web.Param(r, "value_id"))
+	if err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	userID, err := mid.GetUserID(ctx)
+	if err != nil {
+		return errs.New(errs.Unauthenticated, err)
+	}
+
+	// Query with includeArchived=true to find archived values
+	filter := valuebus.QueryFilter{
+		ID:              &valueID,
+		UserID:          &userID,
+		IncludeArchived: true,
+	}
+	values, err := a.valueBus.Query(ctx, filter, order.NewBy("", ""), page.MustParse("1", "1"))
+	if err != nil || len(values) == 0 {
+		return errs.New(errs.NotFound, valuebus.ErrNotFound)
+	}
+
+	value := values[0]
+
+	value, err = a.valueBus.Restore(ctx, value)
+	if err != nil {
+		if errors.Is(err, valuebus.ErrNotArchived) {
+			return errs.New(errs.InvalidArgument, err)
+		}
+		return errs.Newf(errs.Internal, "restore: %s", err)
+	}
+
+	return toAppValue(value)
+}
+
 // query handles GET /v1/values
 func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	qp := parseQueryParams(r)
@@ -160,7 +234,8 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	filter := valuebus.QueryFilter{
-		UserID: &userID,
+		UserID:          &userID,
+		IncludeArchived: qp.IncludeArchived == "true",
 	}
 
 	// Filter by facet if provided
@@ -250,18 +325,20 @@ func (a *app) reorder(ctx context.Context, r *http.Request) web.Encoder {
 // ===== Query params parsing =====
 
 type queryParams struct {
-	Page    string
-	Rows    string
-	OrderBy string
-	Facet   string
+	Page            string
+	Rows            string
+	OrderBy         string
+	Facet           string
+	IncludeArchived string
 }
 
 func parseQueryParams(r *http.Request) queryParams {
 	values := r.URL.Query()
 	return queryParams{
-		Page:    values.Get("page"),
-		Rows:    values.Get("rows"),
-		OrderBy: values.Get("orderBy"),
-		Facet:   values.Get("facet"),
+		Page:            values.Get("page"),
+		Rows:            values.Get("rows"),
+		OrderBy:         values.Get("orderBy"),
+		Facet:           values.Get("facet"),
+		IncludeArchived: values.Get("includeArchived"),
 	}
 }

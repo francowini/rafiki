@@ -28,4 +28,6 @@ func Routes(app *web.App, cfg Config) {
 	app.HandlerFunc(http.MethodGet, version, "/values/{value_id}", api.queryByID, bearer)
 	app.HandlerFunc(http.MethodPut, version, "/values/{value_id}", api.update, bearer)
 	app.HandlerFunc(http.MethodDelete, version, "/values/{value_id}", api.delete, bearer)
+	app.HandlerFunc(http.MethodPut, version, "/values/{value_id}/archive", api.archive, bearer)
+	app.HandlerFunc(http.MethodPut, version, "/values/{value_id}/restore", api.restore, bearer)
 }

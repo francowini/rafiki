@@ -1,6 +1,6 @@
 'use client';
 
-import { Value } from '@/lib/types';
+import { Value, STATUS_ARCHIVED } from '@/lib/types';
 import { ValueCard } from './ValueCard';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -9,22 +9,28 @@ import { Button } from '@/components/ui/button';
 
 interface ValueDragItemProps {
   value: Value;
-  rank: number;
+  rank?: number;
+  activeLifeVisionCount?: number;
   onEdit: (value: Value) => void;
-  onDelete: (value: Value) => void;
+  onArchive: (value: Value) => void;
+  onRestore: (value: Value) => void;
   isDisabled?: boolean;
 }
 
 export function ValueDragItem({
   value,
   rank,
+  activeLifeVisionCount = 0,
   onEdit,
-  onDelete,
+  onArchive,
+  onRestore,
   isDisabled = false,
 }: ValueDragItemProps) {
+  const isArchived = value.status === STATUS_ARCHIVED;
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: value.id,
-    disabled: isDisabled, // Disable sorting when updating
+    disabled: isDisabled || isArchived, // Disable sorting when updating or archived
   });
 
   const style = {
@@ -35,14 +41,16 @@ export function ValueDragItem({
 
   return (
     <div ref={setNodeRef} style={style} className="flex gap-2 items-stretch">
-      {/* Drag handle - disabled during save */}
+      {/* Drag handle - disabled during save or when archived */}
       <Button
         variant="ghost"
         size="sm"
-        disabled={isDisabled}
+        disabled={isDisabled || isArchived}
         className="flex-shrink-0 cursor-grab active:cursor-grabbing h-auto disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label={isDisabled ? 'Saving order...' : 'Drag to reorder'}
-        {...(isDisabled ? {} : { ...attributes, ...listeners })}
+        aria-label={
+          isArchived ? 'Archived values cannot be reordered' : isDisabled ? 'Saving order...' : 'Drag to reorder'
+        }
+        {...(isDisabled || isArchived ? {} : { ...attributes, ...listeners })}
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </Button>
@@ -52,9 +60,11 @@ export function ValueDragItem({
         <ValueCard
           value={value}
           rank={rank}
+          activeLifeVisionCount={activeLifeVisionCount}
           isDragging={isDragging}
           onEdit={() => onEdit(value)}
-          onDelete={() => onDelete(value)}
+          onArchive={() => onArchive(value)}
+          onRestore={() => onRestore(value)}
         />
       </div>
     </div>

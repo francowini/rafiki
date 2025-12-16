@@ -192,9 +192,13 @@ export const api = {
     /**
      * Get all values for the current user, sorted by display_order
      */
-    getAll: async (params?: { facet?: Facet }): Promise<ValueListResponse> => {
+    getAll: async (params?: {
+      facet?: Facet;
+      includeArchived?: boolean;
+    }): Promise<ValueListResponse> => {
       const queryParams = new URLSearchParams();
       if (params?.facet) queryParams.set('facet', params.facet);
+      if (params?.includeArchived) queryParams.set('includeArchived', 'true');
 
       const query = queryParams.toString();
       const endpoint = `/v1/values${query ? `?${query}` : ''}`;
@@ -248,6 +252,25 @@ export const api = {
         body: JSON.stringify({ items }),
       });
     },
+
+    /**
+     * Archive a value (soft delete).
+     * Returns 409 if value has active life visions.
+     */
+    archive: async (id: string): Promise<Value> => {
+      return fetchAPI<Value>(`/v1/values/${id}/archive`, {
+        method: 'PUT',
+      });
+    },
+
+    /**
+     * Restore an archived value.
+     */
+    restore: async (id: string): Promise<Value> => {
+      return fetchAPI<Value>(`/v1/values/${id}/restore`, {
+        method: 'PUT',
+      });
+    },
   },
 
   health: {
@@ -270,8 +293,16 @@ export const api = {
     /**
      * Get all life visions for the current user
      */
-    getAll: async (): Promise<LifeVisionListResponse> => {
-      return fetchAPI<LifeVisionListResponse>('/v1/lifevisions');
+    getAll: async (params?: {
+      valueId?: string;
+      includeArchived?: boolean;
+    }): Promise<LifeVisionListResponse> => {
+      const queryParams = new URLSearchParams();
+      if (params?.valueId) queryParams.set('valueId', params.valueId);
+      if (params?.includeArchived) queryParams.set('includeArchived', 'true');
+
+      const query = queryParams.toString();
+      return fetchAPI<LifeVisionListResponse>(`/v1/lifevisions${query ? `?${query}` : ''}`);
     },
 
     /**
@@ -314,6 +345,34 @@ export const api = {
     delete: async (id: string): Promise<void> => {
       return fetchAPI<void>(`/v1/lifevisions/${id}`, {
         method: 'DELETE',
+      });
+    },
+
+    /**
+     * Archive a life vision (soft delete).
+     */
+    archive: async (id: string): Promise<LifeVision> => {
+      return fetchAPI<LifeVision>(`/v1/lifevisions/${id}/archive`, {
+        method: 'PUT',
+      });
+    },
+
+    /**
+     * Restore an archived life vision.
+     */
+    restore: async (id: string): Promise<LifeVision> => {
+      return fetchAPI<LifeVision>(`/v1/lifevisions/${id}/restore`, {
+        method: 'PUT',
+      });
+    },
+
+    /**
+     * Reassign life vision to a different value.
+     */
+    reassign: async (id: string, newValueId: string): Promise<LifeVision> => {
+      return fetchAPI<LifeVision>(`/v1/lifevisions/${id}/reassign`, {
+        method: 'PUT',
+        body: JSON.stringify({ valueId: newValueId }),
       });
     },
   },
