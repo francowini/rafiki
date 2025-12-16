@@ -526,3 +526,125 @@ WHERE user_id = :user_id
 - [ ] **Validation**: Business layer validates inputs before persisting
 - [ ] **API Parameters**: Numeric parameters have max limits
 - [ ] **SQL Performance**: Aggregate queries have time bounds
+
+---
+
+## 17. Error Handling: Fragile String-Based Error Detection
+
+### Severity: Major (Integration Bug, Fragile Code)
+
+### Problem
+
+Detecting database errors by searching for substrings in error messages is fragile and can break if the message format changes.
+
+### Bad Example
+
+```go
+// BAD: Fragile string-based error detection
+if err := b.storer.Update(ctx, value); err != nil {
+    if strings.Contains(err.Error(), "active life visions") {
+        return Value{}, ErrHasActiveLifeVisions
+    }
+    return Value{}, fmt.Errorf("update: %w", err)
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Store layer detects specific PG error and returns sentinel error
+// In store layer (valuedb.go):
+if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, dbValue); err != nil {
+    var pgErr *pgconn.PgError
+    if errors.As(err, &pgErr) && pgErr.Code == "23503" &&
+       strings.Contains(pgErr.Message, "active life visions") {
+        return valuebus.ErrHasActiveLifeVisions
+    }
+    return fmt.Errorf("namedexeccontext: %w", err)
+}
+
+// In business layer (valuebus.go):
+if err := b.storer.Update(ctx, value); err != nil {
+    if errors.Is(err, ErrHasActiveLifeVisions) {
+        return Value{}, ErrHasActiveLifeVisions
+    }
+    return Value{}, fmt.Errorf("update: %w", err)
+}
+```
+
+### Checklist
+
+- [ ] Use `errors.As` to cast to specific error types (e.g., `*pgconn.PgError`)
+- [ ] Check error codes, not just message text
+- [ ] Define sentinel errors at the domain layer and return them from the store layer
+- [ ] Use `errors.Is` in business layer to check for sentinel errors
+
+---
+
+## 18. Business Logic: Missing Parent Entity Validation on Restore
+
+### Severity: Major (Data Integrity Issue)
+
+### Problem
+
+When restoring an archived child entity, failing to validate that its parent entity is still active can lead to orphaned or inconsistent data states.
+
+### Bad Example
+
+```go
+// BAD: Restoring life vision without checking if parent value is active
+func (b *Business) Restore(ctx context.Context, lifeVision LifeVision) (LifeVision, error) {
+    if !lifeVision.Status.IsArchived() {
+        return LifeVision{}, ErrNotArchived
+    }
+
+    // Missing: Check if parent value is still active!
+
+    lifeVision.Status = entitystatus.Active
+    lifeVision.ArchivedAt = nil
+    lifeVision.DateUpdated = time.Now().UTC()
+
+    if err := b.storer.Update(ctx, lifeVision); err != nil {
+        return LifeVision{}, fmt.Errorf("update: %w", err)
+    }
+
+    return lifeVision, nil
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Validate parent value is active before restoring
+func (b *Business) Restore(ctx context.Context, lifeVision LifeVision) (LifeVision, error) {
+    if !lifeVision.Status.IsArchived() {
+        return LifeVision{}, ErrNotArchived
+    }
+
+    // Validate parent value is still active before restoring
+    value, err := b.valueBus.QueryByID(ctx, lifeVision.ValueID)
+    if err != nil {
+        return LifeVision{}, fmt.Errorf("value.querybyid: valueID[%s]: %w", lifeVision.ValueID, err)
+    }
+
+    if !value.Status.IsActive() {
+        return LifeVision{}, ErrTargetValueNotActive
+    }
+
+    lifeVision.Status = entitystatus.Active
+    lifeVision.ArchivedAt = nil
+    lifeVision.DateUpdated = time.Now().UTC()
+
+    if err := b.storer.Update(ctx, lifeVision); err != nil {
+        return LifeVision{}, fmt.Errorf("update: %w", err)
+    }
+
+    return lifeVision, nil
+}
+```
+
+### Checklist
+
+- [ ] Before restoring a child entity, verify the parent entity exists and is in valid state
+- [ ] Define specific error types for invalid parent states (e.g., `ErrTargetValueNotActive`)
+- [ ] Handle the new error in the app layer and return appropriate HTTP status codes

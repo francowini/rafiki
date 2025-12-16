@@ -202,9 +202,6 @@ func (a *app) restore(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	value := values[0]
-	if value.UserID != userID {
-		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
-	}
 
 	value, err = a.valueBus.Restore(ctx, value)
 	if err != nil {

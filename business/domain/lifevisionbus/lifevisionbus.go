@@ -197,6 +197,16 @@ func (b *Business) Restore(ctx context.Context, lifeVision LifeVision) (LifeVisi
 		return LifeVision{}, ErrNotArchived
 	}
 
+	// Validate parent value is still active before restoring
+	value, err := b.valueBus.QueryByID(ctx, lifeVision.ValueID)
+	if err != nil {
+		return LifeVision{}, fmt.Errorf("value.querybyid: valueID[%s]: %w", lifeVision.ValueID, err)
+	}
+
+	if !value.Status.IsActive() {
+		return LifeVision{}, ErrTargetValueNotActive
+	}
+
 	lifeVision.Status = entitystatus.Active
 	lifeVision.ArchivedAt = nil
 	lifeVision.DateUpdated = time.Now().UTC()

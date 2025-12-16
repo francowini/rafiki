@@ -1,6 +1,6 @@
 'use client';
 
-import { Value } from '@/lib/types';
+import { Value, STATUS_ARCHIVED } from '@/lib/types';
 import { ValueCard } from './ValueCard';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 
 interface ValueDragItemProps {
   value: Value;
-  rank: number;
+  rank?: number;
   activeLifeVisionCount?: number;
   onEdit: (value: Value) => void;
   onArchive: (value: Value) => void;

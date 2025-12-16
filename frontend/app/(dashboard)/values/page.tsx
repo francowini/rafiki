@@ -44,7 +44,7 @@ export default function ValuesPage() {
   const [showReassignmentDialog, setShowReassignmentDialog] = useState(false);
   const [activeLifeVisions, setActiveLifeVisions] = useState<LifeVision[]>([]);
   const [availableValues, setAvailableValues] = useState<Value[]>([]);
-  const [_isArchiving, setIsArchiving] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
   const handleCreateSuccess = () => {
@@ -80,19 +80,29 @@ export default function ValuesPage() {
     } catch (err: unknown) {
       // Check if has active life visions (409 Conflict)
       if (err instanceof APIError && err.status === 409) {
-        // Fetch life visions for this value
-        const visionsRes = await api.lifeVisions.getAll({ valueId: value.id });
-        const activeVisions = visionsRes.items.filter((v) => v.status === 'active');
+        try {
+          // Fetch life visions for this value
+          const visionsRes = await api.lifeVisions.getAll({ valueId: value.id });
+          const activeVisions = visionsRes.items.filter((v) => v.status === 'active');
 
-        // Fetch available values for reassignment
-        const valuesRes = await api.values.getAll();
-        const available = valuesRes.items.filter(
-          (v) => v.id !== value.id && v.status === 'active',
-        );
+          // Fetch available values for reassignment
+          const valuesRes = await api.values.getAll();
+          const available = valuesRes.items.filter(
+            (v) => v.id !== value.id && v.status === 'active',
+          );
 
-        setActiveLifeVisions(activeVisions);
-        setAvailableValues(available);
-        setShowReassignmentDialog(true);
+          setActiveLifeVisions(activeVisions);
+          setAvailableValues(available);
+          setShowReassignmentDialog(true);
+        } catch (fetchErr: unknown) {
+          console.error('Failed to fetch data for reassignment dialog:', fetchErr);
+          toast({
+            variant: 'destructive',
+            title: 'Error al cargar datos',
+            description: 'No se pudieron cargar los datos para reasignación. Por favor intenta de nuevo.',
+          });
+          setValueToArchive(null);
+        }
       } else {
         toast({
           variant: 'destructive',
@@ -137,7 +147,7 @@ export default function ValuesPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Valores</h1>
-            <p className="text-muted-foreground mt-1">Define lo que mas importa en tu vida</p>
+            <p className="text-muted-foreground mt-1">Define lo que más importa en tu vida</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -166,7 +176,7 @@ export default function ValuesPage() {
                 <SheetHeader>
                   <SheetTitle className="text-xl">Define un valor</SheetTitle>
                   <SheetDescription>
-                    ¿Que te importa? ¿Que guia tus decisiones y acciones?
+                    ¿Qué te importa? ¿Qué guía tus decisiones y acciones?
                   </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6">
@@ -179,7 +189,7 @@ export default function ValuesPage() {
               </SheetContent>
             </Sheet>
             {valuesCount >= 10 && (
-              <p className="text-sm text-muted-foreground italic">Maximo de 10 valores alcanzado</p>
+              <p className="text-sm text-muted-foreground italic">Máximo de 10 valores alcanzado</p>
             )}
           </div>
         </div>
@@ -224,7 +234,7 @@ export default function ValuesPage() {
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="text-xl">Editar valor</SheetTitle>
-            <SheetDescription>Actualiza tu declaracion de valor o prioridad.</SheetDescription>
+            <SheetDescription>Actualiza tu declaración de valor o prioridad.</SheetDescription>
           </SheetHeader>
           <div className="mt-6">
             <ValueForm
@@ -252,7 +262,7 @@ export default function ValuesPage() {
               Restaurar valor
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Este valor volvera a estar activo y podras asignarle nuevas visiones de vida.
+              Este valor volverá a estar activo y podrás asignarle nuevas visiones de vida.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

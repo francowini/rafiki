@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
-import { Value, ValueWithLifeVisionCount } from '@/lib/types';
+import { Value, ValueWithLifeVisionCount, STATUS_ACTIVE, STATUS_ARCHIVED } from '@/lib/types';
 import { ValueDragItem } from './ValueDragItem';
 import { EmptySlot } from './EmptySlot';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -75,19 +75,17 @@ export function ValueList({
         return; // A newer request was made, discard this result
       }
 
-      // Add life vision counts
+      // Add life vision counts (backend already filters to active-only when includeArchived is not set)
       const valuesWithCounts: ValueWithLifeVisionCount[] = response.items.map((value) => ({
         ...value,
-        activeLifeVisionCount: visionsRes.items.filter(
-          (v) => v.valueId === value.id && v.status === 'active',
-        ).length,
+        activeLifeVisionCount: visionsRes.items.filter((v) => v.valueId === value.id).length,
       }));
 
       const sortedValues = valuesWithCounts.sort((a, b) => a.displayOrder - b.displayOrder);
       setValues(sortedValues);
 
       // Count only active values for limit
-      const activeCount = sortedValues.filter((v) => v.status === 'active').length;
+      const activeCount = sortedValues.filter((v) => v.status === STATUS_ACTIVE).length;
       onValuesCountChange?.(activeCount);
     } catch (err: unknown) {
       // Only update error state if this request is still current
@@ -116,7 +114,7 @@ export function ValueList({
       if (!over || active.id === over.id) return;
 
       // Only allow reordering active values
-      const activeValues = values.filter((v) => v.status === 'active');
+      const activeValues = values.filter((v) => v.status === STATUS_ACTIVE);
       const oldIndex = activeValues.findIndex((v) => v.id === active.id);
       const newIndex = activeValues.findIndex((v) => v.id === over.id);
 
@@ -133,7 +131,7 @@ export function ValueList({
       }));
 
       // Merge back with archived values
-      const archivedValues = values.filter((v) => v.status === 'archived');
+      const archivedValues = values.filter((v) => v.status === STATUS_ARCHIVED);
       const updatedValues = [...updatedActiveValues, ...archivedValues].sort(
         (a, b) => a.displayOrder - b.displayOrder,
       );
@@ -141,7 +139,7 @@ export function ValueList({
 
       // Save to backend (only active values)
       const result = await handleValueReorder(
-        originalValues.filter((v) => v.status === 'active'),
+        originalValues.filter((v) => v.status === STATUS_ACTIVE),
         updatedActiveValues,
       );
 
@@ -171,11 +169,11 @@ export function ValueList({
   }
 
   // Filter values based on showArchived
-  const displayValues = showArchived ? values : values.filter((v) => v.status === 'active');
+  const displayValues = showArchived ? values : values.filter((v) => v.status === STATUS_ACTIVE);
 
   // Generate 10 slots for active values
-  const activeValues = displayValues.filter((v) => v.status === 'active');
-  const archivedValues = displayValues.filter((v) => v.status === 'archived');
+  const activeValues = displayValues.filter((v) => v.status === STATUS_ACTIVE);
+  const archivedValues = displayValues.filter((v) => v.status === STATUS_ARCHIVED);
 
   const slots = Array.from({ length: 10 }, (_, i) => {
     const slotNumber = i + 1;
@@ -217,11 +215,10 @@ export function ValueList({
                   Valores retirados ({archivedValues.length})
                 </h3>
               </div>
-              {archivedValues.map((value, index) => (
+              {archivedValues.map((value) => (
                 <ValueDragItem
                   key={value.id}
                   value={value}
-                  rank={index + 1}
                   activeLifeVisionCount={value.activeLifeVisionCount}
                   onEdit={onValueEdit}
                   onArchive={onValueArchive}

@@ -204,14 +204,14 @@ func (a *app) restore(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	lifeVision := lifeVisions[0]
-	if lifeVision.UserID != userID {
-		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
-	}
 
 	lifeVision, err = a.lifeVisionBus.Restore(ctx, lifeVision)
 	if err != nil {
 		if errors.Is(err, lifevisionbus.ErrNotArchived) {
 			return errs.New(errs.InvalidArgument, err)
+		}
+		if errors.Is(err, lifevisionbus.ErrTargetValueNotActive) {
+			return errs.New(errs.FailedPrecondition, err)
 		}
 		return errs.Newf(errs.Internal, "restore: %s", err)
 	}

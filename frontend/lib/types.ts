@@ -136,6 +136,10 @@ export type Facet = (typeof FACETS)[number];
 // Entity status for soft delete functionality
 export type EntityStatus = 'active' | 'archived';
 
+// Entity status constants
+export const STATUS_ACTIVE: EntityStatus = 'active';
+export const STATUS_ARCHIVED: EntityStatus = 'archived';
+
 export interface Value {
   id: string;
   content: string;

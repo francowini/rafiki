@@ -55,22 +55,65 @@ export function ReassignmentDialog({
     setIsProcessing(true);
 
     try {
+      let allSucceeded = true;
+
       if (archiveVisions) {
-        // Archive all life visions
-        await Promise.all(activeLifeVisions.map((vision) => api.lifeVisions.archive(vision.id)));
-        toast({
-          title: 'Visiones retiradas',
-          description: `${activeLifeVisions.length} visiones retiradas exitosamente.`,
-        });
+        // Archive all life visions using Promise.allSettled to handle partial failures
+        const results = await Promise.allSettled(
+          activeLifeVisions.map((vision) => api.lifeVisions.archive(vision.id)),
+        );
+
+        const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+        const failed = results.filter((r) => r.status === 'rejected').length;
+
+        if (failed > 0) {
+          allSucceeded = false;
+          console.error(
+            'Failed to archive some visions:',
+            results.filter((r) => r.status === 'rejected'),
+          );
+          toast({
+            variant: 'destructive',
+            title: 'Error parcial',
+            description: `${succeeded} de ${activeLifeVisions.length} visiones retiradas. ${failed} fallaron.`,
+          });
+        } else {
+          toast({
+            title: 'Visiones retiradas',
+            description: `${activeLifeVisions.length} visiones retiradas exitosamente.`,
+          });
+        }
       } else {
-        // Reassign all life visions to selected value
-        await Promise.all(
+        // Reassign all life visions using Promise.allSettled
+        const results = await Promise.allSettled(
           activeLifeVisions.map((vision) => api.lifeVisions.reassign(vision.id, selectedValueId)),
         );
-        toast({
-          title: 'Visiones reasignadas',
-          description: `${activeLifeVisions.length} visiones reasignadas exitosamente.`,
-        });
+
+        const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+        const failed = results.filter((r) => r.status === 'rejected').length;
+
+        if (failed > 0) {
+          allSucceeded = false;
+          console.error(
+            'Failed to reassign some visions:',
+            results.filter((r) => r.status === 'rejected'),
+          );
+          toast({
+            variant: 'destructive',
+            title: 'Error parcial',
+            description: `${succeeded} de ${activeLifeVisions.length} visiones reasignadas. ${failed} fallaron.`,
+          });
+        } else {
+          toast({
+            title: 'Visiones reasignadas',
+            description: `${activeLifeVisions.length} visiones reasignadas exitosamente.`,
+          });
+        }
+      }
+
+      // Only archive the value if all vision operations succeeded
+      if (!allSucceeded) {
+        return;
       }
 
       // Now archive the value
@@ -80,13 +123,16 @@ export function ReassignmentDialog({
         description: 'Tu valor ha sido retirado exitosamente.',
       });
 
+      // Reset local state before closing
+      setSelectedValueId('');
+      setArchiveVisions(false);
       onComplete();
       onOpenChange(false);
     } catch (err: unknown) {
       const message =
         err instanceof Error
           ? err.message
-          : 'No se pudo completar la operacion. Por favor intenta de nuevo.';
+          : 'No se pudo completar la operación. Por favor intenta de nuevo.';
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -152,7 +198,9 @@ export function ReassignmentDialog({
         <div className="space-y-4">
           {/* Option 1: Reassign to another value */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Reasignar a:</label>
+            <label htmlFor="reassign-value-select" className="text-sm font-medium">
+              Reasignar a:
+            </label>
             <Select
               value={selectedValueId}
               onValueChange={(value) => {
@@ -161,7 +209,7 @@ export function ReassignmentDialog({
               }}
               disabled={archiveVisions}
             >
-              <SelectTrigger>
+              <SelectTrigger id="reassign-value-select">
                 <SelectValue placeholder="Selecciona un valor..." />
               </SelectTrigger>
               <SelectContent>

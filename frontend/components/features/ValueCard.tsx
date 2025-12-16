@@ -1,6 +1,6 @@
 'use client';
 
-import { Value } from '@/lib/types';
+import { Value, STATUS_ARCHIVED } from '@/lib/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,7 @@ function formatDateSafe(dateValue: string | null, locale = 'es-MX'): string {
 
   // Validate date is valid before formatting
   if (isNaN(date.getTime())) {
-    return 'Fecha invalida';
+    return 'Fecha inválida';
   }
 
   return date.toLocaleDateString(locale, {
@@ -44,7 +44,7 @@ function formatDateSafe(dateValue: string | null, locale = 'es-MX'): string {
 
 interface ValueCardProps {
   value: Value;
-  rank: number;
+  rank?: number;
   activeLifeVisionCount?: number;
   onEdit?: () => void;
   onArchive?: () => void;
@@ -63,7 +63,7 @@ export function ValueCard({
 }: ValueCardProps) {
   const facetConfig = getFacetConfig(value.facet);
   const gradientClass = gradientMap[value.facet] || 'bg-white';
-  const isArchived = value.status === 'archived';
+  const isArchived = value.status === STATUS_ARCHIVED;
 
   return (
     <Card
@@ -76,10 +76,12 @@ export function ValueCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap flex-1">
-            {/* Priority Badge - uniform styling for all */}
-            <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">
-              #{rank}
-            </Badge>
+            {/* Priority Badge - only shown for active values with a rank */}
+            {rank !== undefined && (
+              <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">
+                #{rank}
+              </Badge>
+            )}
 
             {/* Facet Badge */}
             <Badge

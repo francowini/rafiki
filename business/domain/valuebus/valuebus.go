@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -257,8 +256,8 @@ func (b *Business) Archive(ctx context.Context, value Value) (Value, error) {
 	value.DateUpdated = now
 
 	if err := b.storer.Update(ctx, value); err != nil {
-		// Database trigger will reject if has active life visions
-		if strings.Contains(err.Error(), "active life visions") {
+		// Store layer returns sentinel error for trigger rejection
+		if errors.Is(err, ErrHasActiveLifeVisions) {
 			return Value{}, ErrHasActiveLifeVisions
 		}
 		return Value{}, fmt.Errorf("update: %w", err)

@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/francowini/rafiki/business/domain/valuebus"
@@ -99,6 +101,14 @@ func (s *Store) Update(ctx context.Context, value valuebus.Value) error {
 		if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
 			return fmt.Errorf("namedexeccontext: %w", valuebus.ErrDuplicateOrder)
 		}
+
+		// Detect database trigger rejection for archiving with active life visions.
+		// The trigger uses ERRCODE '23503' with message containing 'active life visions'.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" && strings.Contains(pgErr.Message, "active life visions") {
+			return valuebus.ErrHasActiveLifeVisions
+		}
+
 		return fmt.Errorf("namedexeccontext: %w", err)
 	}
 
