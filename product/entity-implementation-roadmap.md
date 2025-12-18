@@ -118,181 +118,23 @@ business/types/
     └── recurrencia.go        # JSONB struct with validation
 ```
 
-### 2.2 Example Business Type Implementation
+### 2.2 Implementation Pattern Reference
 
-```go
-// business/types/objetivostatus/objetivostatus.go
-package objetivostatus
+All new business types must follow the established pattern documented in `CLAUDE.md` under "Business Types with Validation". Key requirements:
 
-import (
-    "fmt"
-)
+**For enum types** (objetivostatus, trackingtype, etc.):
+- Reference: `business/types/entitystatus/entitystatus.go`
+- Required methods: `Value()`, `String()`, `Equal()`, `MarshalText()`, `Parse()`, `MustParse()`
+- Export a `Set` map for validation
 
-// Set of valid objective statuses
-var (
-    Activo     = newStatus("activo")
-    Completado = newStatus("completado")
-    Abandonado = newStatus("abandonado")
-    Pausado    = newStatus("pausado")
-)
+**For validated primitives** (objetivotitle, progresopct, etc.):
+- Reference: `business/types/content/content.go`, `business/types/name/name.go`
+- Required methods: `Value()`, `String()`, `Equal()`, `MarshalText()`, `Parse()`, `MustParse()`
 
-// Set holds all valid statuses for iteration/validation
-var Set = map[string]Status{
-    Activo.value:     Activo,
-    Completado.value: Completado,
-    Abandonado.value: Abandonado,
-    Pausado.value:    Pausado,
-}
-
-// Status represents a validated objective status
-type Status struct {
-    value string
-}
-
-func newStatus(value string) Status {
-    return Status{value}
-}
-
-// String returns the string representation
-func (s Status) String() string {
-    return s.value
-}
-
-// IsActive returns true if the status is activo
-func (s Status) IsActive() bool {
-    return s.value == Activo.value
-}
-
-// Equal provides support for go-cmp package
-func (s Status) Equal(s2 Status) bool {
-    return s.value == s2.value
-}
-
-// MarshalText implements encoding.TextMarshaler
-func (s Status) MarshalText() ([]byte, error) {
-    return []byte(s.value), nil
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler
-func (s *Status) UnmarshalText(data []byte) error {
-    status, err := Parse(string(data))
-    if err != nil {
-        return err
-    }
-    *s = status
-    return nil
-}
-
-// Parse validates and returns a Status
-func Parse(value string) (Status, error) {
-    status, exists := Set[value]
-    if !exists {
-        return Status{}, fmt.Errorf("invalid status %q, valid values: activo, completado, abandonado, pausado", value)
-    }
-    return status, nil
-}
-
-// MustParse panics on invalid status. Use only in tests.
-func MustParse(value string) Status {
-    status, err := Parse(value)
-    if err != nil {
-        panic(err)
-    }
-    return status
-}
-```
-
-### 2.3 Recurrence Pattern Type
-
-```go
-// business/types/recurrencia/recurrencia.go
-package recurrencia
-
-import (
-    "encoding/json"
-    "errors"
-    "fmt"
-)
-
-// Type constants
-const (
-    TypeSemanal = "semanal"
-    TypeMensual = "mensual"
-    TypeDiario  = "diario"
-)
-
-// Recurrencia represents a task recurrence pattern
-type Recurrencia struct {
-    Tipo       string `json:"tipo"`
-    DiasSemana []int  `json:"dias_semana,omitempty"` // 1=Monday to 7=Sunday
-    DiaMes     *int   `json:"dia_mes,omitempty"`     // 1-31
-}
-
-// Validate checks if the recurrence pattern is valid
-func (r Recurrencia) Validate() error {
-    switch r.Tipo {
-    case TypeDiario:
-        // No additional validation needed
-        return nil
-
-    case TypeSemanal:
-        if len(r.DiasSemana) == 0 {
-            return errors.New("semanal requires at least one day in dias_semana")
-        }
-        for _, dia := range r.DiasSemana {
-            if dia < 1 || dia > 7 {
-                return fmt.Errorf("dias_semana values must be 1-7, got %d", dia)
-            }
-        }
-        return nil
-
-    case TypeMensual:
-        if r.DiaMes == nil {
-            return errors.New("mensual requires dia_mes")
-        }
-        if *r.DiaMes < 1 || *r.DiaMes > 31 {
-            return fmt.Errorf("dia_mes must be 1-31, got %d", *r.DiaMes)
-        }
-        return nil
-
-    default:
-        return fmt.Errorf("invalid tipo %q, valid values: diario, semanal, mensual", r.Tipo)
-    }
-}
-
-// MarshalJSON implements json.Marshaler
-func (r Recurrencia) MarshalJSON() ([]byte, error) {
-    type Alias Recurrencia
-    return json.Marshal(Alias(r))
-}
-
-// Parse validates and returns a Recurrencia from JSON bytes
-func Parse(data []byte) (Recurrencia, error) {
-    if len(data) == 0 {
-        return Recurrencia{}, errors.New("empty recurrence data")
-    }
-
-    var r Recurrencia
-    if err := json.Unmarshal(data, &r); err != nil {
-        return Recurrencia{}, fmt.Errorf("invalid recurrence JSON: %w", err)
-    }
-
-    if err := r.Validate(); err != nil {
-        return Recurrencia{}, err
-    }
-
-    return r, nil
-}
-
-// MustParse panics on error. Use only in tests.
-func MustParse(data []byte) Recurrencia {
-    r, err := Parse(data)
-    if err != nil {
-        panic(err)
-    }
-    return r
-}
-```
+**For JSONB structs** (recurrencia):
+- Reference: Implement as struct with `Validate()` method
+- Store as JSONB in PostgreSQL
+- Parse from JSON bytes with validation
 
 ---
 
@@ -313,286 +155,45 @@ business/domain/objetivobus/
         └── model.go      # Database model (dbObjetivo)
 ```
 
-### 3.2 Objetivobus Model
+### 3.2 Objetivobus Model Fields
 
-```go
-// business/domain/objetivobus/model.go
-package objetivobus
+**Objetivo** (main entity):
+- `ID`, `UserID`, `LifeVisionID` (uuid.UUID)
+- `Title` (objetivotitle type, 5-200 chars)
+- `Description` (*string, optional)
+- `Year` (int)
+- `TrackingType` (enum: resultado, frecuencia)
+- `MetricaTarget`, `MetricaActual` (int)
+- `MetricaUnidad` (string: libros, sesiones, km, etc.)
+- `Frecuencia` (*enum, only if TrackingType = frecuencia)
+- `FrecuenciaN` (*int, e.g., 5 for "5 days per week")
+- `CumplimientoTargetPct` (*int, e.g., 80 for "80% compliance")
+- `Status` (objetivostatus enum)
+- `ArchivedAt`, `DateCreated`, `DateUpdated` (time.Time)
 
-import (
-    "time"
-
-    "github.com/google/uuid"
-    "github.com/francowini/rafiki/business/types/frecuenciatype"
-    "github.com/francowini/rafiki/business/types/metricatarget"
-    "github.com/francowini/rafiki/business/types/metricaunidad"
-    "github.com/francowini/rafiki/business/types/objetivostatus"
-    "github.com/francowini/rafiki/business/types/objetivotitle"
-    "github.com/francowini/rafiki/business/types/trackingtype"
-)
-
-// Objetivo represents an annual goal linked to a life vision
-type Objetivo struct {
-    ID                   uuid.UUID
-    UserID               uuid.UUID
-    LifeVisionID         uuid.UUID
-    Title                objetivotitle.ObjetivoTitle
-    Description          *string
-    Year                 int
-    TrackingType         trackingtype.TrackingType
-    MetricaTarget        metricatarget.MetricaTarget
-    MetricaActual        int // Auto-calculated, not directly editable
-    MetricaUnidad        metricaunidad.MetricaUnidad
-    Frecuencia           *frecuenciatype.FrecuenciaType // Only if TrackingType = frecuencia
-    FrecuenciaN          *int                           // e.g., 5 for "5 days per week"
-    CumplimientoTargetPct *int                          // e.g., 80 for "80% compliance"
-    Status               objetivostatus.Status
-    ArchivedAt           *time.Time
-    DateCreated          time.Time
-    DateUpdated          time.Time
-}
-
-// NewObjetivo contains fields for creating a new objective
-type NewObjetivo struct {
-    UserID               uuid.UUID
-    LifeVisionID         uuid.UUID
-    Title                objetivotitle.ObjetivoTitle
-    Description          *string
-    Year                 int
-    TrackingType         trackingtype.TrackingType
-    MetricaTarget        metricatarget.MetricaTarget
-    MetricaUnidad        metricaunidad.MetricaUnidad
-    Frecuencia           *frecuenciatype.FrecuenciaType
-    FrecuenciaN          *int
-    CumplimientoTargetPct *int
-}
-
-// UpdateObjetivo contains fields for updating an existing objective
-type UpdateObjetivo struct {
-    Title                *objetivotitle.ObjetivoTitle
-    Description          *string
-    MetricaTarget        *metricatarget.MetricaTarget
-    MetricaUnidad        *metricaunidad.MetricaUnidad
-    Frecuencia           *frecuenciatype.FrecuenciaType
-    FrecuenciaN          *int
-    CumplimientoTargetPct *int
-    Status               *objetivostatus.Status
-}
-```
+**Reference pattern**: `business/domain/lifevisionbus/model.go`
 
 ### 3.3 Objetivobus Business Logic
 
-```go
-// business/domain/objetivobus/objetivobus.go
-package objetivobus
+**Key behaviors**:
+- Imports `lifevisionbus.ExtBusiness` for parent validation
+- Create: Validates life vision exists, is active, and belongs to user
+- Archive: Checks for active children (iniciativas) - block pattern
+- UpdateMetricaActual: Called by registro creation to update progress
 
-import (
-    "context"
-    "errors"
-    "fmt"
-    "time"
-
-    "github.com/google/uuid"
-    "github.com/francowini/rafiki/business/domain/lifevisionbus"
-    "github.com/francowini/rafiki/business/sdk/delegate"
-    "github.com/francowini/rafiki/business/sdk/sqldb"
-    "github.com/francowini/rafiki/business/types/objetivostatus"
-    "github.com/francowini/rafiki/foundation/logger"
-)
-
-// Set of error variables
-var (
-    ErrNotFound              = errors.New("objetivo not found")
-    ErrNotOwner              = errors.New("not owner of objetivo")
-    ErrAlreadyArchived       = errors.New("objetivo already archived")
-    ErrHasActiveIniciativas  = errors.New("cannot archive objetivo with active iniciativas")
-    ErrLifeVisionNotActive   = errors.New("life vision is not active")
-)
-
-// ExtBusiness represents the external interface for objetivo operations
-type ExtBusiness interface {
-    Create(ctx context.Context, no NewObjetivo) (Objetivo, error)
-    Update(ctx context.Context, objetivo Objetivo, uo UpdateObjetivo) (Objetivo, error)
-    Archive(ctx context.Context, objetivo Objetivo) (Objetivo, error)
-    Restore(ctx context.Context, objetivo Objetivo) (Objetivo, error)
-    UpdateMetricaActual(ctx context.Context, objetivoID uuid.UUID, value int) error
-    QueryByID(ctx context.Context, objetivoID uuid.UUID) (Objetivo, error)
-    Query(ctx context.Context, filter QueryFilter, orderBy OrderBy, page sqldb.Page) ([]Objetivo, error)
-    Count(ctx context.Context, filter QueryFilter) (int, error)
-}
-
-// Business manages the set of APIs for objetivo access
-type Business struct {
-    log           *logger.Logger
-    lifeVisionBus lifevisionbus.ExtBusiness
-    delegate      *delegate.Delegate
-    storer        Storer
-}
-
-// NewBusiness constructs a Business for objetivo operations
-func NewBusiness(
-    log *logger.Logger,
-    lifeVisionBus lifevisionbus.ExtBusiness,
-    dlg *delegate.Delegate,
-    storer Storer,
-) *Business {
-    b := Business{
-        log:           log,
-        lifeVisionBus: lifeVisionBus,
-        delegate:      dlg,
-        storer:        storer,
-    }
-
-    // Register delegate handlers
-    b.registerDelegateFunctions()
-
-    return &b
-}
-
-// Create adds a new objetivo to the system
-func (b *Business) Create(ctx context.Context, no NewObjetivo) (Objetivo, error) {
-    // Validate life vision exists and is active
-    lv, err := b.lifeVisionBus.QueryByID(ctx, no.LifeVisionID)
-    if err != nil {
-        return Objetivo{}, fmt.Errorf("lifevision.querybyid: %w", err)
-    }
-
-    if lv.Status.IsArchived() {
-        return Objetivo{}, ErrLifeVisionNotActive
-    }
-
-    // Security: Ensure life vision belongs to requesting user
-    if lv.UserID != no.UserID {
-        return Objetivo{}, ErrNotOwner
-    }
-
-    now := time.Now().UTC()
-
-    objetivo := Objetivo{
-        ID:                    uuid.New(),
-        UserID:                no.UserID,
-        LifeVisionID:          no.LifeVisionID,
-        Title:                 no.Title,
-        Description:           no.Description,
-        Year:                  no.Year,
-        TrackingType:          no.TrackingType,
-        MetricaTarget:         no.MetricaTarget,
-        MetricaActual:         0, // Starts at 0
-        MetricaUnidad:         no.MetricaUnidad,
-        Frecuencia:            no.Frecuencia,
-        FrecuenciaN:           no.FrecuenciaN,
-        CumplimientoTargetPct: no.CumplimientoTargetPct,
-        Status:                objetivostatus.Activo,
-        DateCreated:           now,
-        DateUpdated:           now,
-    }
-
-    if err := b.storer.Create(ctx, objetivo); err != nil {
-        return Objetivo{}, fmt.Errorf("create: %w", err)
-    }
-
-    return objetivo, nil
-}
-
-// Archive marks an objetivo as archived
-func (b *Business) Archive(ctx context.Context, objetivo Objetivo) (Objetivo, error) {
-    if objetivo.Status.IsArchived() {
-        return Objetivo{}, ErrAlreadyArchived
-    }
-
-    now := time.Now().UTC()
-    objetivo.Status = objetivostatus.Abandonado // Or a dedicated archived status
-    objetivo.ArchivedAt = &now
-    objetivo.DateUpdated = now
-
-    if err := b.storer.Update(ctx, objetivo); err != nil {
-        // Check if blocked by trigger (has active iniciativas)
-        if errors.Is(err, ErrHasActiveIniciativas) {
-            return Objetivo{}, ErrHasActiveIniciativas
-        }
-        return Objetivo{}, fmt.Errorf("update: %w", err)
-    }
-
-    return objetivo, nil
-}
-
-// UpdateMetricaActual updates the progress metric (called by registro creation)
-func (b *Business) UpdateMetricaActual(ctx context.Context, objetivoID uuid.UUID, value int) error {
-    objetivo, err := b.QueryByID(ctx, objetivoID)
-    if err != nil {
-        return fmt.Errorf("querybyid: %w", err)
-    }
-
-    objetivo.MetricaActual = value
-    objetivo.DateUpdated = time.Now().UTC()
-
-    if err := b.storer.Update(ctx, objetivo); err != nil {
-        return fmt.Errorf("update: %w", err)
-    }
-
-    return nil
-}
-```
+**Reference pattern**: `business/domain/lifevisionbus/lifevisionbus.go`
 
 ### 3.4 Tareabus with Dual Parentage
 
-```go
-// business/domain/tareabus/tareabus.go (partial)
-package tareabus
+**Special pattern**: Tasks can be standalone OR derived from initiatives.
 
-// Business manages task operations with dual parent validation
-type Business struct {
-    log           *logger.Logger
-    userBus       userbus.ExtBusiness      // For standalone tasks
-    iniciativaBus iniciativabus.ExtBusiness // For derived tasks
-    delegate      *delegate.Delegate
-    storer        Storer
-}
+**Key behaviors**:
+- Imports BOTH `userbus.ExtBusiness` AND `iniciativabus.ExtBusiness`
+- Create always validates user exists and is enabled
+- If `IniciativaID` is provided, validates initiative exists and belongs to same user
+- If `IniciativaID` is nil, task goes to "Inbox" (standalone)
 
-// Create adds a new task (derived or standalone)
-func (b *Business) Create(ctx context.Context, nt NewTarea) (Tarea, error) {
-    // ALWAYS validate user exists
-    user, err := b.userBus.QueryByID(ctx, nt.UserID)
-    if err != nil {
-        return Tarea{}, fmt.Errorf("user.querybyid: %w", err)
-    }
-    if !user.Enabled {
-        return Tarea{}, ErrUserDisabled
-    }
-
-    // CONDITIONALLY validate initiative (if provided)
-    if nt.IniciativaID != nil {
-        iniciativa, err := b.iniciativaBus.QueryByID(ctx, *nt.IniciativaID)
-        if err != nil {
-            return Tarea{}, fmt.Errorf("iniciativa.querybyid: %w", err)
-        }
-
-        // Security: Ensure initiative belongs to same user
-        // (initiative's objective's life vision's value's user)
-        if iniciativa.UserID != nt.UserID {
-            return Tarea{}, ErrNotOwner
-        }
-    }
-
-    // Create task...
-    now := time.Now().UTC()
-    tarea := Tarea{
-        ID:             uuid.New(),
-        UserID:         nt.UserID,
-        IniciativaID:   nt.IniciativaID, // Can be nil for standalone
-        Title:          nt.Title,
-        // ... other fields
-        DateCreated:    now,
-        DateUpdated:    now,
-    }
-
-    if err := b.storer.Create(ctx, tarea); err != nil {
-        return Tarea{}, fmt.Errorf("create: %w", err)
-    }
-
-    return tarea, nil
-}
-```
+**Reference pattern**: `business/domain/valuebus/valuebus.go` (for user validation)
 
 ---
 
@@ -652,277 +253,45 @@ GET    /v1/tareas/activity              Get daily completion counts
 
 ### 5.1 React Query Setup
 
-```typescript
-// frontend/lib/query-client.ts
-import { QueryClient } from '@tanstack/react-query';
+**Requirements**:
+- Install `@tanstack/react-query` for data fetching and caching
+- Configure QueryClient with appropriate stale/cache times
+- Create query key factory for consistent cache invalidation
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 10,   // 10 minutes
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-    mutations: {
-      retry: 0,
-    },
-  },
-});
+**Key patterns**:
+- Query keys: hierarchical structure (e.g., `['objectives', 'list', filters]`)
+- Mutations: optimistic updates with rollback on error
+- Cache invalidation: invalidate related queries on mutations
 
-// Query key factory
-export const queryKeys = {
-  objectives: {
-    all: ['objectives'] as const,
-    lists: () => [...queryKeys.objectives.all, 'list'] as const,
-    list: (filters: string) => [...queryKeys.objectives.lists(), filters] as const,
-    detail: (id: string) => [...queryKeys.objectives.all, 'detail', id] as const,
-    records: (id: string) => [...queryKeys.objectives.all, 'records', id] as const,
-  },
-  initiatives: {
-    all: ['initiatives'] as const,
-    lists: () => [...queryKeys.initiatives.all, 'list'] as const,
-    detail: (id: string) => [...queryKeys.initiatives.all, 'detail', id] as const,
-  },
-  tasks: {
-    all: ['tasks'] as const,
-    lists: () => [...queryKeys.tasks.all, 'list'] as const,
-    list: (filters: object) => [...queryKeys.tasks.lists(), filters] as const,
-    detail: (id: string) => [...queryKeys.tasks.all, 'detail', id] as const,
-    activity: () => [...queryKeys.tasks.all, 'activity'] as const,
-  },
-};
-```
+**Reference**: TanStack Query documentation
 
-### 5.2 Optimistic Task Completion
+### 5.2 Optimistic Updates Pattern
 
-```typescript
-// frontend/lib/hooks/use-tasks.ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { queryKeys } from '@/lib/query-client';
-import { useToast } from '@/hooks/use-toast';
+**For task completion** (and similar instant-feedback actions):
+1. `onMutate`: Cancel in-flight queries, snapshot current state, update cache optimistically
+2. `onError`: Rollback to previous state, show error toast
+3. `onSettled`: Invalidate related queries to ensure consistency
+4. `onSuccess`: Show success feedback
 
-export function useCompleteTask() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+### 5.3 Calendar Heatmap
 
-  return useMutation({
-    mutationFn: (taskId: string) => api.tasks.complete(taskId),
+**Requirements**:
+- Library: `react-activity-calendar`
+- Data format: `{ date: string, count: number, level: 0-4 }`
+- Theme: Match application light/dark mode
 
-    // Optimistic update
-    onMutate: async (taskId) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.lists() });
-
-      const previousTasks = queryClient.getQueryData(queryKeys.tasks.lists());
-
-      queryClient.setQueryData(queryKeys.tasks.lists(), (old: any) => {
-        if (!old?.items) return old;
-        return {
-          ...old,
-          items: old.items.map((task: Task) =>
-            task.id === taskId
-              ? { ...task, status: 'completada', completedAt: new Date().toISOString() }
-              : task
-          ),
-        };
-      });
-
-      return { previousTasks };
-    },
-
-    // Rollback on error
-    onError: (error: Error, taskId, context) => {
-      if (context?.previousTasks) {
-        queryClient.setQueryData(queryKeys.tasks.lists(), context.previousTasks);
-      }
-      toast({
-        variant: 'destructive',
-        title: 'Error completing task',
-        description: error.message,
-      });
-    },
-
-    // Refetch to ensure consistency
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.activity() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.initiatives.all });
-    },
-
-    onSuccess: () => {
-      toast({
-        title: 'Task completed',
-        description: 'Great progress!',
-      });
-    },
-  });
-}
-```
-
-### 5.3 Calendar Heatmap Component
-
-```typescript
-// frontend/components/features/objectives/FrequencyHeatmap.tsx
-'use client';
-
-import ActivityCalendar, { Activity } from 'react-activity-calendar';
-import { useObjectiveRecords } from '@/lib/hooks/use-objectives';
-import { Skeleton } from '@/components/ui/skeleton';
-
-interface FrequencyHeatmapProps {
-  objectiveId: string;
-  year?: number;
-}
-
-export function FrequencyHeatmap({ objectiveId, year }: FrequencyHeatmapProps) {
-  const currentYear = year || new Date().getFullYear();
-  const { data, isLoading } = useObjectiveRecords(objectiveId, currentYear);
-
-  if (isLoading) {
-    return <Skeleton className="h-32 w-full rounded-lg" />;
-  }
-
-  // Transform records to activity format
-  const activityData: Activity[] = data?.items.map((record) => ({
-    date: record.fecha,
-    count: record.completado ? 1 : 0,
-    level: record.completado ? 2 : 0,
-  })) ?? [];
-
-  return (
-    <div className="w-full p-4 bg-card rounded-lg border">
-      <ActivityCalendar
-        data={activityData}
-        theme={{
-          light: ['#f4f4f5', '#bbf7d0', '#4ade80', '#22c55e', '#16a34a'],
-          dark: ['#27272a', '#166534', '#22c55e', '#4ade80', '#86efac'],
-        }}
-        labels={{
-          totalCount: '{{count}} completions in {{year}}',
-        }}
-        showWeekdayLabels
-        blockSize={12}
-        blockMargin={3}
-        blockRadius={2}
-        fontSize={12}
-      />
-    </div>
-  );
-}
-```
+**Used for**: Frequency objective tracking visualization
 
 ### 5.4 Quick Task Capture FAB
 
-```typescript
-// frontend/components/features/tasks/QuickTaskFAB.tsx
-'use client';
+**Requirements**:
+- Floating action button (fixed position, bottom-right)
+- Keyboard shortcut: Cmd+K / Ctrl+K
+- Sheet component for quick input form
+- Minimal required fields: title only
+- Tasks without initiative go to "Inbox"
 
-import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useCreateTask } from '@/lib/hooks/use-tasks';
-
-export function QuickTaskFAB() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const createTask = useCreateTask();
-
-  // Keyboard shortcut: Cmd+K / Ctrl+K
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsOpen(true);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-
-    await createTask.mutateAsync({
-      title: title.trim(),
-      tipo: 'unica',
-      prioridad: 'media',
-      status: 'pendiente',
-      // No initiative = goes to Inbox
-    });
-
-    setTitle('');
-    setIsOpen(false);
-  };
-
-  return (
-    <>
-      {/* Floating Action Button */}
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
-        size="icon"
-        aria-label="Quick add task"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
-
-      {/* Quick Add Sheet */}
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Captura Rápida</SheetTitle>
-          </SheetHeader>
-
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="task-title">¿Qué necesitas hacer?</Label>
-              <Input
-                id="task-title"
-                autoFocus
-                placeholder="Ej: Llamar al dentista"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-
-            <p className="text-sm text-muted-foreground">
-              💡 Presiona <kbd className="px-1 bg-muted rounded">Cmd+K</kbd> para
-              capturar tareas rápidamente desde cualquier lugar.
-            </p>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={!title.trim() || createTask.isPending}
-              >
-                {createTask.isPending ? 'Agregando...' : 'Agregar'}
-              </Button>
-            </div>
-          </form>
-        </SheetContent>
-      </Sheet>
-    </>
-  );
-}
-```
+**Reference components**: `frontend/components/ui/sheet.tsx`, `frontend/components/ui/button.tsx`
 
 ---
 

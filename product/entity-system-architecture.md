@@ -114,7 +114,7 @@ VALUES → LIFE VISIONS → OBJECTIVES → INITIATIVES → TASKS
 | Entity | Relationship | Limit | Status |
 |--------|-------------|-------|--------|
 | Users | Root | - | ✅ Implemented |
-| Values | 1 User : N Values | Max 10 active | ✅ Implemented |
+| Values | 1 User : N Values | Max 10 total (incl. archived) | ✅ Implemented |
 | Life Visions | 1 Value : N Visions | Unlimited | ✅ Implemented |
 | Objectives | 1 Vision : N Objectives | Unlimited | ⏳ To Implement |
 | Objective Records | 1 Objective : N Records | 1 per day | ⏳ To Implement |
@@ -146,7 +146,7 @@ VALUES → LIFE VISIONS → OBJECTIVES → INITIATIVES → TASKS
 **Purpose**: Permanent life directions based on ACT therapy. Values are not goals to achieve but qualities of being to manifest continuously.
 
 **Key Characteristics**:
-- Maximum 10 active values per user (cognitive limit)
+- Maximum 10 total values per user, including archived (cognitive limit; current implementation counts all values, not just active)
 - Ordered by priority (1 = most important)
 - Categorized by life facet (personal, relationships, work, leisure, growth)
 - Soft delete via archive (preserves history)
