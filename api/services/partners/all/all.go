@@ -6,6 +6,7 @@ import (
 	"github.com/francowini/rafiki/app/domain/checkapp"
 	"github.com/francowini/rafiki/app/domain/lifevisionapp"
 	"github.com/francowini/rafiki/app/domain/momentapp"
+	"github.com/francowini/rafiki/app/domain/roleapp"
 	"github.com/francowini/rafiki/app/domain/thinkapp"
 	"github.com/francowini/rafiki/app/domain/valueapp"
 	"github.com/francowini/rafiki/app/domain/vexportapp"
@@ -54,6 +55,12 @@ func (Add) Add(app *web.App, cfg mux.Config) {
 	lifevisionapp.Routes(app, lifevisionapp.Config{
 		LifeVisionBus: cfg.BusConfig.LifeVisionBus,
 		Auth:          cfg.BusConfig.Auth,
+	})
+
+	roleapp.Routes(app, roleapp.Config{
+		RoleBus:  cfg.BusConfig.RoleBus,
+		ValueBus: cfg.BusConfig.ValueBus,
+		Auth:     cfg.BusConfig.Auth,
 	})
 
 	vexportapp.Routes(app, vexportapp.Config{

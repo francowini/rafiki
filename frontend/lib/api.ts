@@ -19,6 +19,11 @@ import type {
   UpdateLifeVision,
   ExportParams,
   ExportResponse,
+  Role,
+  RoleWithValues,
+  RoleListResponse,
+  NewRole,
+  UpdateRole,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -402,6 +407,93 @@ export const api = {
       }
 
       return fetchAPI<ExportResponse>(`/v1/export?${queryParams.toString()}`);
+    },
+  },
+
+  roles: {
+    /**
+     * Get all roles for the current user
+     */
+    getAll: async (params?: { includeArchived?: boolean }): Promise<RoleListResponse> => {
+      const query = params?.includeArchived ? '?includeArchived=true' : '';
+      return fetchAPI<RoleListResponse>(`/v1/roles${query}`);
+    },
+
+    /**
+     * Get a single role by ID with its connected values
+     */
+    getById: async (id: string): Promise<RoleWithValues> => {
+      return fetchAPI<RoleWithValues>(`/v1/roles/${id}`);
+    },
+
+    /**
+     * Create a new role
+     */
+    create: async (data: NewRole): Promise<Role> => {
+      return fetchAPI<Role>('/v1/roles', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    /**
+     * Update an existing role
+     */
+    update: async (id: string, data: UpdateRole): Promise<Role> => {
+      return fetchAPI<Role>(`/v1/roles/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+
+    /**
+     * Delete a role
+     */
+    delete: async (id: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/roles/${id}`, { method: 'DELETE' });
+    },
+
+    /**
+     * Archive a role (soft delete)
+     */
+    archive: async (id: string): Promise<Role> => {
+      return fetchAPI<Role>(`/v1/roles/${id}/archive`, { method: 'PUT' });
+    },
+
+    /**
+     * Restore an archived role
+     */
+    restore: async (id: string): Promise<Role> => {
+      return fetchAPI<Role>(`/v1/roles/${id}/restore`, { method: 'PUT' });
+    },
+
+    /**
+     * Connect a value to a role (immediate save)
+     */
+    connectValue: async (roleId: string, valueId: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/roles/${roleId}/values`, {
+        method: 'POST',
+        body: JSON.stringify({ value_id: valueId }),
+      });
+    },
+
+    /**
+     * Disconnect a value from a role
+     */
+    disconnectValue: async (roleId: string, valueId: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/roles/${roleId}/values/${valueId}`, {
+        method: 'DELETE',
+      });
+    },
+
+    /**
+     * Bulk set values for a role (replaces all connections)
+     */
+    bulkSetValues: async (roleId: string, valueIds: string[]): Promise<void> => {
+      return fetchAPI<void>(`/v1/roles/${roleId}/values`, {
+        method: 'PUT',
+        body: JSON.stringify({ value_ids: valueIds }),
+      });
     },
   },
 };

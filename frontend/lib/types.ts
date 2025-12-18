@@ -249,3 +249,70 @@ export interface DateRange {
   startDate: Date;
   endDate: Date;
 }
+
+// ============================================================================
+// Role Types
+// ============================================================================
+
+// Role Types (4 categories)
+export type RoleType = 'personal' | 'relational' | 'professional' | 'hobby_cause';
+
+// Role Facets (15 expanded from values)
+export const ROLE_FACETS = [
+  'family_relationships',
+  'friendships_social',
+  'romantic_relationships',
+  'work_career',
+  'education_growth',
+  'recreation_leisure',
+  'spirituality_meaning',
+  'health_wellbeing',
+  'community_citizenship',
+  'physical_health',
+  'mental_wellbeing',
+  'creative_expression',
+  'leadership_mentorship',
+  'financial_stewardship',
+  'environmental_nature',
+] as const;
+
+export type RoleFacet = (typeof ROLE_FACETS)[number];
+
+export interface Role {
+  id: string;
+  name: string;
+  roleType: RoleType;
+  facet: RoleFacet;
+  description: string;
+  displayOrder: number;
+  status: EntityStatus;
+  archivedAt: string | null;
+  dateCreated: string;
+  dateUpdated: string;
+}
+
+export interface NewRole {
+  name: string;
+  roleType: RoleType;
+  facet: RoleFacet;
+  description: string;
+  displayOrder: number;
+  valueIds: string[];
+}
+
+export interface UpdateRole {
+  name?: string;
+  roleType?: RoleType;
+  facet?: RoleFacet;
+  description?: string;
+  displayOrder?: number;
+}
+
+export interface RoleWithValues extends Role {
+  valueIds: string[];
+}
+
+export interface RoleListResponse {
+  items: Role[];
+  total: number;
+}

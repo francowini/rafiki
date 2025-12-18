@@ -471,3 +471,84 @@ COMMENT ON COLUMN values.status IS 'Entity status: active or archived (soft dele
 COMMENT ON COLUMN values.archived_at IS 'Timestamp when entity was archived (NULL if active)';
 COMMENT ON COLUMN life_visions.status IS 'Entity status: active or archived (soft delete)';
 COMMENT ON COLUMN life_visions.archived_at IS 'Timestamp when entity was archived (NULL if active)';
+
+
+-- Version: 13
+-- Description: Create roles and roles_values tables for life roles tracking
+
+-- =============================================================================
+-- Roles table
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS roles (
+    role_id        UUID        NOT NULL,
+    user_id        UUID        NOT NULL,
+    name           TEXT        NOT NULL,
+    role_type      TEXT        NOT NULL,
+    facet          TEXT        NOT NULL,
+    description    TEXT        NOT NULL,
+    display_order  INTEGER     NOT NULL CHECK (display_order >= 1),
+    status         TEXT        NOT NULL DEFAULT 'active',
+    archived_at    TIMESTAMP   NULL,
+    date_created   TIMESTAMP   NOT NULL,
+    date_updated   TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (role_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT roles_status_check CHECK (status IN ('active', 'archived')),
+    CONSTRAINT roles_type_check CHECK (role_type IN ('personal', 'relational', 'professional', 'hobby_cause')),
+    CONSTRAINT roles_facet_check CHECK (facet IN (
+        'family_relationships',
+        'friendships_social',
+        'romantic_relationships',
+        'work_career',
+        'education_growth',
+        'recreation_leisure',
+        'spirituality_meaning',
+        'health_wellbeing',
+        'community_citizenship',
+        'physical_health',
+        'mental_wellbeing',
+        'creative_expression',
+        'leadership_mentorship',
+        'financial_stewardship',
+        'environmental_nature'
+    ))
+);
+
+-- Indexes for roles
+CREATE INDEX IF NOT EXISTS roles_user_id_idx ON roles(user_id);
+CREATE INDEX IF NOT EXISTS roles_user_active_idx ON roles(user_id) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS roles_status_idx ON roles(status);
+CREATE INDEX IF NOT EXISTS roles_facet_idx ON roles(facet);
+CREATE INDEX IF NOT EXISTS roles_type_idx ON roles(role_type);
+CREATE INDEX IF NOT EXISTS roles_date_created_idx ON roles(date_created DESC);
+
+COMMENT ON TABLE roles IS 'Life roles that users identify with (max 15 per user)';
+COMMENT ON COLUMN roles.name IS 'Encrypted role name (plaintext validated as 3-100 chars in business layer)';
+COMMENT ON COLUMN roles.description IS 'Encrypted description (plaintext validated as 10-500 chars in business layer)';
+COMMENT ON COLUMN roles.role_type IS 'Role category: personal, relational, professional, or hobby_cause';
+COMMENT ON COLUMN roles.facet IS 'Life facet categorization (15 role-specific facets)';
+COMMENT ON COLUMN roles.display_order IS 'User-controlled priority ranking (1=highest)';
+COMMENT ON COLUMN roles.status IS 'Entity status: active or archived (soft delete)';
+
+-- =============================================================================
+-- Roles_values junction table (N:M relationship)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS roles_values (
+    role_id      UUID        NOT NULL,
+    value_id     UUID        NOT NULL,
+    date_created TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (role_id, value_id),
+    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE,
+    FOREIGN KEY (value_id) REFERENCES values(value_id) ON DELETE RESTRICT
+);
+
+-- Indexes for roles_values
+CREATE INDEX IF NOT EXISTS roles_values_role_id_idx ON roles_values(role_id);
+CREATE INDEX IF NOT EXISTS roles_values_value_id_idx ON roles_values(value_id);
+
+COMMENT ON TABLE roles_values IS 'Junction table linking roles to values (N:M relationship)';
+COMMENT ON COLUMN roles_values.date_created IS 'When this connection was created';

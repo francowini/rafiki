@@ -108,3 +108,61 @@ export function validateDateRange(startDate: Date, endDate: Date): string | null
 
   return null;
 }
+
+/**
+ * Formats a date value for display with validation (F7 compliance).
+ * Returns a structured object with date and time strings.
+ * Handles invalid dates gracefully with fallback text.
+ */
+export function formatDate(
+  dateValue: string | null | undefined,
+  locale = 'es-MX',
+): { dateStr: string; timeStr: string } {
+  if (!dateValue) {
+    return { dateStr: 'Fecha desconocida', timeStr: '' };
+  }
+
+  const date = new Date(dateValue);
+
+  if (isNaN(date.getTime())) {
+    return { dateStr: 'Fecha inválida', timeStr: '' };
+  }
+
+  const dateStr = date.toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const timeStr = date.toLocaleTimeString(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return { dateStr, timeStr };
+}
+
+/**
+ * Formats a date value for short display (e.g., "27 nov 2025").
+ * Used in cards and compact views.
+ */
+export function formatDateShort(
+  dateValue: string | null | undefined,
+  locale = 'es-MX',
+): string {
+  if (!dateValue) {
+    return 'Fecha desconocida';
+  }
+
+  const date = new Date(dateValue);
+
+  if (isNaN(date.getTime())) {
+    return 'Fecha inválida';
+  }
+
+  return date.toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}

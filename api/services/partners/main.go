@@ -27,6 +27,8 @@ import (
 	"github.com/francowini/rafiki/business/domain/momentbus/stores/momentdb"
 	"github.com/francowini/rafiki/business/domain/notificationbus"
 	"github.com/francowini/rafiki/business/domain/notificationbus/stores/notificationdb"
+	"github.com/francowini/rafiki/business/domain/rolebus"
+	"github.com/francowini/rafiki/business/domain/rolebus/stores/roledb"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
 	"github.com/francowini/rafiki/business/domain/userbus"
@@ -250,6 +252,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 	// Create life vision domain (child of value)
 	lifeVisionStore := lifevisiondb.NewStore(log, db, encryptor)
 	lifeVisionBus := lifevisionbus.NewBusiness(log, valueBus, dlg, lifeVisionStore)
+
+	// Create role domain (child of user, depends on value for validation)
+	roleStore := roledb.NewStore(log, db, encryptor)
+	roleBeginner := sqldb.NewBeginner(db)
+	roleBus := rolebus.NewBusiness(log, userBus, valueBus, dlg, roleStore, roleBeginner)
 
 	// Create vexport domain (query-only view domain)
 	vexportStore := vexportdb.NewStore(log, db, encryptor)
@@ -478,6 +485,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 			MomentBus:     momentBus,
 			ValueBus:      valueBus,
 			LifeVisionBus: lifeVisionBus,
+			RoleBus:       roleBus,
 			VExportBus:    vexportBus,
 			UserBus:       userBus,
 			Auth:          authInstance,

@@ -4,6 +4,18 @@ Execute a collaborative analysis using six specialized subagents (including the 
 
 **Usage**: `/multi-mind [topic/task]` or `/multi-mind [topic/task] --no-product` (to exclude Product Agent)
 
+## ⚠️ CRITICAL: Documentation-Only Output
+
+**Multi-Mind agents must ONLY generate files in the `docs/` folder.**
+
+- ✅ **ALLOWED**: Create/edit files in `docs/` folder (e.g., `docs/feature-backend.md`)
+- ✅ **EXCEPTION**: Product Agent can edit `product/product-entities-tracker.md` to keep data model updated
+- ❌ **FORBIDDEN**: All other agents creating/editing files outside `docs/`
+- ❌ **FORBIDDEN**: Modify actual source code files (`frontend/`, `api/`, `business/`, etc.)
+- ❌ **FORBIDDEN**: Create new implementation files outside `docs/`
+
+Multi-Mind is a **planning and documentation tool**, not an implementation tool. The output is documentation that developers will follow to implement features manually.
+
 ## Project Context
 
 This is a personal development tracking application (Rafiki) with a Go backend, Next.js frontend, and PostgreSQL database. Backend is deployed on Hetzner servers, frontend on Vercel. The application helps users track their ideals (ideales), values (valores), habits (hábitos), goals (metas), and objectives (objetivos). The six-agent team consists of:
@@ -33,7 +45,15 @@ Each agent should:
 4. Provide initial analysis based on their specialty
 
 **Agent 0: Product Agent** (ALWAYS RUNS unless `--no-product` specified)
-- Prompt: "As a Product Agent specializing in mental wellness, self-improvement, and personal development methodologies, analyze [topic] focusing on:
+- Prompt: "As a Product Agent specializing in mental wellness, self-improvement, and personal development methodologies, analyze [topic].
+
+  **CRITICAL: First read the product reference document:**
+  - Read `product/product-entities-tracker.md` to understand the current data model, entity relationships, and implemented features
+  - This document describes VALUES, LIFE_VISIONS, and planned future entities (ROLES, OBJECTIVES)
+  - Use this as your source of truth for what exists in the product today
+  - **You ARE ALLOWED to edit this document** to keep it updated when new features are implemented or entity relationships change (this is the ONLY exception to the docs-only rule)
+
+  Then focus your analysis on:
   - **Psychological frameworks**: Identify relevant mental models, behavioral psychology principles, and cognitive frameworks that apply to this feature
   - **Self-improvement methodologies**: Consider approaches like:
     * Values clarification and alignment (Acceptance and Commitment Therapy - ACT)
@@ -90,6 +110,8 @@ Each agent should:
   - Business validation rules
   - Any ambiguities in the requirements
 
+  **⚠️ OUTPUT RESTRICTION**: You may ONLY create/edit files in the `docs/` folder. Do NOT write actual implementation code.
+
   Use Read, Glob, and Grep tools to examine the existing codebase."
 
 **Agent 2: UX/UI Designer**
@@ -123,6 +145,8 @@ Each agent should:
   - Data display preferences (table vs cards vs list)
   - Any specific design constraints or preferences
 
+  **⚠️ OUTPUT RESTRICTION**: You may ONLY create/edit files in the `docs/` folder. Do NOT write actual implementation code.
+
   Use Read tool to examine existing UI components and design patterns in the codebase."
 
 **Agent 3: Frontend Engineer**
@@ -149,6 +173,8 @@ Each agent should:
   - Form submission behavior (optimistic updates, loading states)
   - Any specific implementation concerns
 
+  **⚠️ OUTPUT RESTRICTION**: You may ONLY create/edit files in the `docs/` folder. Do NOT write actual implementation code.
+
   Use Read, Glob, and Grep tools to examine the frontend codebase."
 
 **Agent 4: DevOps Engineer**
@@ -170,6 +196,8 @@ Each agent should:
   - Any infrastructure constraints or concerns
   - Monitoring and alerting requirements
   - Database migration strategy
+
+  **⚠️ OUTPUT RESTRICTION**: You may ONLY create/edit files in the `docs/` folder. Do NOT write actual deployment scripts or configuration files.
 
   Use Read tool to examine deployment scripts, Docker files, and configuration files."
 
@@ -193,7 +221,13 @@ Each original agent should:
 4. Coordinate with other specialists' findings
 
 **Agent 0: Product Agent** (Round 2 - VALIDATION ROLE)
-- Prompt: "Based on user's answers from Round 1 and the proposals from other agents, VALIDATE that the feature design supports mental wellness:
+- Prompt: "Based on user's answers from Round 1 and the proposals from other agents, VALIDATE that the feature design supports mental wellness.
+
+  **CRITICAL: Reference the product document:**
+  - Read `product/product-entities-tracker.md` for context on existing entities and their relationships
+  - Ensure proposals align with the established data model (VALUES → LIFE_VISIONS hierarchy)
+  - Consider how new features integrate with planned future entities (ROLES, OBJECTIVES)
+  - **You ARE ALLOWED to edit this document** to reflect any new entities, relationships, or changes approved in this round (this is the ONLY exception to the docs-only rule)
 
   **VALIDATE Backend Proposals**:
   - Do the data models support psychological frameworks (e.g., tracking progress, streaks, reflections)?

@@ -14,6 +14,7 @@ import (
 	"github.com/francowini/rafiki/app/sdk/mid"
 	"github.com/francowini/rafiki/business/domain/lifevisionbus"
 	"github.com/francowini/rafiki/business/domain/momentbus"
+	"github.com/francowini/rafiki/business/domain/rolebus"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/domain/valuebus"
@@ -61,6 +62,7 @@ type BusConfig struct {
 	MomentBus     *momentbus.Business
 	ValueBus      valuebus.ExtBusiness
 	LifeVisionBus lifevisionbus.ExtBusiness
+	RoleBus       rolebus.ExtBusiness
 	VExportBus    vexportbus.ExtBusiness
 	UserBus       userbus.ExtBusiness
 	Auth          *auth.Auth
