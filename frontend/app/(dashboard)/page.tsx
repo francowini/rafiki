@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import type { MomentStats as MomentStatsType } from '@/lib/types';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
@@ -9,7 +8,6 @@ import { ValuesTableWithVisions } from '@/components/dashboard/ValuesTableWithVi
 import { MomentStats } from '@/components/features/MomentStats';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
   const [stats, setStats] = useState<MomentStatsType | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const requestIdRef = useRef(0);
@@ -39,7 +37,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <WelcomeCard userName={user?.name || 'there'} />
+      <WelcomeCard />
 
       <MomentStats
         thisWeek={stats?.thisWeek ?? 0}

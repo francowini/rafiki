@@ -249,3 +249,121 @@ export interface DateRange {
   startDate: Date;
   endDate: Date;
 }
+
+// ============================================================================
+// Objective Types
+// ============================================================================
+
+export type TrackingType = 'resultado' | 'frecuencia';
+export type ObjectiveStatus = 'activo' | 'completado' | 'abandonado' | 'pausado';
+export type RecordStatus = 'completado' | 'omitido_intencional' | 'omitido';
+export type FrecuenciaType = 'daily' | 'n_por_semana' | 'n_por_mes';
+
+export const RECORD_STATUS_LABELS: Record<RecordStatus, string> = {
+  completado: 'Completado',
+  omitido_intencional: 'Omitido intencionalmente',
+  omitido: 'Omitido',
+};
+
+export const OBJECTIVE_STATUS_LABELS: Record<ObjectiveStatus, string> = {
+  activo: 'Activo',
+  completado: 'Completado',
+  abandonado: 'Abandonado',
+  pausado: 'Pausado',
+};
+
+export interface Objective {
+  id: string;
+  userId: string;
+  lifeVisionId: string;
+  titulo: string;
+  tipoTracking: TrackingType;
+  status: ObjectiveStatus;
+
+  // Resultado fields (null if frecuencia)
+  metricaObjetivo?: number;
+  metricaActual?: number;
+
+  // Frecuencia fields (null if resultado)
+  frecuenciaTipo?: FrecuenciaType;
+  frecuenciaN?: number;
+  cumplimientoTargetPct?: number;
+
+  archivedAt?: string | null;
+  dateCreated: string;
+  dateUpdated: string;
+}
+
+export interface ObjectiveWithRelations extends Objective {
+  lifeVision?: LifeVision;
+  value?: Value;
+  currentWeekCompliance?: number;
+  currentMonthCompliance?: number;
+}
+
+export interface NewObjective {
+  lifeVisionId: string;
+  titulo: string;
+  tipoTracking: TrackingType;
+  metricaObjetivo?: number;
+  frecuenciaTipo?: FrecuenciaType;
+  frecuenciaN?: number;
+  cumplimientoTargetPct?: number;
+}
+
+export interface UpdateObjective {
+  titulo?: string;
+  lifeVisionId?: string;
+  status?: ObjectiveStatus;
+  metricaObjetivo?: number;
+  frecuenciaTipo?: FrecuenciaType;
+  frecuenciaN?: number;
+  cumplimientoTargetPct?: number;
+}
+
+export interface ObjectiveListResponse {
+  items: Objective[];
+  total: number;
+}
+
+// ============================================================================
+// Objective Record Types
+// ============================================================================
+
+export interface ObjectiveRecord {
+  id: string;
+  objetivoId: string;
+  fechaRegistro: string; // YYYY-MM-DD
+  status: RecordStatus;
+  notes?: string;
+  dateCreated: string;
+}
+
+export interface NewObjectiveRecord {
+  fechaRegistro: string; // YYYY-MM-DD (today or yesterday only)
+  status: RecordStatus;
+  notes?: string;
+}
+
+export interface ObjectiveRecordListResponse {
+  items: ObjectiveRecord[];
+  total: number;
+}
+
+// ============================================================================
+// Activity Heatmap Types
+// ============================================================================
+
+export interface ObjectiveActivityDay {
+  date: string; // YYYY-MM-DD
+  count: number;
+  level: 0 | 1 | 2 | 3 | 4;
+}
+
+export interface ObjectiveActivityData {
+  year: number;
+  days: ObjectiveActivityDay[];
+  totalCompletions: number;
+  streakDays: number;
+  longestStreak: number;
+}

@@ -471,3 +471,117 @@ COMMENT ON COLUMN values.status IS 'Entity status: active or archived (soft dele
 COMMENT ON COLUMN values.archived_at IS 'Timestamp when entity was archived (NULL if active)';
 COMMENT ON COLUMN life_visions.status IS 'Entity status: active or archived (soft delete)';
 COMMENT ON COLUMN life_visions.archived_at IS 'Timestamp when entity was archived (NULL if active)';
+
+
+-- Version: 13
+-- Description: Create objetivos table for goal tracking with resultado/frecuencia types
+CREATE TABLE IF NOT EXISTS objetivos (
+    objetivo_id              UUID        NOT NULL,
+    user_id                  UUID        NOT NULL,
+    life_vision_id           UUID        NOT NULL,
+    titulo                   TEXT        NOT NULL,
+    tipo_tracking            TEXT        NOT NULL CHECK (tipo_tracking IN ('resultado', 'frecuencia')),
+    status                   TEXT        NOT NULL DEFAULT 'activo' CHECK (status IN ('activo', 'completado', 'abandonado', 'pausado')),
+    metrica_objetivo         INTEGER     NULL,
+    metrica_actual           INTEGER     NULL,
+    frecuencia_tipo          TEXT        NULL CHECK (frecuencia_tipo IS NULL OR frecuencia_tipo IN ('daily', 'n_por_semana', 'n_por_mes')),
+    frecuencia_n             INTEGER     NULL,
+    cumplimiento_target_pct  INTEGER     NULL CHECK (cumplimiento_target_pct IS NULL OR (cumplimiento_target_pct >= 1 AND cumplimiento_target_pct <= 100)),
+    archived_at              TIMESTAMP   NULL,
+    date_created             TIMESTAMP   NOT NULL,
+    date_updated             TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (objetivo_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (life_vision_id) REFERENCES life_visions(life_vision_id) ON DELETE CASCADE,
+
+    -- Resultado type requires metrica_objetivo > 0
+    CONSTRAINT objetivos_resultado_config CHECK (
+        tipo_tracking != 'resultado' OR (metrica_objetivo IS NOT NULL AND metrica_objetivo > 0)
+    ),
+
+    -- Frecuencia type requires frecuencia_tipo and cumplimiento_target_pct
+    CONSTRAINT objetivos_frecuencia_config CHECK (
+        tipo_tracking != 'frecuencia' OR (
+            frecuencia_tipo IS NOT NULL AND
+            cumplimiento_target_pct IS NOT NULL
+        )
+    ),
+
+    -- For n_por_semana and n_por_mes, frecuencia_n must have sensible bounds
+    CONSTRAINT objetivos_frecuencia_n_config CHECK (
+        frecuencia_tipo IS NULL OR
+        frecuencia_tipo = 'daily' OR
+        (frecuencia_tipo = 'n_por_semana' AND frecuencia_n IS NOT NULL AND frecuencia_n BETWEEN 1 AND 7) OR
+        (frecuencia_tipo = 'n_por_mes' AND frecuencia_n IS NOT NULL AND frecuencia_n BETWEEN 1 AND 31)
+    ),
+
+    -- Metrica_actual cannot exceed metrica_objetivo and must be non-negative
+    CONSTRAINT objetivos_progress_bounds CHECK (
+        metrica_actual IS NULL OR (metrica_actual >= 0 AND (metrica_objetivo IS NULL OR metrica_actual <= metrica_objetivo))
+    ),
+
+    -- Mutual exclusivity: resultado type should not have frecuencia fields
+    CONSTRAINT objetivos_resultado_exclusivity CHECK (
+        tipo_tracking != 'resultado' OR (
+            frecuencia_tipo IS NULL AND
+            frecuencia_n IS NULL AND
+            cumplimiento_target_pct IS NULL
+        )
+    ),
+
+    -- Mutual exclusivity: frecuencia type should not have resultado fields
+    CONSTRAINT objetivos_frecuencia_exclusivity CHECK (
+        tipo_tracking != 'frecuencia' OR (
+            metrica_objetivo IS NULL AND
+            metrica_actual IS NULL
+        )
+    )
+);
+
+CREATE INDEX IF NOT EXISTS objetivos_user_id_idx ON objetivos(user_id);
+CREATE INDEX IF NOT EXISTS objetivos_life_vision_id_idx ON objetivos(life_vision_id);
+CREATE INDEX IF NOT EXISTS objetivos_status_idx ON objetivos(status);
+CREATE INDEX IF NOT EXISTS objetivos_user_active_idx ON objetivos(user_id) WHERE archived_at IS NULL;
+CREATE INDEX IF NOT EXISTS objetivos_tipo_tracking_idx ON objetivos(tipo_tracking);
+
+COMMENT ON TABLE objetivos IS 'Measurable objectives linked to life visions with resultado or frecuencia tracking';
+COMMENT ON COLUMN objetivos.titulo IS 'Encrypted objective title (plaintext validated as 5-200 chars in business layer)';
+COMMENT ON COLUMN objetivos.tipo_tracking IS 'Tracking type: resultado (metric-based) or frecuencia (calendar compliance)';
+COMMENT ON COLUMN objetivos.status IS 'Objective status: activo, completado (terminal), abandonado (terminal), pausado';
+COMMENT ON COLUMN objetivos.metrica_objetivo IS 'Target metric for resultado tracking (e.g., 35 books)';
+COMMENT ON COLUMN objetivos.metrica_actual IS 'Current progress for resultado tracking';
+COMMENT ON COLUMN objetivos.frecuencia_tipo IS 'Frequency type: daily, n_por_semana, n_por_mes';
+COMMENT ON COLUMN objetivos.frecuencia_n IS 'Target occurrences per period for n_por_semana/n_por_mes';
+COMMENT ON COLUMN objetivos.cumplimiento_target_pct IS 'Target compliance percentage (1-100) for frecuencia tracking';
+
+
+-- Version: 14
+-- Description: Create objetivo_records table for frecuencia tracking records
+CREATE TABLE IF NOT EXISTS objetivo_records (
+    objetivo_record_id   UUID        NOT NULL,
+    objetivo_id          UUID        NOT NULL,
+    user_id              UUID        NOT NULL,
+    fecha_registro       DATE        NOT NULL,
+    status               TEXT        NOT NULL CHECK (status IN ('completado', 'omitido_intencional', 'omitido')),
+    notes                TEXT        NULL,
+    date_created         TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (objetivo_record_id),
+    FOREIGN KEY (objetivo_id) REFERENCES objetivos(objetivo_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Unique constraint: one record per objetivo per day
+CREATE UNIQUE INDEX IF NOT EXISTS objetivo_records_objetivo_date_unique_idx
+    ON objetivo_records(objetivo_id, fecha_registro);
+
+CREATE INDEX IF NOT EXISTS objetivo_records_objetivo_id_idx ON objetivo_records(objetivo_id);
+CREATE INDEX IF NOT EXISTS objetivo_records_user_id_idx ON objetivo_records(user_id);
+CREATE INDEX IF NOT EXISTS objetivo_records_fecha_idx ON objetivo_records(fecha_registro);
+CREATE INDEX IF NOT EXISTS objetivo_records_status_idx ON objetivo_records(status);
+
+COMMENT ON TABLE objetivo_records IS 'Daily completion records for frecuencia-type objectives';
+COMMENT ON COLUMN objetivo_records.fecha_registro IS 'Date of the record (today or yesterday only, enforced in business layer)';
+COMMENT ON COLUMN objetivo_records.status IS 'Record status: completado (done), omitido_intencional (rest day), omitido (missed)';
+COMMENT ON COLUMN objetivo_records.notes IS 'Encrypted optional notes about the record';

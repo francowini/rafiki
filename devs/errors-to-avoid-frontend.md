@@ -658,3 +658,286 @@ When handling one error leads to additional async calls (e.g., fetching data for
 - [ ] Log errors for debugging
 - [ ] Show user-friendly error messages
 - [ ] Clean up state on error (clear loading flags, reset selections)
+
+---
+
+## F12. React Query: Cache Key Not Including All Parameters
+
+### Severity: Major (Cache Collision Bug)
+
+### Problem
+
+When React Query's queryKey doesn't include all parameters used in the queryFn, different requests can collide in the cache, returning stale data.
+
+### Bad Example
+
+```typescript
+// BAD: queryKey only includes id, but queryFn uses params
+export function useRecords(id: string, params?: { startDate?: string; endDate?: string }) {
+  return useQuery({
+    queryKey: ['records', id], // Missing params!
+    queryFn: () => api.getRecords(id, params), // params affects response
+    enabled: !!id,
+  });
+}
+```
+
+### Good Example
+
+```typescript
+// GOOD: queryKey includes all parameters that affect the response
+export function useRecords(id: string, params?: { startDate?: string; endDate?: string }) {
+  return useQuery({
+    queryKey: ['records', id, params], // Includes params
+    queryFn: () => api.getRecords(id, params),
+    enabled: !!id,
+  });
+}
+```
+
+### Checklist
+
+- [ ] queryKey includes all parameters that affect the response
+- [ ] Use query key factories for consistent key generation
+- [ ] Parameters in queryFn should be reflected in queryKey
+
+---
+
+## F13. Optimistic Updates: Weak Temporary ID Generation
+
+### Severity: Medium (Race Condition)
+
+### Problem
+
+Using `Date.now()` for optimistic update IDs can collide when rapid submissions occur in the same millisecond.
+
+### Bad Example
+
+```typescript
+// BAD: Can collide on rapid submissions
+const optimisticRecord = {
+  id: `temp-${Date.now()}`, // May produce duplicate IDs
+  ...newData,
+};
+```
+
+### Good Example
+
+```typescript
+// GOOD: Cryptographically unique ID
+const optimisticRecord = {
+  id: crypto.randomUUID(), // Guaranteed unique
+  ...newData,
+};
+```
+
+### Checklist
+
+- [ ] Use `crypto.randomUUID()` for optimistic record IDs
+- [ ] Ensure environment supports `crypto.randomUUID()` (modern browsers, Node 19+)
+
+---
+
+## F14. Route Parameters: Unvalidated Dynamic Segments
+
+### Severity: Medium (Runtime Error / Security)
+
+### Problem
+
+Next.js dynamic route parameters (`params.id`) can be undefined, arrays, or unexpected types. Casting without validation leads to runtime errors.
+
+**Note**: Import `useParams` from `'next/navigation'` (not from `'next/router'`).
+
+### Bad Example
+
+```typescript
+// BAD: Assumes params.id is always a string
+import { useParams } from 'next/navigation';
+
+export default function DetailPage() {
+  const params = useParams();
+  const id = params.id as string; // Can be undefined or string[]
+
+  return <Detail itemId={id} />; // May pass undefined
+}
+```
+
+### Good Example
+
+```typescript
+// GOOD: Validate and handle edge cases
+import { useParams } from 'next/navigation';
+import { notFound } from 'next/navigation';
+
+export default function DetailPage() {
+  const params = useParams();
+
+  // Handle undefined, array, or invalid values
+  const rawId = params?.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+  if (!id || typeof id !== 'string') {
+    notFound();
+  }
+
+  return <Detail itemId={id} />;
+}
+```
+
+### Checklist
+
+- [ ] Check if `params?.id` exists before using
+- [ ] Handle both string and string[] types (use first element if array)
+- [ ] Call `notFound()` for invalid or missing IDs
+
+---
+
+## F15. Rendering: State Updates During Render
+
+### Severity: Medium (React Warning / Infinite Loop Risk)
+
+### Problem
+
+Calling `setState` during the render phase causes React warnings and can lead to infinite loops.
+
+### Bad Example
+
+```typescript
+// BAD: setState during render
+function Dialog({ open, objective }) {
+  const [value, setValue] = useState('');
+  const [initialized, setInitialized] = useState(false);
+
+  if (open && objective && !initialized) {
+    setValue(objective.value); // Called during render!
+    setInitialized(true);
+  }
+
+  return <input value={value} />;
+}
+```
+
+### Good Example
+
+```typescript
+// GOOD: setState in event handlers or effects
+function Dialog({ open, objective, onOpenChange }) {
+  const [value, setValue] = useState('');
+  const [initialized, setInitialized] = useState(false);
+
+  const handleOpenChange = useCallback(
+    (newOpen: boolean) => {
+      if (newOpen && objective && !initialized) {
+        setValue(objective.value);
+        setInitialized(true);
+      }
+      if (!newOpen) {
+        setInitialized(false);
+      }
+      onOpenChange(newOpen);
+    },
+    [objective, onOpenChange, initialized],
+  );
+
+  return <Dialog open={open} onOpenChange={handleOpenChange}>...</Dialog>;
+}
+```
+
+### Checklist
+
+- [ ] Never call setState directly in the component body
+- [ ] Use event handlers (onClick, onOpenChange) or useEffect for state updates
+- [ ] Reset dialog state in the open/close handler, not during render
+
+---
+
+## F16. UI Controls: Not Disabling for Terminal States
+
+### Severity: Medium (UX Bug)
+
+### Problem
+
+Interactive controls that modify state should be disabled when the entity is in a terminal (immutable) state.
+
+### Bad Example
+
+```typescript
+// BAD: Status can be changed even for completed/abandoned items
+<Select value={item.status} onValueChange={handleStatusChange}>
+  {statuses.map((s) => (
+    <SelectItem key={s} value={s}>
+      {s}
+    </SelectItem>
+  ))}
+</Select>
+```
+
+### Good Example
+
+```typescript
+// GOOD: Disable for terminal states with tooltip explanation
+const isTerminal = ['completado', 'abandonado'].includes(item.status);
+
+const handleStatusChange = (newStatus: string) => {
+  if (isTerminal) return; // Guard in handler too
+  updateStatus(newStatus);
+};
+
+<Select
+  value={item.status}
+  onValueChange={handleStatusChange}
+  disabled={isTerminal}
+>
+  <SelectTrigger title={isTerminal ? 'Estado final - no se puede cambiar' : undefined}>
+    <SelectValue />
+  </SelectTrigger>
+  {/* ... */}
+</Select>
+```
+
+### Checklist
+
+- [ ] Identify terminal/immutable states in your domain
+- [ ] Disable controls that modify state when in terminal state
+- [ ] Add tooltip or aria-label explaining why control is disabled
+- [ ] Guard handler functions against terminal state changes
+
+---
+
+## F17. Functions: Silent Empty Returns for Unknown Values
+
+### Severity: Low (Debugging Difficulty)
+
+### Problem
+
+Returning empty strings or null for unknown/invalid values makes debugging difficult and can cause confusing UI.
+
+### Bad Example
+
+```typescript
+// BAD: Returns empty string for unknown type - confusing UI
+function getLabel(type: string): string {
+  if (type === 'a') return 'Type A';
+  if (type === 'b') return 'Type B';
+  return ''; // Unknown type produces blank UI
+}
+```
+
+### Good Example
+
+```typescript
+// GOOD: Return fallback label and log warning
+function getLabel(type: string, entityId?: string): string {
+  if (type === 'a') return 'Type A';
+  if (type === 'b') return 'Type B';
+
+  console.warn(`Unknown type "${type}" for entity ${entityId}`);
+  return 'Tipo desconocido';
+}
+```
+
+### Checklist
+
+- [ ] Return user-friendly fallback for unknown values
+- [ ] Log warning with context (entity ID, actual value) for debugging
+- [ ] Consider if unknown values should throw or be reported to error tracking
