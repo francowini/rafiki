@@ -8,7 +8,10 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/francowini/rafiki/business/types/cumplimientopct"
+	"github.com/francowini/rafiki/business/types/frecuencian"
 	"github.com/francowini/rafiki/business/types/frecuenciatype"
+	"github.com/francowini/rafiki/business/types/metricaactual"
+	"github.com/francowini/rafiki/business/types/metricaobjetivo"
 	"github.com/francowini/rafiki/business/types/objetivostatus"
 	"github.com/francowini/rafiki/business/types/objetivotitle"
 	"github.com/francowini/rafiki/business/types/trackingtype"
@@ -42,12 +45,12 @@ type Objetivo struct {
 	Status       objetivostatus.ObjetivoStatus
 
 	// Resultado tracking fields (NULL if frecuencia)
-	MetricaObjetivo *int // Target metric (e.g., 35 books)
-	MetricaActual   *int // Current progress (auto-calculated from tasks in future)
+	MetricaObjetivo *metricaobjetivo.MetricaObjetivo // Target metric (e.g., 35 books)
+	MetricaActual   *metricaactual.MetricaActual     // Current progress (auto-calculated from tasks in future)
 
 	// Frecuencia tracking fields (NULL if resultado)
 	FrecuenciaTipo        *frecuenciatype.FrecuenciaType   // daily, n_por_semana, n_por_mes
-	FrecuenciaN           *int                             // e.g., 5 for "5 days per week"
+	FrecuenciaN           *frecuencian.FrecuenciaN         // e.g., 5 for "5 days per week"
 	CumplimientoTargetPct *cumplimientopct.CumplimientoPct // REQUIRED for frecuencia
 
 	ArchivedAt  *time.Time
@@ -63,11 +66,11 @@ type NewObjetivo struct {
 	TipoTracking trackingtype.TrackingType
 
 	// Resultado fields (required if tipo_tracking = resultado)
-	MetricaObjetivo *int
+	MetricaObjetivo *metricaobjetivo.MetricaObjetivo
 
 	// Frecuencia fields (required if tipo_tracking = frecuencia)
 	FrecuenciaTipo        *frecuenciatype.FrecuenciaType
-	FrecuenciaN           *int
+	FrecuenciaN           *frecuencian.FrecuenciaN
 	CumplimientoTargetPct *cumplimientopct.CumplimientoPct
 }
 
@@ -77,11 +80,11 @@ type UpdateObjetivo struct {
 	Status *objetivostatus.ObjetivoStatus
 
 	// Resultado fields
-	MetricaObjetivo *int
+	MetricaObjetivo *metricaobjetivo.MetricaObjetivo
 
 	// Frecuencia fields
 	FrecuenciaTipo        *frecuenciatype.FrecuenciaType
-	FrecuenciaN           *int
+	FrecuenciaN           *frecuencian.FrecuenciaN
 	CumplimientoTargetPct *cumplimientopct.CumplimientoPct
 }
 

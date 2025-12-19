@@ -13,6 +13,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/metricaactual"
 	"github.com/francowini/rafiki/business/types/objetivostatus"
 	"github.com/francowini/rafiki/foundation/logger"
 )
@@ -142,7 +143,7 @@ func (b *Business) Create(ctx context.Context, no NewObjetivo) (Objetivo, error)
 
 	// Initialize MetricaActual to 0 for resultado tracking
 	if no.TipoTracking.IsResultado() {
-		zero := 0
+		zero := metricaactual.Zero()
 		objetivo.MetricaActual = &zero
 	}
 
@@ -172,9 +173,7 @@ func (b *Business) Update(ctx context.Context, objetivo Objetivo, uo UpdateObjet
 		if !objetivo.TipoTracking.IsResultado() {
 			return Objetivo{}, errors.New("metrica_objetivo only valid for resultado tracking")
 		}
-		if *uo.MetricaObjetivo <= 0 {
-			return Objetivo{}, ErrInvalidResultadoConfig
-		}
+		// Validation (> 0) is handled by metricaobjetivo.Parse at app layer
 		objetivo.MetricaObjetivo = uo.MetricaObjetivo
 	}
 
@@ -189,9 +188,7 @@ func (b *Business) Update(ctx context.Context, objetivo Objetivo, uo UpdateObjet
 		if !objetivo.TipoTracking.IsFrecuencia() {
 			return Objetivo{}, errors.New("frecuencia_n only valid for frecuencia tracking")
 		}
-		if *uo.FrecuenciaN < 1 {
-			return Objetivo{}, ErrInvalidFrecuenciaConfig
-		}
+		// Validation (>= 1) is handled by frecuencian.Parse at app layer
 		objetivo.FrecuenciaN = uo.FrecuenciaN
 	}
 
@@ -322,15 +319,20 @@ func (b *Business) IncrementProgress(ctx context.Context, objetivo Objetivo, req
 		return Objetivo{}, errors.New("metrica values not initialized")
 	}
 
-	newValue := *objetivo.MetricaActual + req.Increment
+	newValue := objetivo.MetricaActual.Value() + req.Increment
 	if newValue < 0 {
 		newValue = 0
 	}
-	if newValue > *objetivo.MetricaObjetivo {
+	if newValue > objetivo.MetricaObjetivo.Value() {
 		return Objetivo{}, ErrProgressExceedsTarget
 	}
 
-	objetivo.MetricaActual = &newValue
+	// Parse validates non-negative (which we've already ensured above)
+	newMetricaActual, err := metricaactual.Parse(newValue)
+	if err != nil {
+		return Objetivo{}, fmt.Errorf("parse metrica_actual: %w", err)
+	}
+	objetivo.MetricaActual = &newMetricaActual
 	objetivo.DateUpdated = time.Now().UTC()
 
 	if err := b.storer.Update(ctx, objetivo); err != nil {
@@ -360,7 +362,7 @@ func (b *Business) UpdateProgress(ctx context.Context, objetivo Objetivo, req Up
 		newValue = *req.Value
 	} else if req.Increment != nil {
 		// Increment mode
-		newValue = *objetivo.MetricaActual + *req.Increment
+		newValue = objetivo.MetricaActual.Value() + *req.Increment
 	} else {
 		return Objetivo{}, errors.New("either increment or value must be provided")
 	}
@@ -368,11 +370,16 @@ func (b *Business) UpdateProgress(ctx context.Context, objetivo Objetivo, req Up
 	if newValue < 0 {
 		newValue = 0
 	}
-	if newValue > *objetivo.MetricaObjetivo {
+	if newValue > objetivo.MetricaObjetivo.Value() {
 		return Objetivo{}, ErrProgressExceedsTarget
 	}
 
-	objetivo.MetricaActual = &newValue
+	// Parse validates non-negative (which we've already ensured above)
+	newMetricaActual, err := metricaactual.Parse(newValue)
+	if err != nil {
+		return Objetivo{}, fmt.Errorf("parse metrica_actual: %w", err)
+	}
+	objetivo.MetricaActual = &newMetricaActual
 	objetivo.DateUpdated = time.Now().UTC()
 
 	if err := b.storer.Update(ctx, objetivo); err != nil {
@@ -420,7 +427,8 @@ func (b *Business) Count(ctx context.Context, filter QueryFilter) (int, error) {
 // validateTrackingConfig validates the tracking type configuration.
 func validateTrackingConfig(no NewObjetivo) error {
 	if no.TipoTracking.IsResultado() {
-		if no.MetricaObjetivo == nil || *no.MetricaObjetivo <= 0 {
+		// MetricaObjetivo must be provided and > 0 (validated by metricaobjetivo.Parse)
+		if no.MetricaObjetivo == nil {
 			return ErrInvalidResultadoConfig
 		}
 	}
@@ -430,9 +438,9 @@ func validateTrackingConfig(no NewObjetivo) error {
 			return errors.New("frecuencia_tipo required for frecuencia tracking")
 		}
 
-		// For n_por_semana and n_por_mes, frecuencia_n must be >= 1
+		// For n_por_semana and n_por_mes, frecuencia_n must be provided (>= 1 validated by frecuencian.Parse)
 		if !no.FrecuenciaTipo.IsDaily() {
-			if no.FrecuenciaN == nil || *no.FrecuenciaN < 1 {
+			if no.FrecuenciaN == nil {
 				return ErrInvalidFrecuenciaConfig
 			}
 		}

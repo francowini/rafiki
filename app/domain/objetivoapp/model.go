@@ -10,7 +10,9 @@ import (
 	"github.com/francowini/rafiki/app/sdk/errs"
 	"github.com/francowini/rafiki/business/domain/objetivobus"
 	"github.com/francowini/rafiki/business/types/cumplimientopct"
+	"github.com/francowini/rafiki/business/types/frecuencian"
 	"github.com/francowini/rafiki/business/types/frecuenciatype"
+	"github.com/francowini/rafiki/business/types/metricaobjetivo"
 	"github.com/francowini/rafiki/business/types/objetivostatus"
 	"github.com/francowini/rafiki/business/types/objetivotitle"
 	"github.com/francowini/rafiki/business/types/trackingtype"
@@ -149,16 +151,34 @@ func toAppObjetivo(o objetivobus.Objetivo) Objetivo {
 		cumplimientoTargetPct = &cp
 	}
 
+	var metricaObjetivo *int
+	if o.MetricaObjetivo != nil {
+		v := o.MetricaObjetivo.Value()
+		metricaObjetivo = &v
+	}
+
+	var metricaActual *int
+	if o.MetricaActual != nil {
+		v := o.MetricaActual.Value()
+		metricaActual = &v
+	}
+
+	var frecuenciaN *int
+	if o.FrecuenciaN != nil {
+		v := o.FrecuenciaN.Value()
+		frecuenciaN = &v
+	}
+
 	return Objetivo{
 		ID:                    o.ID.String(),
 		LifeVisionID:          o.LifeVisionID.String(),
 		Titulo:                o.Titulo.String(),
 		TipoTracking:          o.TipoTracking.String(),
 		Status:                o.Status.String(),
-		MetricaObjetivo:       o.MetricaObjetivo,
-		MetricaActual:         o.MetricaActual,
+		MetricaObjetivo:       metricaObjetivo,
+		MetricaActual:         metricaActual,
 		FrecuenciaTipo:        frecuenciaTipo,
-		FrecuenciaN:           o.FrecuenciaN,
+		FrecuenciaN:           frecuenciaN,
 		CumplimientoTargetPct: cumplimientoTargetPct,
 		ArchivedAt:            archivedAt,
 		DateCreated:           o.DateCreated.Format("2006-01-02T15:04:05Z07:00"),
@@ -219,6 +239,28 @@ func toBusNewObjetivo(no NewObjetivo, userID uuid.UUID) (objetivobus.NewObjetivo
 		}
 	}
 
+	// Parse metrica_objetivo if provided
+	var metricaObjetivoPtr *metricaobjetivo.MetricaObjetivo
+	if no.MetricaObjetivo != nil {
+		mo, err := metricaobjetivo.Parse(*no.MetricaObjetivo)
+		if err != nil {
+			errors.Add("metricaObjetivo", err)
+		} else {
+			metricaObjetivoPtr = &mo
+		}
+	}
+
+	// Parse frecuencia_n if provided
+	var frecuenciaNPtr *frecuencian.FrecuenciaN
+	if no.FrecuenciaN != nil {
+		fn, err := frecuencian.Parse(*no.FrecuenciaN)
+		if err != nil {
+			errors.Add("frecuenciaN", err)
+		} else {
+			frecuenciaNPtr = &fn
+		}
+	}
+
 	if len(errors) > 0 {
 		return objetivobus.NewObjetivo{}, fmt.Errorf("validate: %w", errors.ToError())
 	}
@@ -228,9 +270,9 @@ func toBusNewObjetivo(no NewObjetivo, userID uuid.UUID) (objetivobus.NewObjetivo
 		LifeVisionID:          lifeVisionID,
 		Titulo:                titulo,
 		TipoTracking:          tipoTracking,
-		MetricaObjetivo:       no.MetricaObjetivo,
+		MetricaObjetivo:       metricaObjetivoPtr,
 		FrecuenciaTipo:        frecuenciaTipo,
-		FrecuenciaN:           no.FrecuenciaN,
+		FrecuenciaN:           frecuenciaNPtr,
 		CumplimientoTargetPct: cumplimientoTargetPct,
 	}, nil
 }
@@ -249,7 +291,12 @@ func toBusUpdateObjetivo(uo UpdateObjetivo) (objetivobus.UpdateObjetivo, error) 
 	}
 
 	if uo.MetricaObjetivo != nil {
-		bus.MetricaObjetivo = uo.MetricaObjetivo
+		mo, err := metricaobjetivo.Parse(*uo.MetricaObjetivo)
+		if err != nil {
+			errors.Add("metricaObjetivo", err)
+		} else {
+			bus.MetricaObjetivo = &mo
+		}
 	}
 
 	if uo.FrecuenciaTipo != nil {
@@ -262,7 +309,12 @@ func toBusUpdateObjetivo(uo UpdateObjetivo) (objetivobus.UpdateObjetivo, error) 
 	}
 
 	if uo.FrecuenciaN != nil {
-		bus.FrecuenciaN = uo.FrecuenciaN
+		fn, err := frecuencian.Parse(*uo.FrecuenciaN)
+		if err != nil {
+			errors.Add("frecuenciaN", err)
+		} else {
+			bus.FrecuenciaN = &fn
+		}
 	}
 
 	if uo.CumplimientoTargetPct != nil {

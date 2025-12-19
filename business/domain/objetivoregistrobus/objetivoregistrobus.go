@@ -264,14 +264,14 @@ func (b *Business) CalculateCompliance(ctx context.Context, objetivo objetivobus
 		startDate = now.AddDate(0, 0, -(weekday - 1))
 		startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
 		if objetivo.FrecuenciaN != nil {
-			targetCount = *objetivo.FrecuenciaN
+			targetCount = objetivo.FrecuenciaN.Value()
 		}
 
 	case objetivo.FrecuenciaTipo.IsNPorMes():
 		// Current month
 		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 		if objetivo.FrecuenciaN != nil {
-			targetCount = *objetivo.FrecuenciaN
+			targetCount = objetivo.FrecuenciaN.Value()
 		}
 
 	default:

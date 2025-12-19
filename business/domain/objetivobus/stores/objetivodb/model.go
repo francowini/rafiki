@@ -10,7 +10,10 @@ import (
 	"github.com/francowini/rafiki/business/domain/objetivobus"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/types/cumplimientopct"
+	"github.com/francowini/rafiki/business/types/frecuencian"
 	"github.com/francowini/rafiki/business/types/frecuenciatype"
+	"github.com/francowini/rafiki/business/types/metricaactual"
+	"github.com/francowini/rafiki/business/types/metricaobjetivo"
 	"github.com/francowini/rafiki/business/types/objetivostatus"
 	"github.com/francowini/rafiki/business/types/objetivotitle"
 	"github.com/francowini/rafiki/business/types/trackingtype"
@@ -60,6 +63,24 @@ func toDBObjetivoEncrypted(bus objetivobus.Objetivo, enc encrypt.Encryptor) (obj
 		cumplimientoTargetPct = &v
 	}
 
+	var metricaObjetivo *int
+	if bus.MetricaObjetivo != nil {
+		v := bus.MetricaObjetivo.Value()
+		metricaObjetivo = &v
+	}
+
+	var metricaActual *int
+	if bus.MetricaActual != nil {
+		v := bus.MetricaActual.Value()
+		metricaActual = &v
+	}
+
+	var frecuenciaN *int
+	if bus.FrecuenciaN != nil {
+		v := bus.FrecuenciaN.Value()
+		frecuenciaN = &v
+	}
+
 	return objetivo{
 		ID:                    bus.ID,
 		UserID:                bus.UserID,
@@ -67,10 +88,10 @@ func toDBObjetivoEncrypted(bus objetivobus.Objetivo, enc encrypt.Encryptor) (obj
 		Titulo:                titulo,
 		TipoTracking:          bus.TipoTracking.String(),
 		Status:                bus.Status.String(),
-		MetricaObjetivo:       bus.MetricaObjetivo,
-		MetricaActual:         bus.MetricaActual,
+		MetricaObjetivo:       metricaObjetivo,
+		MetricaActual:         metricaActual,
 		FrecuenciaTipo:        frecuenciaTipo,
-		FrecuenciaN:           bus.FrecuenciaN,
+		FrecuenciaN:           frecuenciaN,
 		CumplimientoTargetPct: cumplimientoTargetPct,
 		ArchivedAt:            archivedAt,
 		DateCreated:           bus.DateCreated.UTC(),
@@ -121,9 +142,36 @@ func toBusObjetivoDecrypted(db objetivo, enc encrypt.Encryptor) (objetivobus.Obj
 		cumplimientoTargetPct = &cp
 	}
 
+	var metricaObjetivoPtr *metricaobjetivo.MetricaObjetivo
+	if db.MetricaObjetivo != nil {
+		mo, err := metricaobjetivo.Parse(*db.MetricaObjetivo)
+		if err != nil {
+			return objetivobus.Objetivo{}, fmt.Errorf("parse metrica_objetivo: %w", err)
+		}
+		metricaObjetivoPtr = &mo
+	}
+
+	var metricaActualPtr *metricaactual.MetricaActual
+	if db.MetricaActual != nil {
+		ma, err := metricaactual.Parse(*db.MetricaActual)
+		if err != nil {
+			return objetivobus.Objetivo{}, fmt.Errorf("parse metrica_actual: %w", err)
+		}
+		metricaActualPtr = &ma
+	}
+
+	var frecuenciaNPtr *frecuencian.FrecuenciaN
+	if db.FrecuenciaN != nil {
+		fn, err := frecuencian.Parse(*db.FrecuenciaN)
+		if err != nil {
+			return objetivobus.Objetivo{}, fmt.Errorf("parse frecuencia_n: %w", err)
+		}
+		frecuenciaNPtr = &fn
+	}
+
 	var archivedAt *time.Time
 	if db.ArchivedAt != nil {
-		t := db.ArchivedAt.In(time.Local)
+		t := db.ArchivedAt.UTC()
 		archivedAt = &t
 	}
 
@@ -134,14 +182,14 @@ func toBusObjetivoDecrypted(db objetivo, enc encrypt.Encryptor) (objetivobus.Obj
 		Titulo:                titulo,
 		TipoTracking:          tipoTracking,
 		Status:                status,
-		MetricaObjetivo:       db.MetricaObjetivo,
-		MetricaActual:         db.MetricaActual,
+		MetricaObjetivo:       metricaObjetivoPtr,
+		MetricaActual:         metricaActualPtr,
 		FrecuenciaTipo:        frecuenciaTipo,
-		FrecuenciaN:           db.FrecuenciaN,
+		FrecuenciaN:           frecuenciaNPtr,
 		CumplimientoTargetPct: cumplimientoTargetPct,
 		ArchivedAt:            archivedAt,
-		DateCreated:           db.DateCreated.In(time.Local),
-		DateUpdated:           db.DateUpdated.In(time.Local),
+		DateCreated:           db.DateCreated.UTC(),
+		DateUpdated:           db.DateUpdated.UTC(),
 	}, nil
 }
 
