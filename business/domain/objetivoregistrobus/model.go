@@ -18,6 +18,7 @@ var (
 	ErrFutureDateNotAllowed = errors.New("cannot log record for future date")
 	ErrMissingUserID        = errors.New("userID is required for querying objetivo records")
 	ErrNotObjetivoOwner     = errors.New("user does not own the specified objetivo")
+	ErrFrecuenciaNRequired  = errors.New("frecuencia_n required for n_por_semana and n_por_mes types")
 )
 
 // ObjetivoRecord represents a single completion record for frequency tracking.

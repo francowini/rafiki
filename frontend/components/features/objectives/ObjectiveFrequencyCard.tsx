@@ -46,15 +46,26 @@ export function ObjectiveFrequencyCard({
   onLogRecord,
   onClick,
 }: ObjectiveFrequencyCardProps) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick(objective);
+    }
+  };
+
   return (
     <Card
       className={cn(
-        'cursor-pointer transition-all hover:shadow-md bg-gradient-to-br',
+        'cursor-pointer transition-all hover:shadow-md bg-gradient-to-br focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2',
         objective.status === 'pausado'
           ? 'opacity-75 border-l-4 border-l-purple-400 hover:border-purple-300 from-purple-50/50 to-white'
           : 'hover:border-purple-300 from-purple-50 to-white',
       )}
       onClick={() => onClick(objective)}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-label={`Ver detalles de ${objective.titulo}`}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">

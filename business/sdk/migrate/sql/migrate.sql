@@ -519,6 +519,23 @@ CREATE TABLE IF NOT EXISTS objetivos (
     -- Metrica_actual cannot exceed metrica_objetivo and must be non-negative
     CONSTRAINT objetivos_progress_bounds CHECK (
         metrica_actual IS NULL OR (metrica_actual >= 0 AND (metrica_objetivo IS NULL OR metrica_actual <= metrica_objetivo))
+    ),
+
+    -- Mutual exclusivity: resultado type should not have frecuencia fields
+    CONSTRAINT objetivos_resultado_exclusivity CHECK (
+        tipo_tracking != 'resultado' OR (
+            frecuencia_tipo IS NULL AND
+            frecuencia_n IS NULL AND
+            cumplimiento_target_pct IS NULL
+        )
+    ),
+
+    -- Mutual exclusivity: frecuencia type should not have resultado fields
+    CONSTRAINT objetivos_frecuencia_exclusivity CHECK (
+        tipo_tracking != 'frecuencia' OR (
+            metrica_objetivo IS NULL AND
+            metrica_actual IS NULL
+        )
     )
 );
 

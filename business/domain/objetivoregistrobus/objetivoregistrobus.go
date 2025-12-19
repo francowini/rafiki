@@ -267,16 +267,18 @@ func (b *Business) CalculateCompliance(ctx context.Context, objetivo objetivobus
 		// Calculate startDate as the Monday of the current week at UTC midnight
 		startDate = now.AddDate(0, 0, -(weekday - 1))
 		startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
-		if objetivo.FrecuenciaN != nil {
-			targetCount = objetivo.FrecuenciaN.Value()
+		if objetivo.FrecuenciaN == nil {
+			return 0, ErrFrecuenciaNRequired
 		}
+		targetCount = objetivo.FrecuenciaN.Value()
 
 	case objetivo.FrecuenciaTipo.IsNPorMes():
 		// Current month
 		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-		if objetivo.FrecuenciaN != nil {
-			targetCount = objetivo.FrecuenciaN.Value()
+		if objetivo.FrecuenciaN == nil {
+			return 0, ErrFrecuenciaNRequired
 		}
+		targetCount = objetivo.FrecuenciaN.Value()
 
 	default:
 		return 0, fmt.Errorf("unknown frecuencia type: %s", objetivo.FrecuenciaTipo.String())

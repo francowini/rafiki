@@ -96,7 +96,9 @@ export function ProgressUpdateDialog({
   const currentProgress = objective.metricaActual || 0;
   const target = objective.metricaObjetivo || 1;
   const percentage = Math.round((currentProgress / target) * 100);
-  const newPercentage = value ? Math.round((parseFloat(value) / target) * 100) : percentage;
+  const parsedValue = value ? parseFloat(value) : NaN;
+  const isValidNumber = !isNaN(parsedValue);
+  const newPercentage = isValidNumber ? Math.round((parsedValue / target) * 100) : percentage;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -146,18 +148,15 @@ export function ProgressUpdateDialog({
           </div>
 
           {/* Preview of new progress */}
-          {value &&
-            !error &&
-            !isNaN(parseFloat(value)) &&
-            parseFloat(value) !== currentProgress && (
-              <div className="bg-green-50 rounded-lg p-3 text-sm">
-                <span className="text-green-700">
-                  Nuevo progreso: <strong>{newPercentage}%</strong>
-                  {newPercentage >= 100 && ' - ¡Meta alcanzada!'}
-                  {newPercentage >= 50 && newPercentage < 100 && ' - ¡Más de la mitad!'}
-                </span>
-              </div>
-            )}
+          {value && !error && isValidNumber && parsedValue !== currentProgress && (
+            <div className="bg-green-50 rounded-lg p-3 text-sm">
+              <span className="text-green-700">
+                Nuevo progreso: <strong>{newPercentage}%</strong>
+                {newPercentage >= 100 && ' - ¡Meta alcanzada!'}
+                {newPercentage >= 50 && newPercentage < 100 && ' - ¡Más de la mitad!'}
+              </span>
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleCancel}>
