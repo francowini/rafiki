@@ -19,6 +19,16 @@ import type {
   UpdateLifeVision,
   ExportParams,
   ExportResponse,
+  Objective,
+  ObjectiveListResponse,
+  NewObjective,
+  UpdateObjective,
+  ObjectiveStatus,
+  TrackingType,
+  ObjectiveRecord,
+  ObjectiveRecordListResponse,
+  NewObjectiveRecord,
+  ObjectiveActivityData,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -402,6 +412,106 @@ export const api = {
       }
 
       return fetchAPI<ExportResponse>(`/v1/export?${queryParams.toString()}`);
+    },
+  },
+
+  objectives: {
+    getAll: async (params?: {
+      lifeVisionId?: string;
+      status?: ObjectiveStatus;
+      trackingType?: TrackingType;
+      includeArchived?: boolean;
+    }): Promise<ObjectiveListResponse> => {
+      const queryParams = new URLSearchParams();
+      if (params?.lifeVisionId) queryParams.set('lifeVisionId', params.lifeVisionId);
+      if (params?.status) queryParams.set('status', params.status);
+      if (params?.trackingType) queryParams.set('trackingType', params.trackingType);
+      if (params?.includeArchived) queryParams.set('includeArchived', 'true');
+
+      const query = queryParams.toString();
+      return fetchAPI<ObjectiveListResponse>(`/v1/objetivos${query ? `?${query}` : ''}`);
+    },
+
+    getById: async (id: string): Promise<Objective> => {
+      return fetchAPI<Objective>(`/v1/objetivos/${id}`);
+    },
+
+    create: async (data: NewObjective): Promise<Objective> => {
+      return fetchAPI<Objective>('/v1/objetivos', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    update: async (id: string, data: UpdateObjective): Promise<Objective> => {
+      return fetchAPI<Objective>(`/v1/objetivos/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+
+    delete: async (id: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/objetivos/${id}`, { method: 'DELETE' });
+    },
+
+    archive: async (id: string): Promise<Objective> => {
+      return fetchAPI<Objective>(`/v1/objetivos/${id}/archive`, { method: 'PUT' });
+    },
+
+    restore: async (id: string): Promise<Objective> => {
+      return fetchAPI<Objective>(`/v1/objetivos/${id}/restore`, { method: 'PUT' });
+    },
+
+    updateStatus: async (id: string, status: ObjectiveStatus): Promise<Objective> => {
+      return fetchAPI<Objective>(`/v1/objetivos/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status }),
+      });
+    },
+
+    incrementProgress: async (id: string, increment: number): Promise<Objective> => {
+      return fetchAPI<Objective>(`/v1/objetivos/${id}/progress`, {
+        method: 'PUT',
+        body: JSON.stringify({ increment }),
+      });
+    },
+
+    updateProgress: async (id: string, value: number): Promise<Objective> => {
+      return fetchAPI<Objective>(`/v1/objetivos/${id}/progress`, {
+        method: 'PUT',
+        body: JSON.stringify({ value }),
+      });
+    },
+
+    getRecords: async (
+      objetivoId: string,
+      params?: { startDate?: string; endDate?: string },
+    ): Promise<ObjectiveRecordListResponse> => {
+      const queryParams = new URLSearchParams();
+      if (params?.startDate) queryParams.set('startDate', params.startDate);
+      if (params?.endDate) queryParams.set('endDate', params.endDate);
+
+      const query = queryParams.toString();
+      return fetchAPI<ObjectiveRecordListResponse>(
+        `/v1/objetivos/${objetivoId}/records${query ? `?${query}` : ''}`,
+      );
+    },
+
+    logRecord: async (objetivoId: string, data: NewObjectiveRecord): Promise<ObjectiveRecord> => {
+      return fetchAPI<ObjectiveRecord>(`/v1/objetivos/${objetivoId}/records`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    deleteRecord: async (objetivoId: string, recordId: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/objetivos/${objetivoId}/records/${recordId}`, {
+        method: 'DELETE',
+      });
+    },
+
+    getActivity: async (objetivoId: string, year: number): Promise<ObjectiveActivityData> => {
+      return fetchAPI<ObjectiveActivityData>(`/v1/objetivos/${objetivoId}/activity?year=${year}`);
     },
   },
 };
