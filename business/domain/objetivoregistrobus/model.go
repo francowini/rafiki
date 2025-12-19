@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/francowini/rafiki/business/types/notes"
 	"github.com/francowini/rafiki/business/types/registrostatus"
 )
 
@@ -28,7 +29,7 @@ type ObjetivoRecord struct {
 	UserID        uuid.UUID
 	FechaRegistro time.Time // Date of the record (can be today or yesterday only)
 	Status        registrostatus.RegistroStatus
-	Notes         *string
+	Notes         *notes.Notes
 	DateCreated   time.Time
 }
 
@@ -38,11 +39,11 @@ type NewObjetivoRecord struct {
 	UserID        uuid.UUID
 	FechaRegistro time.Time // Must be today or yesterday only
 	Status        registrostatus.RegistroStatus
-	Notes         *string
+	Notes         *notes.Notes
 }
 
 // UpdateObjetivoRecord contains information to update a record.
 type UpdateObjetivoRecord struct {
 	Status *registrostatus.RegistroStatus
-	Notes  **string // Double pointer to distinguish between "not updating" and "setting to null"
+	Notes  **notes.Notes // Double pointer to distinguish between "not updating" and "setting to null"
 }

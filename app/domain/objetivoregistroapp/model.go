@@ -10,6 +10,7 @@ import (
 
 	"github.com/francowini/rafiki/app/sdk/errs"
 	"github.com/francowini/rafiki/business/domain/objetivoregistrobus"
+	"github.com/francowini/rafiki/business/types/notes"
 	"github.com/francowini/rafiki/business/types/registrostatus"
 )
 
@@ -71,9 +72,9 @@ func (uor UpdateObjetivoRecord) Validate() error {
 // ===== Business → App conversions =====
 
 func toAppRecord(r objetivoregistrobus.ObjetivoRecord) ObjetivoRecord {
-	notes := ""
+	notesStr := ""
 	if r.Notes != nil {
-		notes = *r.Notes
+		notesStr = r.Notes.String()
 	}
 
 	return ObjetivoRecord{
@@ -81,7 +82,7 @@ func toAppRecord(r objetivoregistrobus.ObjetivoRecord) ObjetivoRecord {
 		ObjetivoID:    r.ObjetivoID.String(),
 		FechaRegistro: r.FechaRegistro.Format("2006-01-02"),
 		Status:        r.Status.String(),
-		Notes:         notes,
+		Notes:         notesStr,
 		DateCreated:   r.DateCreated.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
@@ -111,6 +112,17 @@ func toBusNewRecord(nor NewObjetivoRecord, objetivoID, userID uuid.UUID) (objeti
 		errors.Add("status", err)
 	}
 
+	// Parse notes (optional)
+	var notesPtr *notes.Notes
+	if nor.Notes != nil && *nor.Notes != "" {
+		n, err := notes.Parse(*nor.Notes)
+		if err != nil {
+			errors.Add("notes", err)
+		} else {
+			notesPtr = &n
+		}
+	}
+
 	if len(errors) > 0 {
 		return objetivoregistrobus.NewObjetivoRecord{}, fmt.Errorf("validate: %w", errors.ToError())
 	}
@@ -120,6 +132,6 @@ func toBusNewRecord(nor NewObjetivoRecord, objetivoID, userID uuid.UUID) (objeti
 		UserID:        userID,
 		FechaRegistro: fechaRegistro,
 		Status:        status,
-		Notes:         nor.Notes,
+		Notes:         notesPtr,
 	}, nil
 }

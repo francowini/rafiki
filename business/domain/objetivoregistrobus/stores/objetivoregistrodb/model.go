@@ -9,6 +9,7 @@ import (
 
 	"github.com/francowini/rafiki/business/domain/objetivoregistrobus"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
+	"github.com/francowini/rafiki/business/types/notes"
 	"github.com/francowini/rafiki/business/types/registrostatus"
 )
 
@@ -25,13 +26,13 @@ type objetivoRecord struct {
 
 // toDBRecordEncrypted converts business model to DB model with encryption.
 func toDBRecordEncrypted(bus objetivoregistrobus.ObjetivoRecord, enc encrypt.Encryptor) (objetivoRecord, error) {
-	var notes *string
+	var notesStr *string
 	if bus.Notes != nil {
-		encrypted, err := enc.Encrypt(*bus.Notes)
+		encrypted, err := enc.Encrypt(bus.Notes.String())
 		if err != nil {
 			return objetivoRecord{}, fmt.Errorf("encrypt notes: %w", err)
 		}
-		notes = &encrypted
+		notesStr = &encrypted
 	}
 
 	return objetivoRecord{
@@ -40,7 +41,7 @@ func toDBRecordEncrypted(bus objetivoregistrobus.ObjetivoRecord, enc encrypt.Enc
 		UserID:        bus.UserID,
 		FechaRegistro: bus.FechaRegistro.UTC(),
 		Status:        bus.Status.String(),
-		Notes:         notes,
+		Notes:         notesStr,
 		DateCreated:   bus.DateCreated.UTC(),
 	}, nil
 }
@@ -53,13 +54,17 @@ func toBusRecordDecrypted(db objetivoRecord, enc encrypt.Encryptor) (objetivoreg
 		return objetivoregistrobus.ObjetivoRecord{}, fmt.Errorf("parse status: %w", err)
 	}
 
-	var notes *string
+	var notesPtr *notes.Notes
 	if db.Notes != nil {
 		decrypted, err := enc.Decrypt(*db.Notes)
 		if err != nil {
 			return objetivoregistrobus.ObjetivoRecord{}, fmt.Errorf("decrypt notes: %w", err)
 		}
-		notes = &decrypted
+		n, err := notes.Parse(decrypted)
+		if err != nil {
+			return objetivoregistrobus.ObjetivoRecord{}, fmt.Errorf("parse notes: %w", err)
+		}
+		notesPtr = &n
 	}
 
 	return objetivoregistrobus.ObjetivoRecord{
@@ -68,7 +73,7 @@ func toBusRecordDecrypted(db objetivoRecord, enc encrypt.Encryptor) (objetivoreg
 		UserID:        db.UserID,
 		FechaRegistro: db.FechaRegistro.UTC(),
 		Status:        status,
-		Notes:         notes,
+		Notes:         notesPtr,
 		DateCreated:   db.DateCreated.UTC(),
 	}, nil
 }
