@@ -252,15 +252,19 @@ func (b *Business) CalculateCompliance(ctx context.Context, objetivo objetivobus
 	case objetivo.FrecuenciaTipo.IsDaily():
 		// Current month
 		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		// Go idiom: day=0 of the next month returns the last day of the current month
 		daysInMonth := time.Date(now.Year(), now.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()
 		targetCount = daysInMonth
 
 	case objetivo.FrecuenciaTipo.IsNPorSemana():
 		// Current week (Monday-Sunday)
+		// Convert time.Weekday (Sunday=0..Saturday=6) to Monday=1..Sunday=7
+		// so that Monday is treated as the first day of the week.
 		weekday := int(now.Weekday())
 		if weekday == 0 {
-			weekday = 7 // Sunday
+			weekday = 7 // Sunday becomes 7
 		}
+		// Calculate startDate as the Monday of the current week at UTC midnight
 		startDate = now.AddDate(0, 0, -(weekday - 1))
 		startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
 		if objetivo.FrecuenciaN != nil {

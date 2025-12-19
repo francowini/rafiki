@@ -746,10 +746,14 @@ const optimisticRecord = {
 
 Next.js dynamic route parameters (`params.id`) can be undefined, arrays, or unexpected types. Casting without validation leads to runtime errors.
 
+**Note**: Import `useParams` from `'next/navigation'` (not from `'next/router'`).
+
 ### Bad Example
 
 ```typescript
 // BAD: Assumes params.id is always a string
+import { useParams } from 'next/navigation';
+
 export default function DetailPage() {
   const params = useParams();
   const id = params.id as string; // Can be undefined or string[]
@@ -762,6 +766,9 @@ export default function DetailPage() {
 
 ```typescript
 // GOOD: Validate and handle edge cases
+import { useParams } from 'next/navigation';
+import { notFound } from 'next/navigation';
+
 export default function DetailPage() {
   const params = useParams();
 

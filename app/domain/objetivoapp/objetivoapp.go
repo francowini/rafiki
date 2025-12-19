@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 
@@ -178,7 +179,7 @@ func (a *app) archive(ctx context.Context, r *http.Request) web.Encoder {
 	objetivo, err = a.objetivoBus.Archive(ctx, objetivo)
 	if err != nil {
 		if errors.Is(err, objetivobus.ErrAlreadyArchived) {
-			return errs.New(errs.InvalidArgument, err)
+			return errs.New(errs.FailedPrecondition, err)
 		}
 		if errors.Is(err, objetivobus.ErrTerminalStatusNoArchive) {
 			return errs.New(errs.FailedPrecondition, err)
@@ -351,7 +352,7 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 
 	filter := objetivobus.QueryFilter{
 		UserID:          &userID,
-		IncludeArchived: qp.IncludeArchived == "true",
+		IncludeArchived: parseBool(qp.IncludeArchived),
 	}
 
 	// Filter by life vision if provided
@@ -448,7 +449,7 @@ func (a *app) queryByLifeVision(ctx context.Context, r *http.Request) web.Encode
 	filter := objetivobus.QueryFilter{
 		UserID:          &userID,
 		LifeVisionID:    &lifeVisionID,
-		IncludeArchived: qp.IncludeArchived == "true",
+		IncludeArchived: parseBool(qp.IncludeArchived),
 	}
 
 	objetivos, err := a.objetivoBus.Query(ctx, filter, orderBy, pg)
@@ -503,4 +504,16 @@ func parseTipoTracking(s string) (*objetivobus.TrackingType, error) {
 		return nil, err
 	}
 	return &tt, nil
+}
+
+// parseBool parses a boolean string, returning false for empty or invalid values.
+func parseBool(s string) bool {
+	if s == "" {
+		return false
+	}
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return false
+	}
+	return v
 }

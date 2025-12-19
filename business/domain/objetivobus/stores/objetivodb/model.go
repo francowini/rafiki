@@ -201,7 +201,7 @@ func toBusObjetivosDecrypted(dbs []objetivo, enc encrypt.Encryptor) ([]objetivob
 		var err error
 		objetivos[i], err = toBusObjetivoDecrypted(db, enc)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("record %d (id=%s): %w", i, db.ID, err)
 		}
 	}
 

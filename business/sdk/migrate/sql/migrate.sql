@@ -508,11 +508,12 @@ CREATE TABLE IF NOT EXISTS objetivos (
         )
     ),
 
-    -- For n_por_semana and n_por_mes, frecuencia_n must be >= 1
+    -- For n_por_semana and n_por_mes, frecuencia_n must have sensible bounds
     CONSTRAINT objetivos_frecuencia_n_config CHECK (
         frecuencia_tipo IS NULL OR
         frecuencia_tipo = 'daily' OR
-        (frecuencia_n IS NOT NULL AND frecuencia_n >= 1)
+        (frecuencia_tipo = 'n_por_semana' AND frecuencia_n IS NOT NULL AND frecuencia_n BETWEEN 1 AND 7) OR
+        (frecuencia_tipo = 'n_por_mes' AND frecuencia_n IS NOT NULL AND frecuencia_n BETWEEN 1 AND 31)
     ),
 
     -- Metrica_actual cannot exceed metrica_objetivo and must be non-negative

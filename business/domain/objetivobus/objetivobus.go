@@ -162,7 +162,7 @@ func (b *Business) Update(ctx context.Context, objetivo Objetivo, uo UpdateObjet
 
 	// Status cannot be changed via Update (use ChangeStatus)
 	if uo.Status != nil {
-		return Objetivo{}, errors.New("status changes must use ChangeStatus method")
+		return Objetivo{}, ErrStatusChangeMustUseMethod
 	}
 
 	if uo.Titulo != nil {
@@ -171,7 +171,7 @@ func (b *Business) Update(ctx context.Context, objetivo Objetivo, uo UpdateObjet
 
 	if uo.MetricaObjetivo != nil {
 		if !objetivo.TipoTracking.IsResultado() {
-			return Objetivo{}, errors.New("metrica_objetivo only valid for resultado tracking")
+			return Objetivo{}, ErrMetricaOnlyForResultado
 		}
 		// Validation (> 0) is handled by metricaobjetivo.Parse at app layer
 		objetivo.MetricaObjetivo = uo.MetricaObjetivo
@@ -179,14 +179,14 @@ func (b *Business) Update(ctx context.Context, objetivo Objetivo, uo UpdateObjet
 
 	if uo.FrecuenciaTipo != nil {
 		if !objetivo.TipoTracking.IsFrecuencia() {
-			return Objetivo{}, errors.New("frecuencia_tipo only valid for frecuencia tracking")
+			return Objetivo{}, ErrFrecuenciaOnlyForFrecuencia
 		}
 		objetivo.FrecuenciaTipo = uo.FrecuenciaTipo
 	}
 
 	if uo.FrecuenciaN != nil {
 		if !objetivo.TipoTracking.IsFrecuencia() {
-			return Objetivo{}, errors.New("frecuencia_n only valid for frecuencia tracking")
+			return Objetivo{}, ErrFrecuenciaOnlyForFrecuencia
 		}
 		// Validation (>= 1) is handled by frecuencian.Parse at app layer
 		objetivo.FrecuenciaN = uo.FrecuenciaN
@@ -194,7 +194,7 @@ func (b *Business) Update(ctx context.Context, objetivo Objetivo, uo UpdateObjet
 
 	if uo.CumplimientoTargetPct != nil {
 		if !objetivo.TipoTracking.IsFrecuencia() {
-			return Objetivo{}, errors.New("cumplimiento_target_pct only valid for frecuencia tracking")
+			return Objetivo{}, ErrFrecuenciaOnlyForFrecuencia
 		}
 		objetivo.CumplimientoTargetPct = uo.CumplimientoTargetPct
 	}
@@ -316,7 +316,7 @@ func (b *Business) IncrementProgress(ctx context.Context, objetivo Objetivo, req
 	}
 
 	if objetivo.MetricaActual == nil || objetivo.MetricaObjetivo == nil {
-		return Objetivo{}, errors.New("metrica values not initialized")
+		return Objetivo{}, ErrMetricaNotInitialized
 	}
 
 	newValue := objetivo.MetricaActual.Value() + req.Increment
@@ -353,7 +353,7 @@ func (b *Business) UpdateProgress(ctx context.Context, objetivo Objetivo, req Up
 	}
 
 	if objetivo.MetricaActual == nil || objetivo.MetricaObjetivo == nil {
-		return Objetivo{}, errors.New("metrica values not initialized")
+		return Objetivo{}, ErrMetricaNotInitialized
 	}
 
 	var newValue int
@@ -364,7 +364,7 @@ func (b *Business) UpdateProgress(ctx context.Context, objetivo Objetivo, req Up
 		// Increment mode
 		newValue = objetivo.MetricaActual.Value() + *req.Increment
 	} else {
-		return Objetivo{}, errors.New("either increment or value must be provided")
+		return Objetivo{}, ErrIncrementOrValueRequired
 	}
 
 	if newValue < 0 {
@@ -435,7 +435,7 @@ func validateTrackingConfig(no NewObjetivo) error {
 
 	if no.TipoTracking.IsFrecuencia() {
 		if no.FrecuenciaTipo == nil {
-			return errors.New("frecuencia_tipo required for frecuencia tracking")
+			return ErrFrecuenciaTipoRequired
 		}
 
 		// For n_por_semana and n_por_mes, frecuencia_n must be provided (>= 1 validated by frecuencian.Parse)

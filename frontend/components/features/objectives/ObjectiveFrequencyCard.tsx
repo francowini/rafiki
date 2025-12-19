@@ -104,7 +104,9 @@ export function ObjectiveFrequencyCard({
 
       <CardContent>
         <div className="text-center py-2">
-          <p className="text-3xl font-bold text-purple-600">{objective.cumplimientoTargetPct}%</p>
+          <p className="text-3xl font-bold text-purple-600">
+            {objective.cumplimientoTargetPct ?? 0}%
+          </p>
           <p className="text-sm text-muted-foreground">Meta de cumplimiento</p>
         </div>
       </CardContent>
