@@ -165,6 +165,7 @@ export default function ObjetivosPage() {
         <SheetContent side="right" className="w-full sm:max-w-4xl overflow-y-auto">
           <SheetHeader className="sr-only">
             <SheetTitle>Detalle del objetivo</SheetTitle>
+            <SheetDescription>Detalles del objetivo seleccionado</SheetDescription>
           </SheetHeader>
           {selectedObjective && <ObjectiveDetail objectiveId={selectedObjective.id} />}
         </SheetContent>

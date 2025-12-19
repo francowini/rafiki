@@ -515,9 +515,9 @@ CREATE TABLE IF NOT EXISTS objetivos (
         (frecuencia_n IS NOT NULL AND frecuencia_n >= 1)
     ),
 
-    -- Metrica_actual cannot exceed metrica_objetivo
+    -- Metrica_actual cannot exceed metrica_objetivo and must be non-negative
     CONSTRAINT objetivos_progress_bounds CHECK (
-        metrica_actual IS NULL OR metrica_objetivo IS NULL OR metrica_actual <= metrica_objetivo
+        metrica_actual IS NULL OR (metrica_actual >= 0 AND (metrica_objetivo IS NULL OR metrica_actual <= metrica_objetivo))
     )
 );
 

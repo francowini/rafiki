@@ -208,7 +208,10 @@ func (a *app) restore(ctx context.Context, r *http.Request) web.Encoder {
 		IncludeArchived: true,
 	}
 	objetivos, err := a.objetivoBus.Query(ctx, filter, order.NewBy("", ""), page.MustParse("1", "1"))
-	if err != nil || len(objetivos) == 0 {
+	if err != nil {
+		return errs.Newf(errs.Internal, "query: objetivoID[%s]: %s", objetivoID, err)
+	}
+	if len(objetivos) == 0 {
 		return errs.New(errs.NotFound, objetivobus.ErrNotFound)
 	}
 

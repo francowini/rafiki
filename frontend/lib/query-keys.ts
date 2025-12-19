@@ -13,8 +13,8 @@ export const queryKeys = {
       [...queryKeys.objectives.lists(), filters] as const,
     details: () => [...queryKeys.objectives.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.objectives.details(), id] as const,
-    records: (id: string) =>
-      [...queryKeys.objectives.detail(id), 'records'] as const,
+    records: (id: string, params?: { startDate?: string; endDate?: string }) =>
+      [...queryKeys.objectives.detail(id), 'records', params] as const,
     activity: (id: string, year: number) =>
       [...queryKeys.objectives.detail(id), 'activity', year] as const,
   },

@@ -98,13 +98,6 @@ export function ProgressUpdateDialog({
   const percentage = Math.round((currentProgress / target) * 100);
   const newPercentage = value ? Math.round((parseFloat(value) / target) * 100) : percentage;
 
-  // Ensure value is set when dialog opens
-  if (open && objective && !initialized) {
-    setValue(objective.metricaActual?.toString() || '0');
-    setError('');
-    setInitialized(true);
-  }
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[480px]">

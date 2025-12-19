@@ -648,3 +648,97 @@ func (b *Business) Restore(ctx context.Context, lifeVision LifeVision) (LifeVisi
 - [ ] Before restoring a child entity, verify the parent entity exists and is in valid state
 - [ ] Define specific error types for invalid parent states (e.g., `ErrTargetValueNotActive`)
 - [ ] Handle the new error in the app layer and return appropriate HTTP status codes
+
+---
+
+## 19. Error Handling: Conflating Query Errors with NotFound
+
+### Severity: Major (Error Handling Bug)
+
+### Problem
+
+Combining Query error check with empty result check in a single condition discards the original error information, making debugging difficult and returning incorrect HTTP status codes.
+
+### Bad Example
+
+```go
+// BAD: Query error discarded, returns 404 even for database errors
+objetivos, err := a.objetivoBus.Query(ctx, filter, orderBy, page)
+if err != nil || len(objetivos) == 0 {
+    return errs.New(errs.NotFound, objetivobus.ErrNotFound)
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Handle error first, then check empty result
+objetivos, err := a.objetivoBus.Query(ctx, filter, orderBy, page)
+if err != nil {
+    return errs.Newf(errs.Internal, "query: objetivoID[%s]: %s", objetivoID, err)
+}
+if len(objetivos) == 0 {
+    return errs.New(errs.NotFound, objetivobus.ErrNotFound)
+}
+```
+
+### Checklist
+
+- [ ] Always check and handle errors before checking for empty results
+- [ ] Preserve error context when wrapping errors
+- [ ] Return appropriate HTTP status codes (500 for errors, 404 for not found)
+
+---
+
+## 20. State Transitions: Allowing Same-State Transitions
+
+### Severity: Medium (Logic Bug)
+
+### Problem
+
+State machine implementations that allow transitions from a state to itself create confusing behavior and unnecessary database writes.
+
+### Bad Example
+
+```go
+// BAD: activo→activo is allowed (wasteful/confusing)
+func validateStatusTransition(from, to Status) error {
+    if from.IsTerminal() {
+        return ErrStatusTransitionNotAllowed
+    }
+    if from.IsActivo() {
+        // Can go anywhere - but this includes staying activo!
+        return nil
+    }
+    return ErrStatusTransitionNotAllowed
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Reject same-state transitions first
+func validateStatusTransition(from, to Status) error {
+    // Cannot transition to the same status (no-op)
+    if from.Equal(to) {
+        return ErrStatusTransitionNotAllowed
+    }
+
+    // Cannot transition from terminal statuses
+    if from.IsTerminal() {
+        return ErrStatusTransitionNotAllowed
+    }
+
+    if from.IsActivo() {
+        // Can go anywhere except stay activo (already checked above)
+        return nil
+    }
+    return ErrStatusTransitionNotAllowed
+}
+```
+
+### Checklist
+
+- [ ] State machines reject same-state transitions early
+- [ ] Comments accurately describe allowed transitions
+- [ ] Consider whether no-op transitions should be silent success vs error

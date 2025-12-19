@@ -447,6 +447,11 @@ func validateTrackingConfig(no NewObjetivo) error {
 
 // validateStatusTransition validates if a status transition is allowed.
 func validateStatusTransition(from, to objetivostatus.ObjetivoStatus) error {
+	// Cannot transition to the same status (no-op)
+	if from.Equal(to) {
+		return ErrStatusTransitionNotAllowed
+	}
+
 	// Cannot transition from terminal statuses
 	if from.IsTerminal() {
 		return ErrStatusTransitionNotAllowed
@@ -456,7 +461,7 @@ func validateStatusTransition(from, to objetivostatus.ObjetivoStatus) error {
 	// activo → completado, pausado, abandonado
 	// pausado → activo, abandonado
 	if from.IsActivo() {
-		// Can go anywhere except stay activo
+		// Can go anywhere except stay activo (already checked above)
 		return nil
 	}
 

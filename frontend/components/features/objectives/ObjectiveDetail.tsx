@@ -67,12 +67,15 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
   }
 
   const isResultado = objective.tipoTracking === 'resultado';
+  const isTerminal = objective.status === 'completado' || objective.status === 'abandonado';
   const progress =
     isResultado && objective.metricaActual && objective.metricaObjetivo
       ? Math.round((objective.metricaActual / objective.metricaObjetivo) * 100)
       : 0;
 
   const handleStatusChange = (newStatus: ObjectiveStatus) => {
+    // Don't allow changes for terminal states
+    if (isTerminal) return;
     updateStatusMutation.mutate({ id: objectiveId, status: newStatus });
   };
 
@@ -125,8 +128,15 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
           </div>
 
           {/* Status selector */}
-          <Select value={objective.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-36">
+          <Select
+            value={objective.status}
+            onValueChange={handleStatusChange}
+            disabled={isTerminal}
+          >
+            <SelectTrigger
+              className="w-36"
+              title={isTerminal ? 'El estado no puede cambiarse (estado final)' : undefined}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

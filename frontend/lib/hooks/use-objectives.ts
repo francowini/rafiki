@@ -43,7 +43,7 @@ export function useObjectiveRecords(
   params?: { startDate?: string; endDate?: string },
 ): UseQueryResult<ObjectiveRecordListResponse> {
   return useQuery({
-    queryKey: queryKeys.objectives.records(objetivoId),
+    queryKey: queryKeys.objectives.records(objetivoId, params),
     queryFn: () => api.objectives.getRecords(objetivoId, params),
     enabled: !!objetivoId,
   });
@@ -220,7 +220,7 @@ export function useLogRecord(
       // Optimistically update cache
       if (previousRecords) {
         const optimisticRecord: ObjectiveRecord = {
-          id: `temp-${Date.now()}`,
+          id: crypto.randomUUID(),
           objetivoId,
           fechaRegistro: newRecord.fechaRegistro,
           status: newRecord.status,

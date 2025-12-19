@@ -66,10 +66,10 @@ func toBusRecordDecrypted(db objetivoRecord, enc encrypt.Encryptor) (objetivoreg
 		ID:            db.ID,
 		ObjetivoID:    db.ObjetivoID,
 		UserID:        db.UserID,
-		FechaRegistro: db.FechaRegistro.In(time.Local),
+		FechaRegistro: db.FechaRegistro.UTC(),
 		Status:        status,
 		Notes:         notes,
-		DateCreated:   db.DateCreated.In(time.Local),
+		DateCreated:   db.DateCreated.UTC(),
 	}, nil
 }
 

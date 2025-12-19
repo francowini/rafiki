@@ -22,16 +22,21 @@ interface ObjectiveFrequencyCardProps {
 }
 
 function getFrecuenciaLabel(objective: Objective): string {
+  const n = objective.frecuenciaN ?? '?';
+
   if (objective.frecuenciaTipo === 'daily') {
     return 'Diario';
   }
   if (objective.frecuenciaTipo === 'n_por_semana') {
-    return `${objective.frecuenciaN}x/semana`;
+    return `${n}x/semana`;
   }
   if (objective.frecuenciaTipo === 'n_por_mes') {
-    return `${objective.frecuenciaN}x/mes`;
+    return `${n}x/mes`;
   }
-  return '';
+
+  // Fallback for unknown or missing frequency type
+  console.warn(`Unknown frecuenciaTipo for objective ${objective.id}:`, objective.frecuenciaTipo);
+  return 'Tipo desconocido';
 }
 
 export function ObjectiveFrequencyCard({

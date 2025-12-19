@@ -1,11 +1,18 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, notFound } from 'next/navigation';
 import { ObjectiveDetail } from '@/components/features/objectives/ObjectiveDetail';
 
 export default function ObjectiveDetailPage() {
   const params = useParams();
-  const id = params.id as string;
+
+  // Validate params.id: handle undefined, array, or invalid values
+  const rawId = params?.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+  if (!id || typeof id !== 'string') {
+    notFound();
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
