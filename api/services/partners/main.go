@@ -27,10 +27,10 @@ import (
 	"github.com/francowini/rafiki/business/domain/momentbus/stores/momentdb"
 	"github.com/francowini/rafiki/business/domain/notificationbus"
 	"github.com/francowini/rafiki/business/domain/notificationbus/stores/notificationdb"
-	"github.com/francowini/rafiki/business/domain/objetivobus"
-	"github.com/francowini/rafiki/business/domain/objetivobus/stores/objetivodb"
-	"github.com/francowini/rafiki/business/domain/objetivoregistrobus"
-	"github.com/francowini/rafiki/business/domain/objetivoregistrobus/stores/objetivoregistrodb"
+	"github.com/francowini/rafiki/business/domain/objectivebus"
+	"github.com/francowini/rafiki/business/domain/objectivebus/stores/objectivedb"
+	"github.com/francowini/rafiki/business/domain/objectiverecordbus"
+	"github.com/francowini/rafiki/business/domain/objectiverecordbus/stores/objectiverecorddb"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
 	"github.com/francowini/rafiki/business/domain/userbus"
@@ -255,13 +255,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 	lifeVisionStore := lifevisiondb.NewStore(log, db, encryptor)
 	lifeVisionBus := lifevisionbus.NewBusiness(log, valueBus, dlg, lifeVisionStore)
 
-	// Create objetivo domain (child of life vision)
-	objetivoStore := objetivodb.NewStore(log, db, encryptor)
-	objetivoBus := objetivobus.NewBusiness(log, lifeVisionBus, dlg, objetivoStore)
+	// Create objective domain (child of life vision)
+	objectiveStore := objectivedb.NewStore(log, db, encryptor)
+	objectiveBus := objectivebus.NewBusiness(log, lifeVisionBus, dlg, objectiveStore)
 
-	// Create objetivo record domain (child of objetivo)
-	objetivoRegistroStore := objetivoregistrodb.NewStore(log, db, encryptor)
-	objetivoRegistroBus := objetivoregistrobus.NewBusiness(log, objetivoBus, dlg, objetivoRegistroStore)
+	// Create objective record domain (child of objective)
+	objectiveRecordStore := objectiverecorddb.NewStore(log, db, encryptor)
+	objectiveRecordBus := objectiverecordbus.NewBusiness(log, objectiveBus, dlg, objectiveRecordStore)
 
 	// Create vexport domain (query-only view domain)
 	vexportStore := vexportdb.NewStore(log, db, encryptor)
@@ -486,15 +486,15 @@ func run(ctx context.Context, log *logger.Logger) error {
 		DB:     db,
 		Tracer: tracer,
 		BusConfig: mux.BusConfig{
-			ThinkBus:            thinkBus,
-			MomentBus:           momentBus,
-			ValueBus:            valueBus,
-			LifeVisionBus:       lifeVisionBus,
-			ObjetivoBus:         objetivoBus,
-			ObjetivoRegistroBus: objetivoRegistroBus,
-			VExportBus:          vexportBus,
-			UserBus:             userBus,
-			Auth:                authInstance,
+			ThinkBus:           thinkBus,
+			MomentBus:          momentBus,
+			ValueBus:           valueBus,
+			LifeVisionBus:      lifeVisionBus,
+			ObjectiveBus:       objectiveBus,
+			ObjectiveRecordBus: objectiveRecordBus,
+			VExportBus:         vexportBus,
+			UserBus:            userBus,
+			Auth:               authInstance,
 		},
 	}
 

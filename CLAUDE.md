@@ -6,6 +6,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Topifier is a personal development tracking application built in Go, designed to help track ideales (ideals), valores (values), hábitos (habits), metas (goals), and objetivos (objectives). The service is containerized and deployed on Hetzner servers.
 
+## Language Convention
+
+**IMPORTANT**: All code must be written in English. This includes:
+- Variable names, function names, type names, constants
+- Database table names, column names, constraints
+- API routes and endpoints
+- File and directory names
+- Code comments (technical)
+
+**User-facing text stays in Spanish** (the app's target language):
+- UI labels, buttons, placeholders
+- Error messages shown to users
+- Toast notifications
+- Form validation messages
+- Help tooltips
+
+This separation ensures:
+1. Code is maintainable by any developer regardless of language
+2. Users get a native Spanish experience
+3. Consistent naming conventions across the codebase
+
 ## Architecture
 
 - **Service Pattern**: Main service is `partner-service` with dual HTTP servers:

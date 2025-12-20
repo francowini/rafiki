@@ -1,36 +1,36 @@
 import { z } from 'zod';
 
-export const objectiveSchema = z.discriminatedUnion('tipoTracking', [
-  // Resultado tracking
+export const objectiveSchema = z.discriminatedUnion('trackingType', [
+  // Result tracking
   z.object({
-    tipoTracking: z.literal('resultado'),
+    trackingType: z.literal('result'),
     lifeVisionId: z.string().min(1, 'Visión de vida es requerida'),
-    titulo: z.string().min(5, 'Mínimo 5 caracteres').max(200, 'Máximo 200 caracteres'),
-    metricaObjetivo: z.number().min(1, 'La meta debe ser mayor a 0'),
+    title: z.string().min(5, 'Mínimo 5 caracteres').max(200, 'Máximo 200 caracteres'),
+    targetMetric: z.number().min(1, 'La meta debe ser mayor a 0'),
   }),
 
-  // Frecuencia tracking
+  // Frequency tracking
   z
     .object({
-      tipoTracking: z.literal('frecuencia'),
+      trackingType: z.literal('frequency'),
       lifeVisionId: z.string().min(1, 'Visión de vida es requerida'),
-      titulo: z.string().min(5, 'Mínimo 5 caracteres').max(200, 'Máximo 200 caracteres'),
-      frecuenciaTipo: z.enum(['daily', 'n_por_semana', 'n_por_mes']),
-      frecuenciaN: z.number().min(1).max(31).optional(),
-      cumplimientoTargetPct: z.number().min(1, 'Mínimo 1%').max(100, 'Máximo 100%'),
+      title: z.string().min(5, 'Mínimo 5 caracteres').max(200, 'Máximo 200 caracteres'),
+      frequencyType: z.enum(['daily', 'n_per_week', 'n_per_month']),
+      frequencyCount: z.number().min(1).max(31).optional(),
+      complianceTargetPct: z.number().min(1, 'Mínimo 1%').max(100, 'Máximo 100%'),
     })
     .refine(
       (data) => {
-        // For n_por_semana and n_por_mes, frecuenciaN is required
-        if (data.frecuenciaTipo === 'n_por_semana' || data.frecuenciaTipo === 'n_por_mes') {
-          return data.frecuenciaN !== undefined && data.frecuenciaN >= 1;
+        // For n_per_week and n_per_month, frequencyCount is required
+        if (data.frequencyType === 'n_per_week' || data.frequencyType === 'n_per_month') {
+          return data.frequencyCount !== undefined && data.frequencyCount >= 1;
         }
-        // For daily, frecuenciaN is optional (can be omitted)
+        // For daily, frequencyCount is optional (can be omitted)
         return true;
       },
       {
         message: 'La frecuencia (N) es requerida para tipo semanal o mensual',
-        path: ['frecuenciaN'],
+        path: ['frequencyCount'],
       },
     ),
 ]);
@@ -38,8 +38,8 @@ export const objectiveSchema = z.discriminatedUnion('tipoTracking', [
 export type ObjectiveFormData = z.infer<typeof objectiveSchema>;
 
 export const recordSchema = z.object({
-  fechaRegistro: z.string().min(1, 'La fecha es requerida'),
-  status: z.enum(['completado', 'omitido_intencional', 'omitido']),
+  recordDate: z.string().min(1, 'La fecha es requerida'),
+  status: z.enum(['completed', 'intentionally_skipped', 'skipped']),
   notes: z.string().optional(),
 });
 

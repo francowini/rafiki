@@ -26,8 +26,8 @@ import { cn } from '@/lib/utils';
 import type { RecordStatus } from '@/lib/types';
 
 interface FrequencyLogDialogProps {
-  objetivoId: string;
-  objetivoName: string;
+  objectiveId: string;
+  objectiveName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialStatus?: RecordStatus;
@@ -43,8 +43,8 @@ function getDateStrings() {
 }
 
 export function FrequencyLogDialog({
-  objetivoId,
-  objetivoName,
+  objectiveId,
+  objectiveName,
   open,
   onOpenChange,
   initialStatus,
@@ -55,14 +55,14 @@ export function FrequencyLogDialog({
   const [status, setStatus] = useState<RecordStatus | null>(initialStatus || null);
   const [notes, setNotes] = useState('');
 
-  const { mutate: logRecord, isPending } = useLogRecord(objetivoId);
+  const { mutate: logRecord, isPending } = useLogRecord(objectiveId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!status) return;
 
     logRecord(
-      { fechaRegistro: selectedDate, status, notes: notes || undefined },
+      { recordDate: selectedDate, status, notes: notes || undefined },
       {
         onSuccess: () => {
           // Reset all dialog state before closing
@@ -88,7 +88,7 @@ export function FrequencyLogDialog({
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>Registrar progreso</DialogTitle>
-          <DialogDescription>{objetivoName}</DialogDescription>
+          <DialogDescription>{objectiveName}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -120,10 +120,10 @@ export function FrequencyLogDialog({
             >
               <button
                 type="button"
-                onClick={() => setStatus('completado')}
+                onClick={() => setStatus('completed')}
                 className={cn(
                   'border-2 rounded-lg p-4 text-center transition-all',
-                  status === 'completado'
+                  status === 'completed'
                     ? 'border-green-500 bg-green-50'
                     : 'border-gray-200 hover:border-green-300',
                 )}
@@ -131,7 +131,7 @@ export function FrequencyLogDialog({
                 <CheckCircle2
                   className={cn(
                     'h-8 w-8 mx-auto mb-2',
-                    status === 'completado' ? 'text-green-600' : 'text-gray-400',
+                    status === 'completed' ? 'text-green-600' : 'text-gray-400',
                   )}
                 />
                 <span className="text-sm font-medium">Completado</span>
@@ -139,10 +139,10 @@ export function FrequencyLogDialog({
 
               <button
                 type="button"
-                onClick={() => setStatus('omitido_intencional')}
+                onClick={() => setStatus('intentionally_skipped')}
                 className={cn(
                   'border-2 rounded-lg p-4 text-center transition-all',
-                  status === 'omitido_intencional'
+                  status === 'intentionally_skipped'
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-blue-300',
                 )}
@@ -150,7 +150,7 @@ export function FrequencyLogDialog({
                 <MinusCircle
                   className={cn(
                     'h-8 w-8 mx-auto mb-2',
-                    status === 'omitido_intencional' ? 'text-blue-600' : 'text-gray-400',
+                    status === 'intentionally_skipped' ? 'text-blue-600' : 'text-gray-400',
                   )}
                 />
                 <span className="text-sm font-medium">Descanso</span>
@@ -158,10 +158,10 @@ export function FrequencyLogDialog({
 
               <button
                 type="button"
-                onClick={() => setStatus('omitido')}
+                onClick={() => setStatus('skipped')}
                 className={cn(
                   'border-2 rounded-lg p-4 text-center transition-all',
-                  status === 'omitido'
+                  status === 'skipped'
                     ? 'border-gray-500 bg-gray-50'
                     : 'border-gray-200 hover:border-gray-300',
                 )}
@@ -169,7 +169,7 @@ export function FrequencyLogDialog({
                 <XCircle
                   className={cn(
                     'h-8 w-8 mx-auto mb-2',
-                    status === 'omitido' ? 'text-gray-600' : 'text-gray-400',
+                    status === 'skipped' ? 'text-gray-600' : 'text-gray-400',
                   )}
                 />
                 <span className="text-sm font-medium">Omitido</span>

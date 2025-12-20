@@ -5,8 +5,8 @@ import "fmt"
 
 // The set of tracking types for objectives.
 var (
-	Resultado  = newType("resultado")  // Outcome-based (metric progress)
-	Frecuencia = newType("frecuencia") // Frequency-based (calendar compliance)
+	Result    = newType("result")    // Outcome-based (metric progress)
+	Frequency = newType("frequency") // Frequency-based (calendar compliance)
 )
 
 // Set of known tracking types.
@@ -53,21 +53,21 @@ func (tt *TrackingType) UnmarshalText(data []byte) error {
 	return nil
 }
 
-// IsResultado returns true if tracking type is resultado.
-func (tt TrackingType) IsResultado() bool {
-	return tt.value == Resultado.value
+// IsResult returns true if tracking type is result.
+func (tt TrackingType) IsResult() bool {
+	return tt.value == Result.value
 }
 
-// IsFrecuencia returns true if tracking type is frecuencia.
-func (tt TrackingType) IsFrecuencia() bool {
-	return tt.value == Frecuencia.value
+// IsFrequency returns true if tracking type is frequency.
+func (tt TrackingType) IsFrequency() bool {
+	return tt.value == Frequency.value
 }
 
 // Parse parses the string value and returns a tracking type if one exists.
 func Parse(value string) (TrackingType, error) {
 	tt, exists := types[value]
 	if !exists {
-		return TrackingType{}, fmt.Errorf("invalid tracking type %q (must be 'resultado' or 'frecuencia')", value)
+		return TrackingType{}, fmt.Errorf("invalid tracking type %q (must be 'result' or 'frequency')", value)
 	}
 	return tt, nil
 }

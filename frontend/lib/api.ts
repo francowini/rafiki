@@ -429,62 +429,62 @@ export const api = {
       if (params?.includeArchived) queryParams.set('includeArchived', 'true');
 
       const query = queryParams.toString();
-      return fetchAPI<ObjectiveListResponse>(`/v1/objetivos${query ? `?${query}` : ''}`);
+      return fetchAPI<ObjectiveListResponse>(`/v1/objectives${query ? `?${query}` : ''}`);
     },
 
     getById: async (id: string): Promise<Objective> => {
-      return fetchAPI<Objective>(`/v1/objetivos/${id}`);
+      return fetchAPI<Objective>(`/v1/objectives/${id}`);
     },
 
     create: async (data: NewObjective): Promise<Objective> => {
-      return fetchAPI<Objective>('/v1/objetivos', {
+      return fetchAPI<Objective>('/v1/objectives', {
         method: 'POST',
         body: JSON.stringify(data),
       });
     },
 
     update: async (id: string, data: UpdateObjective): Promise<Objective> => {
-      return fetchAPI<Objective>(`/v1/objetivos/${id}`, {
+      return fetchAPI<Objective>(`/v1/objectives/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       });
     },
 
     delete: async (id: string): Promise<void> => {
-      return fetchAPI<void>(`/v1/objetivos/${id}`, { method: 'DELETE' });
+      return fetchAPI<void>(`/v1/objectives/${id}`, { method: 'DELETE' });
     },
 
     archive: async (id: string): Promise<Objective> => {
-      return fetchAPI<Objective>(`/v1/objetivos/${id}/archive`, { method: 'PUT' });
+      return fetchAPI<Objective>(`/v1/objectives/${id}/archive`, { method: 'PUT' });
     },
 
     restore: async (id: string): Promise<Objective> => {
-      return fetchAPI<Objective>(`/v1/objetivos/${id}/restore`, { method: 'PUT' });
+      return fetchAPI<Objective>(`/v1/objectives/${id}/restore`, { method: 'PUT' });
     },
 
     updateStatus: async (id: string, status: ObjectiveStatus): Promise<Objective> => {
-      return fetchAPI<Objective>(`/v1/objetivos/${id}/status`, {
+      return fetchAPI<Objective>(`/v1/objectives/${id}/status`, {
         method: 'PUT',
         body: JSON.stringify({ status }),
       });
     },
 
     incrementProgress: async (id: string, increment: number): Promise<Objective> => {
-      return fetchAPI<Objective>(`/v1/objetivos/${id}/progress`, {
+      return fetchAPI<Objective>(`/v1/objectives/${id}/progress`, {
         method: 'PUT',
         body: JSON.stringify({ increment }),
       });
     },
 
     updateProgress: async (id: string, value: number): Promise<Objective> => {
-      return fetchAPI<Objective>(`/v1/objetivos/${id}/progress`, {
+      return fetchAPI<Objective>(`/v1/objectives/${id}/progress`, {
         method: 'PUT',
         body: JSON.stringify({ value }),
       });
     },
 
     getRecords: async (
-      objetivoId: string,
+      objectiveId: string,
       params?: { startDate?: string; endDate?: string },
     ): Promise<ObjectiveRecordListResponse> => {
       const queryParams = new URLSearchParams();
@@ -493,25 +493,25 @@ export const api = {
 
       const query = queryParams.toString();
       return fetchAPI<ObjectiveRecordListResponse>(
-        `/v1/objetivos/${objetivoId}/records${query ? `?${query}` : ''}`,
+        `/v1/objectives/${objectiveId}/records${query ? `?${query}` : ''}`,
       );
     },
 
-    logRecord: async (objetivoId: string, data: NewObjectiveRecord): Promise<ObjectiveRecord> => {
-      return fetchAPI<ObjectiveRecord>(`/v1/objetivos/${objetivoId}/records`, {
+    logRecord: async (objectiveId: string, data: NewObjectiveRecord): Promise<ObjectiveRecord> => {
+      return fetchAPI<ObjectiveRecord>(`/v1/objectives/${objectiveId}/records`, {
         method: 'POST',
         body: JSON.stringify(data),
       });
     },
 
-    deleteRecord: async (objetivoId: string, recordId: string): Promise<void> => {
-      return fetchAPI<void>(`/v1/objetivos/${objetivoId}/records/${recordId}`, {
+    deleteRecord: async (recordId: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/objectives/records/${recordId}`, {
         method: 'DELETE',
       });
     },
 
-    getActivity: async (objetivoId: string, year: number): Promise<ObjectiveActivityData> => {
-      return fetchAPI<ObjectiveActivityData>(`/v1/objetivos/${objetivoId}/activity?year=${year}`);
+    getActivity: async (objectiveId: string, year: number): Promise<ObjectiveActivityData> => {
+      return fetchAPI<ObjectiveActivityData>(`/v1/objectives/${objectiveId}/activity?year=${year}`);
     },
   },
 };

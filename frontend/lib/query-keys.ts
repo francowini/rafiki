@@ -1,7 +1,7 @@
 export interface ObjectiveFilters {
   lifeVisionId?: string;
-  status?: 'activo' | 'completado' | 'abandonado' | 'pausado';
-  trackingType?: 'resultado' | 'frecuencia';
+  status?: 'active' | 'completed' | 'abandoned' | 'paused';
+  trackingType?: 'result' | 'frequency';
   includeArchived?: boolean;
 }
 

@@ -585,3 +585,123 @@ COMMENT ON TABLE objetivo_records IS 'Daily completion records for frecuencia-ty
 COMMENT ON COLUMN objetivo_records.fecha_registro IS 'Date of the record (today or yesterday only, enforced in business layer)';
 COMMENT ON COLUMN objetivo_records.status IS 'Record status: completado (done), omitido_intencional (rest day), omitido (missed)';
 COMMENT ON COLUMN objetivo_records.notes IS 'Encrypted optional notes about the record';
+
+
+-- Version: 15
+-- Description: Rename objetivos tables to English (objectives/objective_records)
+-- Note: Dropping and recreating since this is new functionality with no production data
+
+-- Drop old tables (child first, then parent)
+DROP TABLE IF EXISTS objetivo_records;
+DROP TABLE IF EXISTS objetivos;
+
+-- Create objectives table with English naming
+CREATE TABLE IF NOT EXISTS objectives (
+    objective_id             UUID        NOT NULL,
+    user_id                  UUID        NOT NULL,
+    life_vision_id           UUID        NOT NULL,
+    title                    TEXT        NOT NULL,
+    tracking_type            TEXT        NOT NULL CHECK (tracking_type IN ('result', 'frequency')),
+    status                   TEXT        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'abandoned', 'paused')),
+    target_metric            INTEGER     NULL,
+    current_metric           INTEGER     NULL,
+    frequency_type           TEXT        NULL CHECK (frequency_type IS NULL OR frequency_type IN ('daily', 'n_per_week', 'n_per_month')),
+    frequency_count          INTEGER     NULL,
+    compliance_target_pct    INTEGER     NULL CHECK (compliance_target_pct IS NULL OR (compliance_target_pct >= 1 AND compliance_target_pct <= 100)),
+    archived_at              TIMESTAMP   NULL,
+    date_created             TIMESTAMP   NOT NULL,
+    date_updated             TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (objective_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (life_vision_id) REFERENCES life_visions(life_vision_id) ON DELETE CASCADE,
+
+    -- Result type requires target_metric > 0
+    CONSTRAINT objectives_result_config CHECK (
+        tracking_type != 'result' OR (target_metric IS NOT NULL AND target_metric > 0)
+    ),
+
+    -- Frequency type requires frequency_type and compliance_target_pct
+    CONSTRAINT objectives_frequency_config CHECK (
+        tracking_type != 'frequency' OR (
+            frequency_type IS NOT NULL AND
+            compliance_target_pct IS NOT NULL
+        )
+    ),
+
+    -- For n_per_week and n_per_month, frequency_count must have sensible bounds
+    CONSTRAINT objectives_frequency_count_config CHECK (
+        frequency_type IS NULL OR
+        frequency_type = 'daily' OR
+        (frequency_type = 'n_per_week' AND frequency_count IS NOT NULL AND frequency_count BETWEEN 1 AND 7) OR
+        (frequency_type = 'n_per_month' AND frequency_count IS NOT NULL AND frequency_count BETWEEN 1 AND 31)
+    ),
+
+    -- current_metric cannot exceed target_metric and must be non-negative
+    CONSTRAINT objectives_progress_bounds CHECK (
+        current_metric IS NULL OR (current_metric >= 0 AND (target_metric IS NULL OR current_metric <= target_metric))
+    ),
+
+    -- Mutual exclusivity: result type should not have frequency fields
+    CONSTRAINT objectives_result_exclusivity CHECK (
+        tracking_type != 'result' OR (
+            frequency_type IS NULL AND
+            frequency_count IS NULL AND
+            compliance_target_pct IS NULL
+        )
+    ),
+
+    -- Mutual exclusivity: frequency type should not have result fields
+    CONSTRAINT objectives_frequency_exclusivity CHECK (
+        tracking_type != 'frequency' OR (
+            target_metric IS NULL AND
+            current_metric IS NULL
+        )
+    )
+);
+
+CREATE INDEX IF NOT EXISTS objectives_user_id_idx ON objectives(user_id);
+CREATE INDEX IF NOT EXISTS objectives_life_vision_id_idx ON objectives(life_vision_id);
+CREATE INDEX IF NOT EXISTS objectives_status_idx ON objectives(status);
+CREATE INDEX IF NOT EXISTS objectives_user_active_idx ON objectives(user_id) WHERE archived_at IS NULL;
+CREATE INDEX IF NOT EXISTS objectives_tracking_type_idx ON objectives(tracking_type);
+
+COMMENT ON TABLE objectives IS 'Measurable objectives linked to life visions with result or frequency tracking';
+COMMENT ON COLUMN objectives.title IS 'Encrypted objective title (plaintext validated as 5-200 chars in business layer)';
+COMMENT ON COLUMN objectives.tracking_type IS 'Tracking type: result (metric-based) or frequency (calendar compliance)';
+COMMENT ON COLUMN objectives.status IS 'Objective status: active, completed (terminal), abandoned (terminal), paused';
+COMMENT ON COLUMN objectives.target_metric IS 'Target metric for result tracking (e.g., 35 books)';
+COMMENT ON COLUMN objectives.current_metric IS 'Current progress for result tracking';
+COMMENT ON COLUMN objectives.frequency_type IS 'Frequency type: daily, n_per_week, n_per_month';
+COMMENT ON COLUMN objectives.frequency_count IS 'Target occurrences per period for n_per_week/n_per_month';
+COMMENT ON COLUMN objectives.compliance_target_pct IS 'Target compliance percentage (1-100) for frequency tracking';
+
+
+-- Create objective_records table with English naming
+CREATE TABLE IF NOT EXISTS objective_records (
+    objective_record_id  UUID        NOT NULL,
+    objective_id         UUID        NOT NULL,
+    user_id              UUID        NOT NULL,
+    record_date          DATE        NOT NULL,
+    status               TEXT        NOT NULL CHECK (status IN ('completed', 'intentionally_skipped', 'skipped')),
+    notes                TEXT        NULL,
+    date_created         TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (objective_record_id),
+    FOREIGN KEY (objective_id) REFERENCES objectives(objective_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Unique constraint: one record per objective per day
+CREATE UNIQUE INDEX IF NOT EXISTS objective_records_objective_date_unique_idx
+    ON objective_records(objective_id, record_date);
+
+CREATE INDEX IF NOT EXISTS objective_records_objective_id_idx ON objective_records(objective_id);
+CREATE INDEX IF NOT EXISTS objective_records_user_id_idx ON objective_records(user_id);
+CREATE INDEX IF NOT EXISTS objective_records_date_idx ON objective_records(record_date);
+CREATE INDEX IF NOT EXISTS objective_records_status_idx ON objective_records(status);
+
+COMMENT ON TABLE objective_records IS 'Daily completion records for frequency-type objectives';
+COMMENT ON COLUMN objective_records.record_date IS 'Date of the record (today or yesterday only, enforced in business layer)';
+COMMENT ON COLUMN objective_records.status IS 'Record status: completed (done), intentionally_skipped (rest day), skipped (missed)';
+COMMENT ON COLUMN objective_records.notes IS 'Encrypted optional notes about the record';

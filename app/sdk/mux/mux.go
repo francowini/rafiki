@@ -14,8 +14,8 @@ import (
 	"github.com/francowini/rafiki/app/sdk/mid"
 	"github.com/francowini/rafiki/business/domain/lifevisionbus"
 	"github.com/francowini/rafiki/business/domain/momentbus"
-	"github.com/francowini/rafiki/business/domain/objetivobus"
-	"github.com/francowini/rafiki/business/domain/objetivoregistrobus"
+	"github.com/francowini/rafiki/business/domain/objectivebus"
+	"github.com/francowini/rafiki/business/domain/objectiverecordbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/domain/valuebus"
@@ -59,15 +59,15 @@ func WithFileServer(react bool, static embed.FS, dir, path string) func(opts *Op
 
 // BusConfig contains the business layer dependencies for route handlers.
 type BusConfig struct {
-	ThinkBus            *thinkbus.Business
-	MomentBus           *momentbus.Business
-	ValueBus            valuebus.ExtBusiness
-	LifeVisionBus       lifevisionbus.ExtBusiness
-	ObjetivoBus         objetivobus.ExtBusiness
-	ObjetivoRegistroBus objetivoregistrobus.ExtBusiness
-	VExportBus          vexportbus.ExtBusiness
-	UserBus             userbus.ExtBusiness
-	Auth                *auth.Auth
+	ThinkBus           *thinkbus.Business
+	MomentBus          *momentbus.Business
+	ValueBus           valuebus.ExtBusiness
+	LifeVisionBus      lifevisionbus.ExtBusiness
+	ObjectiveBus       objectivebus.ExtBusiness
+	ObjectiveRecordBus objectiverecordbus.ExtBusiness
+	VExportBus         vexportbus.ExtBusiness
+	UserBus            userbus.ExtBusiness
+	Auth               *auth.Auth
 }
 
 // Config contains all the mandatory systems required by handlers.
