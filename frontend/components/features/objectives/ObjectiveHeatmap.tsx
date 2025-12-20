@@ -5,12 +5,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useObjectiveActivity } from '@/lib/hooks/use-objectives';
 
 interface ObjectiveHeatmapProps {
-  objetivoId: string;
+  objectiveId: string;
   year: number;
 }
 
-export function ObjectiveHeatmap({ objetivoId, year }: ObjectiveHeatmapProps) {
-  const { data, isLoading } = useObjectiveActivity(objetivoId, year);
+export function ObjectiveHeatmap({ objectiveId, year }: ObjectiveHeatmapProps) {
+  const { data, isLoading } = useObjectiveActivity(objectiveId, year);
 
   if (isLoading) {
     return <Skeleton className="h-32 w-full" />;

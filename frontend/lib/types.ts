@@ -254,40 +254,39 @@ export interface DateRange {
 // Objective Types
 // ============================================================================
 
-export type TrackingType = 'resultado' | 'frecuencia';
-export type ObjectiveStatus = 'activo' | 'completado' | 'abandonado' | 'pausado';
-export type RecordStatus = 'completado' | 'omitido_intencional' | 'omitido';
-export type FrecuenciaType = 'daily' | 'n_por_semana' | 'n_por_mes';
+export type TrackingType = 'result' | 'frequency';
+export type ObjectiveStatus = 'active' | 'completed' | 'abandoned' | 'paused';
+export type RecordStatus = 'completed' | 'intentionally_skipped' | 'skipped';
+export type FrequencyType = 'daily' | 'n_per_week' | 'n_per_month';
 
 export const RECORD_STATUS_LABELS: Record<RecordStatus, string> = {
-  completado: 'Completado',
-  omitido_intencional: 'Omitido intencionalmente',
-  omitido: 'Omitido',
+  completed: 'Completado',
+  intentionally_skipped: 'Omitido intencionalmente',
+  skipped: 'Omitido',
 };
 
 export const OBJECTIVE_STATUS_LABELS: Record<ObjectiveStatus, string> = {
-  activo: 'Activo',
-  completado: 'Completado',
-  abandonado: 'Abandonado',
-  pausado: 'Pausado',
+  active: 'Activo',
+  completed: 'Completado',
+  abandoned: 'Abandonado',
+  paused: 'Pausado',
 };
 
 export interface Objective {
   id: string;
-  userId: string;
   lifeVisionId: string;
-  titulo: string;
-  tipoTracking: TrackingType;
+  title: string;
+  trackingType: TrackingType;
   status: ObjectiveStatus;
 
-  // Resultado fields (null if frecuencia)
-  metricaObjetivo?: number;
-  metricaActual?: number;
+  // Result fields (null if frequency)
+  targetMetric?: number;
+  currentMetric?: number;
 
-  // Frecuencia fields (null if resultado)
-  frecuenciaTipo?: FrecuenciaType;
-  frecuenciaN?: number;
-  cumplimientoTargetPct?: number;
+  // Frequency fields (null if result)
+  frequencyType?: FrequencyType;
+  frequencyCount?: number;
+  complianceTargetPct?: number;
 
   archivedAt?: string | null;
   dateCreated: string;
@@ -303,22 +302,22 @@ export interface ObjectiveWithRelations extends Objective {
 
 export interface NewObjective {
   lifeVisionId: string;
-  titulo: string;
-  tipoTracking: TrackingType;
-  metricaObjetivo?: number;
-  frecuenciaTipo?: FrecuenciaType;
-  frecuenciaN?: number;
-  cumplimientoTargetPct?: number;
+  title: string;
+  trackingType: TrackingType;
+  targetMetric?: number;
+  frequencyType?: FrequencyType;
+  frequencyCount?: number;
+  complianceTargetPct?: number;
 }
 
 export interface UpdateObjective {
-  titulo?: string;
+  title?: string;
   lifeVisionId?: string;
   status?: ObjectiveStatus;
-  metricaObjetivo?: number;
-  frecuenciaTipo?: FrecuenciaType;
-  frecuenciaN?: number;
-  cumplimientoTargetPct?: number;
+  targetMetric?: number;
+  frequencyType?: FrequencyType;
+  frequencyCount?: number;
+  complianceTargetPct?: number;
 }
 
 export interface ObjectiveListResponse {
@@ -332,15 +331,15 @@ export interface ObjectiveListResponse {
 
 export interface ObjectiveRecord {
   id: string;
-  objetivoId: string;
-  fechaRegistro: string; // YYYY-MM-DD
+  objectiveId: string;
+  recordDate: string; // YYYY-MM-DD
   status: RecordStatus;
   notes?: string;
   dateCreated: string;
 }
 
 export interface NewObjectiveRecord {
-  fechaRegistro: string; // YYYY-MM-DD (today or yesterday only)
+  recordDate: string; // YYYY-MM-DD (today or yesterday only)
   status: RecordStatus;
   notes?: string;
 }

@@ -21,21 +21,21 @@ interface ObjectiveFrequencyCardProps {
   onClick: (objective: Objective) => void;
 }
 
-function getFrecuenciaLabel(objective: Objective): string {
-  const n = objective.frecuenciaN ?? '?';
+function getFrequencyLabel(objective: Objective): string {
+  const n = objective.frequencyCount ?? '?';
 
-  if (objective.frecuenciaTipo === 'daily') {
+  if (objective.frequencyType === 'daily') {
     return 'Diario';
   }
-  if (objective.frecuenciaTipo === 'n_por_semana') {
+  if (objective.frequencyType === 'n_per_week') {
     return `${n}x/semana`;
   }
-  if (objective.frecuenciaTipo === 'n_por_mes') {
+  if (objective.frequencyType === 'n_per_month') {
     return `${n}x/mes`;
   }
 
   // Fallback for unknown or missing frequency type
-  console.warn(`Unknown frecuenciaTipo for objective ${objective.id}:`, objective.frecuenciaTipo);
+  console.warn(`Unknown frequencyType for objective ${objective.id}:`, objective.frequencyType);
   return 'Tipo desconocido';
 }
 
@@ -57,7 +57,7 @@ export function ObjectiveFrequencyCard({
     <Card
       className={cn(
         'cursor-pointer transition-all hover:shadow-md bg-gradient-to-br focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2',
-        objective.status === 'pausado'
+        objective.status === 'paused'
           ? 'opacity-75 border-l-4 border-l-purple-400 hover:border-purple-300 from-purple-50/50 to-white'
           : 'hover:border-purple-300 from-purple-50 to-white',
       )}
@@ -65,12 +65,12 @@ export function ObjectiveFrequencyCard({
       onKeyDown={handleKeyDown}
       tabIndex={0}
       role="button"
-      aria-label={`Ver detalles de ${objective.titulo}`}
+      aria-label={`Ver detalles de ${objective.title}`}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg line-clamp-2">{objective.titulo}</h3>
+            <h3 className="font-semibold text-lg line-clamp-2">{objective.title}</h3>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -104,8 +104,8 @@ export function ObjectiveFrequencyCard({
           <Badge variant="outline" className="bg-purple-100 text-purple-700">
             Frecuencia
           </Badge>
-          <Badge variant="outline">{getFrecuenciaLabel(objective)}</Badge>
-          {objective.status === 'pausado' && (
+          <Badge variant="outline">{getFrequencyLabel(objective)}</Badge>
+          {objective.status === 'paused' && (
             <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
               Pausado
             </Badge>
@@ -116,14 +116,14 @@ export function ObjectiveFrequencyCard({
       <CardContent>
         <div className="text-center py-2">
           <p className="text-3xl font-bold text-purple-600">
-            {objective.cumplimientoTargetPct ?? 0}%
+            {objective.complianceTargetPct ?? 0}%
           </p>
           <p className="text-sm text-muted-foreground">Meta de cumplimiento</p>
         </div>
       </CardContent>
 
       <CardFooter className="flex gap-2">
-        {objective.status === 'pausado' ? (
+        {objective.status === 'paused' ? (
           <Button size="sm" variant="outline" className="w-full" disabled>
             Objetivo en pausa
           </Button>
@@ -134,7 +134,7 @@ export function ObjectiveFrequencyCard({
               className="flex-1 bg-green-600 hover:bg-green-700"
               onClick={(e) => {
                 e.stopPropagation();
-                onLogRecord('completado');
+                onLogRecord('completed');
               }}
             >
               <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -146,7 +146,7 @@ export function ObjectiveFrequencyCard({
               className="flex-1"
               onClick={(e) => {
                 e.stopPropagation();
-                onLogRecord('omitido_intencional');
+                onLogRecord('intentionally_skipped');
               }}
             >
               <MinusCircle className="h-4 w-4 mr-1" />

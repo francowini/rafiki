@@ -19,7 +19,7 @@ import { useCreateObjective, useUpdateObjective } from '@/lib/hooks/use-objectiv
 import { objectiveSchema, ObjectiveFormData } from '@/lib/schemas/objective-schema';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import type { Objective, TrackingType, FrecuenciaType, LifeVision } from '@/lib/types';
+import type { Objective, TrackingType, FrequencyType, LifeVision } from '@/lib/types';
 
 interface ObjectiveFormProps {
   objective?: Objective | null;
@@ -31,7 +31,7 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
   const [lifeVisions, setLifeVisions] = useState<LifeVision[]>([]);
   const [loadingLifeVisions, setLoadingLifeVisions] = useState(true);
   const [trackingType, setTrackingType] = useState<TrackingType>(
-    objective?.tipoTracking || 'frecuencia',
+    objective?.trackingType || 'frequency',
   );
 
   const isEditing = !!objective;
@@ -49,17 +49,17 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
   } = useForm<ObjectiveFormData>({
     resolver: zodResolver(objectiveSchema),
     defaultValues: {
-      tipoTracking: objective?.tipoTracking || 'frecuencia',
+      trackingType: objective?.trackingType || 'frequency',
       lifeVisionId: objective?.lifeVisionId || '',
-      titulo: objective?.titulo || '',
-      metricaObjetivo: objective?.metricaObjetivo || 100,
-      frecuenciaTipo: objective?.frecuenciaTipo || 'daily',
-      frecuenciaN: objective?.frecuenciaN || 3,
-      cumplimientoTargetPct: objective?.cumplimientoTargetPct || 80,
+      title: objective?.title || '',
+      targetMetric: objective?.targetMetric || 100,
+      frequencyType: objective?.frequencyType || 'daily',
+      frequencyCount: objective?.frequencyCount || 3,
+      complianceTargetPct: objective?.complianceTargetPct || 80,
     },
   });
 
-  const watchedFrecuenciaTipo = watch('frecuenciaTipo');
+  const watchedFrequencyType = watch('frequencyType');
 
   useEffect(() => {
     async function loadLifeVisions() {
@@ -81,30 +81,30 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
         await updateMutation.mutateAsync({
           id: objective.id,
           data: {
-            titulo: data.titulo,
+            title: data.title,
             lifeVisionId: data.lifeVisionId,
-            ...(data.tipoTracking === 'resultado' && {
-              metricaObjetivo: data.metricaObjetivo,
+            ...(data.trackingType === 'result' && {
+              targetMetric: data.targetMetric,
             }),
-            ...(data.tipoTracking === 'frecuencia' && {
-              frecuenciaTipo: data.frecuenciaTipo,
-              frecuenciaN: data.frecuenciaN,
-              cumplimientoTargetPct: data.cumplimientoTargetPct,
+            ...(data.trackingType === 'frequency' && {
+              frequencyType: data.frequencyType,
+              frequencyCount: data.frequencyCount,
+              complianceTargetPct: data.complianceTargetPct,
             }),
           },
         });
       } else {
         await createMutation.mutateAsync({
-          titulo: data.titulo,
+          title: data.title,
           lifeVisionId: data.lifeVisionId,
-          tipoTracking: data.tipoTracking,
-          ...(data.tipoTracking === 'resultado' && {
-            metricaObjetivo: data.metricaObjetivo,
+          trackingType: data.trackingType,
+          ...(data.trackingType === 'result' && {
+            targetMetric: data.targetMetric,
           }),
-          ...(data.tipoTracking === 'frecuencia' && {
-            frecuenciaTipo: data.frecuenciaTipo,
-            frecuenciaN: data.frecuenciaN,
-            cumplimientoTargetPct: data.cumplimientoTargetPct,
+          ...(data.trackingType === 'frequency' && {
+            frequencyType: data.frequencyType,
+            frequencyCount: data.frequencyCount,
+            complianceTargetPct: data.complianceTargetPct,
           }),
         });
       }
@@ -117,7 +117,7 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
 
   const handleTrackingTypeChange = (type: TrackingType) => {
     setTrackingType(type);
-    setValue('tipoTracking', type);
+    setValue('trackingType', type);
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -134,10 +134,10 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => handleTrackingTypeChange('frecuencia')}
+              onClick={() => handleTrackingTypeChange('frequency')}
               className={cn(
                 'flex flex-col items-center p-4 border-2 rounded-lg transition-all',
-                trackingType === 'frecuencia'
+                trackingType === 'frequency'
                   ? 'border-purple-500 bg-purple-50'
                   : 'border-gray-200 hover:border-purple-300',
               )}
@@ -145,7 +145,7 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
               <BarChart3
                 className={cn(
                   'h-8 w-8 mb-2',
-                  trackingType === 'frecuencia' ? 'text-purple-600' : 'text-gray-400',
+                  trackingType === 'frequency' ? 'text-purple-600' : 'text-gray-400',
                 )}
               />
               <span className="font-medium">Frecuencia</span>
@@ -156,10 +156,10 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
 
             <button
               type="button"
-              onClick={() => handleTrackingTypeChange('resultado')}
+              onClick={() => handleTrackingTypeChange('result')}
               className={cn(
                 'flex flex-col items-center p-4 border-2 rounded-lg transition-all',
-                trackingType === 'resultado'
+                trackingType === 'result'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-blue-300',
               )}
@@ -167,7 +167,7 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
               <Target
                 className={cn(
                   'h-8 w-8 mb-2',
-                  trackingType === 'resultado' ? 'text-blue-600' : 'text-gray-400',
+                  trackingType === 'result' ? 'text-blue-600' : 'text-gray-400',
                 )}
               />
               <span className="font-medium">Resultado</span>
@@ -214,96 +214,96 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
 
       {/* Title */}
       <div className="space-y-2">
-        <Label htmlFor="titulo">Título del objetivo</Label>
+        <Label htmlFor="title">Título del objetivo</Label>
         <Input
-          id="titulo"
-          {...register('titulo')}
+          id="title"
+          {...register('title')}
           placeholder={
-            trackingType === 'frecuencia'
+            trackingType === 'frequency'
               ? 'Ej: Meditar 10 minutos cada día'
               : 'Ej: Leer 12 libros este año'
           }
         />
-        {errors.titulo && <p className="text-sm text-red-500">{errors.titulo.message}</p>}
+        {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
       </div>
 
-      {/* Resultado-specific fields */}
-      {trackingType === 'resultado' && (
+      {/* Result-specific fields */}
+      {trackingType === 'result' && (
         <div className="space-y-2">
-          <Label htmlFor="metricaObjetivo" className="flex items-center gap-2">
+          <Label htmlFor="targetMetric" className="flex items-center gap-2">
             Meta numérica
             <HelpTooltip content="El valor que quieres alcanzar. Por ejemplo: 12 libros, 100 km, 10000 pasos." />
           </Label>
           <Input
-            id="metricaObjetivo"
+            id="targetMetric"
             type="number"
             min="1"
-            {...register('metricaObjetivo', { valueAsNumber: true })}
+            {...register('targetMetric', { valueAsNumber: true })}
             placeholder="Ej: 12"
           />
-          {'metricaObjetivo' in errors && errors.metricaObjetivo && (
-            <p className="text-sm text-red-500">{errors.metricaObjetivo.message}</p>
+          {'targetMetric' in errors && errors.targetMetric && (
+            <p className="text-sm text-red-500">{errors.targetMetric.message}</p>
           )}
         </div>
       )}
 
-      {/* Frecuencia-specific fields */}
-      {trackingType === 'frecuencia' && (
+      {/* Frequency-specific fields */}
+      {trackingType === 'frequency' && (
         <>
           <div className="space-y-2">
-            <Label htmlFor="frecuenciaTipo" className="flex items-center gap-2">
+            <Label htmlFor="frequencyType" className="flex items-center gap-2">
               Frecuencia
               <HelpTooltip content="Con qué frecuencia planeas realizar esta actividad." />
             </Label>
             <Select
-              value={watch('frecuenciaTipo')}
-              onValueChange={(value) => setValue('frecuenciaTipo', value as FrecuenciaType)}
+              value={watch('frequencyType')}
+              onValueChange={(value) => setValue('frequencyType', value as FrequencyType)}
             >
-              <SelectTrigger id="frecuenciaTipo">
+              <SelectTrigger id="frequencyType">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="daily">Diario</SelectItem>
-                <SelectItem value="n_por_semana">Veces por semana</SelectItem>
-                <SelectItem value="n_por_mes">Veces por mes</SelectItem>
+                <SelectItem value="n_per_week">Veces por semana</SelectItem>
+                <SelectItem value="n_per_month">Veces por mes</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {watchedFrecuenciaTipo !== 'daily' && (
+          {watchedFrequencyType !== 'daily' && (
             <div className="space-y-2">
-              <Label htmlFor="frecuenciaN">
-                {watchedFrecuenciaTipo === 'n_por_semana'
+              <Label htmlFor="frequencyCount">
+                {watchedFrequencyType === 'n_per_week'
                   ? 'Veces por semana'
                   : 'Veces por mes'}
               </Label>
               <Input
-                id="frecuenciaN"
+                id="frequencyCount"
                 type="number"
                 min="1"
-                max={watchedFrecuenciaTipo === 'n_por_semana' ? 7 : 31}
-                {...register('frecuenciaN', { valueAsNumber: true })}
+                max={watchedFrequencyType === 'n_per_week' ? 7 : 31}
+                {...register('frequencyCount', { valueAsNumber: true })}
               />
-              {'frecuenciaN' in errors && errors.frecuenciaN && (
-                <p className="text-sm text-red-500">{errors.frecuenciaN.message}</p>
+              {'frequencyCount' in errors && errors.frequencyCount && (
+                <p className="text-sm text-red-500">{errors.frequencyCount.message}</p>
               )}
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="cumplimientoTargetPct" className="flex items-center gap-2">
+            <Label htmlFor="complianceTargetPct" className="flex items-center gap-2">
               Meta de cumplimiento (%)
               <HelpTooltip content="Porcentaje de días/semanas que consideras exitoso. 80% es un buen objetivo para empezar." />
             </Label>
             <Input
-              id="cumplimientoTargetPct"
+              id="complianceTargetPct"
               type="number"
               min="1"
               max="100"
-              {...register('cumplimientoTargetPct', { valueAsNumber: true })}
+              {...register('complianceTargetPct', { valueAsNumber: true })}
             />
-            {'cumplimientoTargetPct' in errors && errors.cumplimientoTargetPct && (
-              <p className="text-sm text-red-500">{errors.cumplimientoTargetPct.message}</p>
+            {'complianceTargetPct' in errors && errors.complianceTargetPct && (
+              <p className="text-sm text-red-500">{errors.complianceTargetPct.message}</p>
             )}
           </div>
         </>

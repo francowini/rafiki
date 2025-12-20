@@ -39,24 +39,24 @@ export function useObjective(id: string): UseQueryResult<Objective> {
 }
 
 export function useObjectiveRecords(
-  objetivoId: string,
+  objectiveId: string,
   params?: { startDate?: string; endDate?: string },
 ): UseQueryResult<ObjectiveRecordListResponse> {
   return useQuery({
-    queryKey: queryKeys.objectives.records(objetivoId, params),
-    queryFn: () => api.objectives.getRecords(objetivoId, params),
-    enabled: !!objetivoId,
+    queryKey: queryKeys.objectives.records(objectiveId, params),
+    queryFn: () => api.objectives.getRecords(objectiveId, params),
+    enabled: !!objectiveId,
   });
 }
 
 export function useObjectiveActivity(
-  objetivoId: string,
+  objectiveId: string,
   year: number,
 ): UseQueryResult<ObjectiveActivityData> {
   return useQuery({
-    queryKey: queryKeys.objectives.activity(objetivoId, year),
-    queryFn: () => api.objectives.getActivity(objetivoId, year),
-    enabled: !!objetivoId && !!year,
+    queryKey: queryKeys.objectives.activity(objectiveId, year),
+    queryFn: () => api.objectives.getActivity(objectiveId, year),
+    enabled: !!objectiveId && !!year,
   });
 }
 
@@ -198,38 +198,38 @@ export function useUpdateProgress(): UseMutationResult<
 // ============================================================================
 
 export function useLogRecord(
-  objetivoId: string,
+  objectiveId: string,
 ): UseMutationResult<ObjectiveRecord, Error, NewObjectiveRecord> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: NewObjectiveRecord) => api.objectives.logRecord(objetivoId, data),
+    mutationFn: (data: NewObjectiveRecord) => api.objectives.logRecord(objectiveId, data),
 
     // OPTIMISTIC UPDATE
     onMutate: async (newRecord) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: queryKeys.objectives.records(objetivoId),
+        queryKey: queryKeys.objectives.records(objectiveId),
       });
 
       // Snapshot previous value
       const previousRecords = queryClient.getQueryData<ObjectiveRecordListResponse>(
-        queryKeys.objectives.records(objetivoId),
+        queryKeys.objectives.records(objectiveId),
       );
 
       // Optimistically update cache
       if (previousRecords) {
         const optimisticRecord: ObjectiveRecord = {
           id: crypto.randomUUID(),
-          objetivoId,
-          fechaRegistro: newRecord.fechaRegistro,
+          objectiveId,
+          recordDate: newRecord.recordDate,
           status: newRecord.status,
           notes: newRecord.notes,
           dateCreated: new Date().toISOString(),
         };
 
         queryClient.setQueryData<ObjectiveRecordListResponse>(
-          queryKeys.objectives.records(objetivoId),
+          queryKeys.objectives.records(objectiveId),
           {
             ...previousRecords,
             items: [optimisticRecord, ...previousRecords.items],
@@ -245,7 +245,7 @@ export function useLogRecord(
     onError: (_err, _newRecord, context) => {
       if (context?.previousRecords) {
         queryClient.setQueryData(
-          queryKeys.objectives.records(objetivoId),
+          queryKeys.objectives.records(objectiveId),
           context.previousRecords,
         );
       }
@@ -254,29 +254,29 @@ export function useLogRecord(
     // Refetch on settle
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.objectives.records(objetivoId),
+        queryKey: queryKeys.objectives.records(objectiveId),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.objectives.activity(objetivoId, new Date().getFullYear()),
+        queryKey: queryKeys.objectives.activity(objectiveId, new Date().getFullYear()),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.objectives.detail(objetivoId),
+        queryKey: queryKeys.objectives.detail(objectiveId),
       });
     },
   });
 }
 
-export function useDeleteRecord(objetivoId: string): UseMutationResult<void, Error, string> {
+export function useDeleteRecord(objectiveId: string): UseMutationResult<void, Error, string> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (recordId: string) => api.objectives.deleteRecord(objetivoId, recordId),
+    mutationFn: (recordId: string) => api.objectives.deleteRecord(recordId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.objectives.records(objetivoId),
+        queryKey: queryKeys.objectives.records(objectiveId),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.objectives.activity(objetivoId, new Date().getFullYear()),
+        queryKey: queryKeys.objectives.activity(objectiveId, new Date().getFullYear()),
       });
     },
   });

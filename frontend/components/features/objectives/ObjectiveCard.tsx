@@ -30,15 +30,15 @@ export function ObjectiveCard({
   onUpdateProgress,
 }: ObjectiveCardProps) {
   const progress =
-    objective.metricaActual && objective.metricaObjetivo
-      ? Math.round((objective.metricaActual / objective.metricaObjetivo) * 100)
+    objective.currentMetric && objective.targetMetric
+      ? Math.round((objective.currentMetric / objective.targetMetric) * 100)
       : 0;
 
   return (
     <Card
       className={cn(
         'cursor-pointer transition-all hover:shadow-md bg-gradient-to-br',
-        objective.status === 'pausado'
+        objective.status === 'paused'
           ? 'opacity-75 border-l-4 border-l-blue-400 hover:border-blue-300 from-blue-50/50 to-white'
           : 'hover:border-blue-300 from-blue-50 to-white',
       )}
@@ -47,7 +47,7 @@ export function ObjectiveCard({
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg line-clamp-2">{objective.titulo}</h3>
+            <h3 className="font-semibold text-lg line-clamp-2">{objective.title}</h3>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -81,7 +81,7 @@ export function ObjectiveCard({
           <Badge variant="outline" className="bg-blue-100 text-blue-700">
             Resultado
           </Badge>
-          {objective.status === 'pausado' ? (
+          {objective.status === 'paused' ? (
             <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
               Pausado
             </Badge>
@@ -96,7 +96,7 @@ export function ObjectiveCard({
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Progreso</span>
             <span className="font-medium">
-              {objective.metricaActual || 0} / {objective.metricaObjetivo}
+              {objective.currentMetric || 0} / {objective.targetMetric}
             </span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -109,14 +109,14 @@ export function ObjectiveCard({
           variant="outline"
           size="sm"
           className="w-full"
-          disabled={objective.status === 'pausado'}
+          disabled={objective.status === 'paused'}
           onClick={(e) => {
             e.stopPropagation();
             onUpdateProgress?.(objective);
           }}
         >
           <TrendingUp className="h-4 w-4 mr-2" />
-          {objective.status === 'pausado' ? 'Objetivo en pausa' : 'Actualizar progreso'}
+          {objective.status === 'paused' ? 'Objetivo en pausa' : 'Actualizar progreso'}
         </Button>
       </CardFooter>
     </Card>

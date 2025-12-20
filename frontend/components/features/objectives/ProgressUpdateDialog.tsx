@@ -38,7 +38,7 @@ export function ProgressUpdateDialog({
   const handleOpenChange = useCallback(
     (newOpen: boolean) => {
       if (newOpen && objective && !initialized) {
-        setValue(objective.metricaActual?.toString() || '0');
+        setValue(objective.currentMetric?.toString() || '0');
         setError('');
         setInitialized(true);
       }
@@ -67,8 +67,8 @@ export function ProgressUpdateDialog({
       return;
     }
 
-    if (objective.metricaObjetivo && numValue > objective.metricaObjetivo) {
-      setError(`El valor no puede ser mayor que la meta (${objective.metricaObjetivo})`);
+    if (objective.targetMetric && numValue > objective.targetMetric) {
+      setError(`El valor no puede ser mayor que la meta (${objective.targetMetric})`);
       return;
     }
 
@@ -93,8 +93,8 @@ export function ProgressUpdateDialog({
 
   if (!objective) return null;
 
-  const currentProgress = objective.metricaActual || 0;
-  const target = objective.metricaObjetivo || 1;
+  const currentProgress = objective.currentMetric || 0;
+  const target = objective.targetMetric || 1;
   const percentage = Math.round((currentProgress / target) * 100);
   const parsedValue = value ? parseFloat(value) : NaN;
   const isValidNumber = !isNaN(parsedValue);
@@ -105,7 +105,7 @@ export function ProgressUpdateDialog({
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>Actualizar progreso</DialogTitle>
-          <DialogDescription className="line-clamp-2">{objective.titulo}</DialogDescription>
+          <DialogDescription className="line-clamp-2">{objective.title}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -132,13 +132,13 @@ export function ProgressUpdateDialog({
               type="number"
               step="any"
               min="0"
-              max={objective.metricaObjetivo}
+              max={objective.targetMetric}
               value={value}
               onChange={(e) => {
                 setValue(e.target.value);
                 setError('');
               }}
-              placeholder={`0 - ${objective.metricaObjetivo}`}
+              placeholder={`0 - ${objective.targetMetric}`}
               autoFocus
             />
             {error && <p className="text-sm text-red-600">{error}</p>}

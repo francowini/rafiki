@@ -66,11 +66,11 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
     );
   }
 
-  const isResultado = objective.tipoTracking === 'resultado';
-  const isTerminal = objective.status === 'completado' || objective.status === 'abandonado';
+  const isResult = objective.trackingType === 'result';
+  const isTerminal = objective.status === 'completed' || objective.status === 'abandoned';
   const progress =
-    isResultado && objective.metricaActual && objective.metricaObjetivo
-      ? Math.round((objective.metricaActual / objective.metricaObjetivo) * 100)
+    isResult && objective.currentMetric && objective.targetMetric
+      ? Math.round((objective.currentMetric / objective.targetMetric) * 100)
       : 0;
 
   const handleStatusChange = (newStatus: ObjectiveStatus) => {
@@ -85,11 +85,11 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
 
   const getRecordIcon = (status: string) => {
     switch (status) {
-      case 'completado':
+      case 'completed':
         return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case 'omitido_intencional':
+      case 'intentionally_skipped':
         return <MinusCircle className="h-4 w-4 text-blue-600" />;
-      case 'omitido':
+      case 'skipped':
         return <XCircle className="h-4 w-4 text-gray-400" />;
       default:
         return null;
@@ -102,17 +102,17 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
       <div className="pr-8">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold mb-2">{objective.titulo}</h1>
+            <h1 className="text-2xl font-bold mb-2">{objective.title}</h1>
             <div className="flex items-center gap-2">
               <Badge
                 variant="outline"
                 className={
-                  isResultado
+                  isResult
                     ? 'bg-blue-100 text-blue-700'
                     : 'bg-purple-100 text-purple-700'
                 }
               >
-                {isResultado ? (
+                {isResult ? (
                   <>
                     <Target className="h-3 w-3 mr-1" />
                     Resultado
@@ -150,8 +150,8 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
         </div>
       </div>
 
-      {/* Progress section for Resultado */}
-      {isResultado && (
+      {/* Progress section for Result */}
+      {isResult && (
         <div className="bg-blue-50 rounded-lg p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg flex items-center gap-2">
@@ -163,12 +163,12 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
                 size="sm"
                 variant="outline"
                 onClick={() => handleIncrementProgress(-1)}
-                disabled={incrementProgressMutation.isPending || (objective.metricaActual || 0) <= 0}
+                disabled={incrementProgressMutation.isPending || (objective.currentMetric || 0) <= 0}
               >
                 <Minus className="h-4 w-4" />
               </Button>
               <span className="font-bold text-xl min-w-[80px] text-center">
-                {objective.metricaActual || 0} / {objective.metricaObjetivo}
+                {objective.currentMetric || 0} / {objective.targetMetric}
               </span>
               <Button
                 size="sm"
@@ -185,8 +185,8 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
         </div>
       )}
 
-      {/* Log record button for Frecuencia */}
-      {!isResultado && (
+      {/* Log record button for Frequency */}
+      {!isResult && (
         <div className="bg-purple-50 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-lg flex items-center gap-2">
@@ -200,26 +200,26 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
           </div>
           <div className="text-center">
             <p className="text-3xl font-bold text-purple-600">
-              {objective.cumplimientoTargetPct}%
+              {objective.complianceTargetPct}%
             </p>
             <p className="text-sm text-muted-foreground">Meta de cumplimiento</p>
           </div>
         </div>
       )}
 
-      {/* Activity Heatmap for Frecuencia */}
-      {!isResultado && (
+      {/* Activity Heatmap for Frequency */}
+      {!isResult && (
         <div className="space-y-4">
           <h2 className="font-semibold text-lg flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             Actividad {currentYear}
           </h2>
-          <ObjectiveHeatmap objetivoId={objectiveId} year={currentYear} />
+          <ObjectiveHeatmap objectiveId={objectiveId} year={currentYear} />
         </div>
       )}
 
-      {/* Recent records for Frecuencia */}
-      {!isResultado && records && records.items.length > 0 && (
+      {/* Recent records for Frequency */}
+      {!isResult && records && records.items.length > 0 && (
         <div className="space-y-4">
           <h2 className="font-semibold text-lg">Registros recientes</h2>
           <div className="space-y-2">
@@ -234,7 +234,7 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
                     {RECORD_STATUS_LABELS[record.status]}
                   </span>
                 </div>
-                <span className="text-sm text-muted-foreground">{record.fechaRegistro}</span>
+                <span className="text-sm text-muted-foreground">{record.recordDate}</span>
               </div>
             ))}
           </div>
@@ -248,10 +248,10 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
       </div>
 
       {/* Log Dialog */}
-      {!isResultado && (
+      {!isResult && (
         <FrequencyLogDialog
-          objetivoId={objectiveId}
-          objetivoName={objective.titulo}
+          objectiveId={objectiveId}
+          objectiveName={objective.title}
           open={logDialogOpen}
           onOpenChange={setLogDialogOpen}
         />
