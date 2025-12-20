@@ -142,7 +142,7 @@ func (s *Store) Query(ctx context.Context, filter taskbus.QueryFilter, orderBy o
 	FROM tasks
 	%s
 	%s
-	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`, whereClause, orderByClause)
+	LIMIT :rows_per_page OFFSET :offset`, whereClause, orderByClause)
 
 	var dbTasks []task
 	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, q, data, &dbTasks); err != nil {
@@ -216,7 +216,11 @@ func buildWhereClause(filter taskbus.QueryFilter, data map[string]any) string {
 		conditions = append(conditions, "user_id = :user_id")
 	}
 
-	if filter.ObjectiveID != nil {
+	// InboxOnly takes precedence over ObjectiveID to prevent conflicting conditions.
+	// When InboxOnly is true, we only look for tasks with no objective.
+	if filter.InboxOnly {
+		conditions = append(conditions, "objective_id IS NULL")
+	} else if filter.ObjectiveID != nil {
 		data["objective_id"] = *filter.ObjectiveID
 		conditions = append(conditions, "objective_id = :objective_id")
 	}
@@ -224,10 +228,6 @@ func buildWhereClause(filter taskbus.QueryFilter, data map[string]any) string {
 	if filter.Status != nil {
 		data["status"] = filter.Status.String()
 		conditions = append(conditions, "status = :status")
-	}
-
-	if filter.InboxOnly {
-		conditions = append(conditions, "objective_id IS NULL")
 	}
 
 	if len(conditions) == 0 {

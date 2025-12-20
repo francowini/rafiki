@@ -59,7 +59,7 @@ func Parse(value string) (TaskStatus, error) {
 	case Pending, Completed, Canceled:
 		return TaskStatus{value}, nil
 	default:
-		return TaskStatus{}, fmt.Errorf("invalid task status %q (must be: pending, completed, canceled)", value)
+		return TaskStatus{}, fmt.Errorf("invalid task status %q (must be: pending, completed, cancelled)", value) //nolint:misspell // Match DB value "cancelled"
 	}
 }
 

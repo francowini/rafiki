@@ -4,6 +4,7 @@ package taskapp
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -110,7 +111,7 @@ func toAppTask(t taskbus.Task) Task {
 
 	var completedAt *string
 	if t.CompletedAt != nil {
-		c := t.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
+		c := t.CompletedAt.Format(time.RFC3339)
 		completedAt = &c
 	}
 
@@ -122,8 +123,8 @@ func toAppTask(t taskbus.Task) Task {
 		Contribution: contributionVal,
 		Status:       t.Status.String(),
 		CompletedAt:  completedAt,
-		DateCreated:  t.DateCreated.Format("2006-01-02T15:04:05Z07:00"),
-		DateUpdated:  t.DateUpdated.Format("2006-01-02T15:04:05Z07:00"),
+		DateCreated:  t.DateCreated.Format(time.RFC3339),
+		DateUpdated:  t.DateUpdated.Format(time.RFC3339),
 	}
 }
 

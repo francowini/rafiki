@@ -154,7 +154,7 @@ func (b *Business) Update(ctx context.Context, task Task, ut UpdateTask) (Task, 
 
 	// Cannot update completed or canceled tasks
 	if task.Status.IsCompleted() || task.Status.IsCanceled() {
-		return Task{}, fmt.Errorf("cannot update task with status %s", task.Status.String())
+		return Task{}, ErrCannotUpdateTerminalTask
 	}
 
 	if ut.Title != nil {
@@ -171,7 +171,7 @@ func (b *Business) Update(ctx context.Context, task Task, ut UpdateTask) (Task, 
 	if ut.Contribution != nil {
 		// Only allow contribution update for objective-linked tasks
 		if task.ObjectiveID == nil {
-			return Task{}, fmt.Errorf("cannot set contribution on inbox task")
+			return Task{}, ErrCannotSetContributionOnInbox
 		}
 		task.Contribution = ut.Contribution
 	}
@@ -263,7 +263,7 @@ func (b *Business) Cancel(ctx context.Context, task Task) (Task, error) {
 	}
 
 	if task.Status.IsCompleted() {
-		return Task{}, fmt.Errorf("cannot cancel completed task (use Uncomplete first)")
+		return Task{}, ErrCannotCancelCompletedTask
 	}
 
 	task.Status = taskstatus.MustParse(taskstatus.Canceled)

@@ -154,7 +154,7 @@ func (s *Store) Query(ctx context.Context, filter objectivebus.QueryFilter, orde
 	FROM objectives
 	%s
 	%s
-	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`, whereClause, orderByClause)
+	LIMIT :rows_per_page OFFSET :offset`, whereClause, orderByClause)
 
 	var dbObjectives []objective
 	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, q, data, &dbObjectives); err != nil {

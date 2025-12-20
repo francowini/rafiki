@@ -213,7 +213,7 @@ func (s *Store) Query(ctx context.Context, filter valuebus.QueryFilter, orderBy 
 	FROM values
 	%s
 	%s
-	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`, whereClause, orderByClause)
+	LIMIT :rows_per_page OFFSET :offset`, whereClause, orderByClause)
 
 	var dbValues []value
 	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, q, data, &dbValues); err != nil {

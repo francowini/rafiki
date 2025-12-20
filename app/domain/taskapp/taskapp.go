@@ -3,6 +3,7 @@ package taskapp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -269,16 +270,18 @@ func (a *app) uncomplete(ctx context.Context, r *http.Request) web.Encoder {
 		return toAppTask(task)
 	}
 
-	// This shouldn't be reached (inbox tasks can't be uncompleted)
+	// Inbox tasks (ObjectiveID == nil) cannot be uncompleted.
+	// The business layer will reject this, but we handle it defensively.
 	task, err := a.taskBus.Uncomplete(ctx, task)
 	if err != nil {
 		if errors.Is(err, taskbus.ErrNotCompleted) {
 			return errs.New(errs.FailedPrecondition, err)
 		}
+		// ErrCannotUncompleteInboxTask is expected here for inbox tasks
 		if errors.Is(err, taskbus.ErrCannotUncompleteInboxTask) {
 			return errs.New(errs.FailedPrecondition, err)
 		}
-		return errs.Newf(errs.Internal, "uncomplete: %s", err)
+		return errs.Newf(errs.Internal, "uncomplete unexpected: %s", err)
 	}
 
 	return toAppTask(task)
@@ -321,9 +324,14 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.NewFieldErrors("order", err)
 	}
 
+	inboxOnly, err := parseBool(qp.InboxOnly)
+	if err != nil {
+		return errs.NewFieldErrors("inboxOnly", err)
+	}
+
 	filter := taskbus.QueryFilter{
 		UserID:    &userID,
-		InboxOnly: parseBool(qp.InboxOnly),
+		InboxOnly: inboxOnly,
 	}
 
 	// Filter by objective if provided
@@ -478,14 +486,15 @@ func parseStatus(s string) (*taskbus.TaskStatus, error) {
 	return &status, nil
 }
 
-// parseBool parses a boolean string, returning false for empty or invalid values.
-func parseBool(s string) bool {
+// parseBool parses a boolean string. Empty string returns false with no error.
+// Invalid non-empty values return an error.
+func parseBool(s string) (bool, error) {
 	if s == "" {
-		return false
+		return false, nil
 	}
 	v, err := strconv.ParseBool(s)
 	if err != nil {
-		return false
+		return false, fmt.Errorf("invalid boolean value %q", s)
 	}
-	return v
+	return v, nil
 }
