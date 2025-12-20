@@ -98,6 +98,12 @@ func (a *app) update(ctx context.Context, r *http.Request) web.Encoder {
 
 	task, err = a.taskBus.Update(ctx, task, ut)
 	if err != nil {
+		if errors.Is(err, taskbus.ErrCannotUpdateTerminalTask) {
+			return errs.New(errs.FailedPrecondition, err)
+		}
+		if errors.Is(err, taskbus.ErrCannotSetContributionOnInbox) {
+			return errs.New(errs.InvalidArgument, err)
+		}
 		return errs.Newf(errs.Internal, "update: %s", err)
 	}
 
@@ -300,6 +306,9 @@ func (a *app) cancel(ctx context.Context, r *http.Request) web.Encoder {
 	task, err := a.taskBus.Cancel(ctx, task)
 	if err != nil {
 		if errors.Is(err, taskbus.ErrAlreadyCanceled) {
+			return errs.New(errs.FailedPrecondition, err)
+		}
+		if errors.Is(err, taskbus.ErrCannotCancelCompletedTask) {
 			return errs.New(errs.FailedPrecondition, err)
 		}
 		return errs.Newf(errs.Internal, "cancel: %s", err)

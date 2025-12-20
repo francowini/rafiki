@@ -138,7 +138,7 @@ func (b *Business) Create(ctx context.Context, nt NewTask) (Task, error) {
 		Title:        nt.Title,
 		Description:  nt.Description,
 		Contribution: nt.Contribution,
-		Status:       taskstatus.MustParse(taskstatus.Pending),
+		Status:       taskstatus.StatusPending,
 		CompletedAt:  nil,
 		DateCreated:  now,
 		DateUpdated:  now,
@@ -219,7 +219,7 @@ func (b *Business) Complete(ctx context.Context, task Task) (Task, error) {
 	}
 
 	now := time.Now().UTC()
-	task.Status = taskstatus.MustParse(taskstatus.Completed)
+	task.Status = taskstatus.StatusCompleted
 	task.CompletedAt = &now
 	task.DateUpdated = now
 
@@ -246,7 +246,7 @@ func (b *Business) Uncomplete(ctx context.Context, task Task) (Task, error) {
 		return Task{}, ErrCannotUncompleteInboxTask
 	}
 
-	task.Status = taskstatus.MustParse(taskstatus.Pending)
+	task.Status = taskstatus.StatusPending
 	task.CompletedAt = nil
 	task.DateUpdated = time.Now().UTC()
 
@@ -271,7 +271,7 @@ func (b *Business) Cancel(ctx context.Context, task Task) (Task, error) {
 		return Task{}, ErrCannotCancelCompletedTask
 	}
 
-	task.Status = taskstatus.MustParse(taskstatus.Canceled)
+	task.Status = taskstatus.StatusCanceled
 	task.DateUpdated = time.Now().UTC()
 
 	if err := b.storer.Update(ctx, task); err != nil {

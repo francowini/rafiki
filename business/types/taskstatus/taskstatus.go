@@ -15,6 +15,14 @@ const (
 	Canceled  = "cancelled" //nolint:misspell // DB uses British spelling
 )
 
+// Pre-parsed status values for use in production code.
+// Use these instead of MustParse to avoid runtime panics.
+var (
+	StatusPending   = TaskStatus{Pending}
+	StatusCompleted = TaskStatus{Completed}
+	StatusCanceled  = TaskStatus{Canceled}
+)
+
 // Value returns the string value of the status.
 func (ts TaskStatus) Value() string {
 	return ts.value
