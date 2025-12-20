@@ -22,6 +22,15 @@ This document catalogs critical errors specific to backend (Go) development.
 14. [API Parameters: Missing Max Limits](#14-api-parameters-missing-max-limits)
 15. [Strong Types: When NOT to Use Them](#15-strong-types-when-not-to-use-them)
 16. [SQL Performance: Unbounded Aggregate Queries](#16-sql-performance-unbounded-aggregate-queries)
+17. [Error Handling: Fragile String-Based Error Detection](#17-error-handling-fragile-string-based-error-detection)
+18. [Business Logic: Missing Parent Entity Validation on Restore](#18-business-logic-missing-parent-entity-validation-on-restore)
+19. [Error Handling: Conflating Query Errors with NotFound](#19-error-handling-conflating-query-errors-with-notfound)
+20. [State Transitions: Allowing Same-State Transitions](#20-state-transitions-allowing-same-state-transitions)
+21. [Delegate Handlers: Returning Errors Instead of Logging](#21-delegate-handlers-returning-errors-instead-of-logging)
+22. [Update Structs: Double Pointers for Nullable Optional Fields](#22-update-structs-double-pointers-for-nullable-optional-fields)
+23. [Bulk Operations: Missing Context in Decryption Errors](#23-bulk-operations-missing-context-in-decryption-errors)
+24. [API Parameters: Missing Date Range Validation](#24-api-parameters-missing-date-range-validation)
+25. [Code Duplication: Repeated Ownership Validation](#25-code-duplication-repeated-ownership-validation)
 
 ---
 
@@ -742,3 +751,282 @@ func validateStatusTransition(from, to Status) error {
 - [ ] State machines reject same-state transitions early
 - [ ] Comments accurately describe allowed transitions
 - [ ] Consider whether no-op transitions should be silent success vs error
+
+---
+
+## 21. Delegate Handlers: Returning Errors Instead of Logging
+
+### Severity: Medium (Operational Issue)
+
+### Problem
+
+When calling delegate handlers after completing a primary operation (like delete), returning the delegate error aborts the operation even though the primary action succeeded. Delegate handlers should be idempotent and non-blocking.
+
+### Bad Example
+
+```go
+// BAD: Delegate failure aborts the delete
+func (b *Business) Delete(ctx context.Context, entity Entity) error {
+    if err := b.storer.Delete(ctx, entity); err != nil {
+        return fmt.Errorf("delete: %w", err)
+    }
+
+    if b.delegate != nil {
+        if err := b.delegate.Call(ctx, ActionDeletedData(entity)); err != nil {
+            return fmt.Errorf("delegate call: %w", err) // Blocks delete success!
+        }
+    }
+    return nil
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Log delegate failures, don't abort the primary operation
+func (b *Business) Delete(ctx context.Context, entity Entity) error {
+    if err := b.storer.Delete(ctx, entity); err != nil {
+        return fmt.Errorf("delete: %w", err)
+    }
+
+    // Delegate handlers are idempotent, so failures are logged but do not abort the delete flow.
+    if b.delegate != nil {
+        if err := b.delegate.Call(ctx, ActionDeletedData(entity)); err != nil {
+            b.log.Error(ctx, "entity.delete.delegate", "entityID", entity.ID, "err", err)
+        }
+    }
+    return nil
+}
+```
+
+### Checklist
+
+- [ ] Delegate calls after successful primary operations log errors instead of returning them
+- [ ] Add comment explaining delegate handlers are idempotent
+- [ ] Include entity ID and error in log message
+
+---
+
+## 22. Update Structs: Double Pointers for Nullable Optional Fields
+
+### Severity: Medium (Code Quality / Maintainability)
+
+### Problem
+
+Using double pointers (`**Type`) to distinguish between "no update" and "set to null" is inconsistent with other Update structs and confusing for developers. Use a separate `ClearField` bool instead.
+
+### Bad Example
+
+```go
+// BAD: Double pointer is confusing and inconsistent
+type UpdateEntity struct {
+    Status  *Status
+    Notes   **notes.Notes // Double pointer to distinguish "not updating" from "setting to null"
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Use ClearField bool pattern for clarity
+type UpdateEntity struct {
+    Status     *Status
+    Notes      *notes.Notes
+    ClearNotes bool // When true, sets Notes to NULL (takes precedence over Notes field)
+}
+
+// Usage in business layer:
+if ur.ClearNotes {
+    entity.Notes = nil
+} else if ur.Notes != nil {
+    entity.Notes = ur.Notes
+}
+```
+
+### Checklist
+
+- [ ] Use single pointers for optional fields in Update structs
+- [ ] Add `ClearField` bool for fields that can be explicitly set to null
+- [ ] Document precedence: ClearField takes precedence over the value field
+
+---
+
+## 23. Bulk Operations: Missing Context in Decryption Errors
+
+### Severity: Medium (Debugging Difficulty)
+
+### Problem
+
+When processing multiple records in a loop, errors that lack context about which record failed make debugging difficult.
+
+### Bad Example
+
+```go
+// BAD: No context about which record failed
+func toBusRecordsDecrypted(dbs []record) ([]Record, error) {
+    records := make([]Record, len(dbs))
+    for i, db := range dbs {
+        var err error
+        records[i], err = toBusRecordDecrypted(db)
+        if err != nil {
+            return nil, err // Which record failed?
+        }
+    }
+    return records, nil
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Include index and record ID in error
+func toBusRecordsDecrypted(dbs []record) ([]Record, error) {
+    records := make([]Record, len(dbs))
+    for i, db := range dbs {
+        var err error
+        records[i], err = toBusRecordDecrypted(db)
+        if err != nil {
+            return nil, fmt.Errorf("failed to decrypt record at index %d (recordID[%s]): %w", i, db.ID, err)
+        }
+    }
+    return records, nil
+}
+```
+
+### Checklist
+
+- [ ] Include loop index in error messages for bulk operations
+- [ ] Include record ID when available
+- [ ] Wrap original error with fmt.Errorf and %w
+
+---
+
+## 24. API Parameters: Missing Date Range Validation
+
+### Severity: Medium (Poor UX / Silent Failure)
+
+### Problem
+
+When API endpoints accept date range filters (startDate, endDate), failing to validate that startDate <= endDate can return empty results without clear feedback to the user.
+
+### Bad Example
+
+```go
+// BAD: Parses dates independently without range validation
+if qp.StartDate != "" {
+    startDate, err := time.Parse("2006-01-02", qp.StartDate)
+    if err != nil {
+        return errs.NewFieldErrors("startDate", err)
+    }
+    filter.StartDate = &startDate
+}
+
+if qp.EndDate != "" {
+    endDate, err := time.Parse("2006-01-02", qp.EndDate)
+    if err != nil {
+        return errs.NewFieldErrors("endDate", err)
+    }
+    filter.EndDate = &endDate
+}
+// Missing: validation that startDate <= endDate
+```
+
+### Good Example
+
+```go
+// GOOD: Validate date range after parsing both dates
+var startDate, endDate time.Time
+if qp.StartDate != "" {
+    startDate, err = time.Parse("2006-01-02", qp.StartDate)
+    if err != nil {
+        return errs.NewFieldErrors("startDate", err)
+    }
+    filter.StartDate = &startDate
+}
+
+if qp.EndDate != "" {
+    endDate, err = time.Parse("2006-01-02", qp.EndDate)
+    if err != nil {
+        return errs.NewFieldErrors("endDate", err)
+    }
+    filter.EndDate = &endDate
+}
+
+// Validate date range: startDate must be <= endDate
+if filter.StartDate != nil && filter.EndDate != nil && startDate.After(endDate) {
+    return errs.NewFieldErrors("startDate", errors.New("startDate must be before or equal to endDate"))
+}
+```
+
+### Checklist
+
+- [ ] All date range parameters validate startDate <= endDate
+- [ ] Return clear error message identifying the invalid parameter
+
+---
+
+## 25. Code Duplication: Repeated Ownership Validation
+
+### Severity: Medium (Maintainability)
+
+### Problem
+
+When multiple handlers need to fetch an entity and validate ownership, duplicating this logic creates maintenance burden and inconsistency risk.
+
+### Bad Example
+
+```go
+// BAD: Ownership validation duplicated across handlers
+func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
+    // ... parse inputs ...
+
+    objective, err := a.objectiveBus.QueryByID(ctx, objectiveID)
+    if err != nil {
+        if errors.Is(err, objectivebus.ErrNotFound) {
+            return errs.New(errs.NotFound, errors.New("objective not found"))
+        }
+        return errs.Newf(errs.Internal, "querybyid: objectiveID[%s]: %s", objectiveID, err)
+    }
+    if objective.UserID != userID {
+        return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
+    }
+    // ... continue ...
+}
+
+func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
+    // Same ownership validation duplicated here...
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Extract helper method for ownership validation
+func (a *app) getObjectiveWithOwnership(ctx context.Context, objectiveID, userID uuid.UUID) (objectivebus.Objective, error) {
+    objective, err := a.objectiveBus.QueryByID(ctx, objectiveID)
+    if err != nil {
+        if errors.Is(err, objectivebus.ErrNotFound) {
+            return objectivebus.Objective{}, errs.New(errs.NotFound, errors.New("objective not found"))
+        }
+        return objectivebus.Objective{}, errs.Newf(errs.Internal, "querybyid: objectiveID[%s]: %s", objectiveID, err)
+    }
+    if objective.UserID != userID {
+        return objectivebus.Objective{}, errs.New(errs.PermissionDenied, errors.New("user not authorized"))
+    }
+    return objective, nil
+}
+
+// Usage in handlers:
+func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
+    if _, err := a.getObjectiveWithOwnership(ctx, objectiveID, userID); err != nil {
+        return err.(web.Encoder)
+    }
+    // ... continue ...
+}
+```
+
+### Checklist
+
+- [ ] Extract helper methods for patterns repeated across handlers
+- [ ] Helper returns appropriate error types for HTTP status mapping
+- [ ] Use type assertion to return errors as web.Encoder

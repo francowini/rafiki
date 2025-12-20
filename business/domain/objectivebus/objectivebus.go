@@ -219,10 +219,11 @@ func (b *Business) Delete(ctx context.Context, objective Objective) error {
 		return fmt.Errorf("delete: %w", err)
 	}
 
-	// Publish event for child domains (objectiverecordbus)
+	// Publish event for child domains (objectiverecordbus).
+	// Delegate handlers are idempotent, so failures are logged but do not abort the delete flow.
 	if b.delegate != nil {
 		if err := b.delegate.Call(ctx, ActionDeletedData(objective)); err != nil {
-			return fmt.Errorf("delegate call: %w", err)
+			b.log.Error(ctx, "objectivebus.delete.delegate", "objectiveID", objective.ID, "err", err)
 		}
 	}
 

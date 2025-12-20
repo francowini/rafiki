@@ -1,7 +1,11 @@
 // Package frequencytype represents frequency type for frequency-based objectives.
 package frequencytype
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
 
 // The set of frequency types.
 var (
@@ -73,7 +77,13 @@ func (ft FrequencyType) IsNPerMonth() bool {
 func Parse(value string) (FrequencyType, error) {
 	ft, exists := types[value]
 	if !exists {
-		return FrequencyType{}, fmt.Errorf("invalid frequency type %q", value)
+		// Collect and sort valid options for deterministic error output
+		validOptions := make([]string, 0, len(types))
+		for k := range types {
+			validOptions = append(validOptions, k)
+		}
+		sort.Strings(validOptions)
+		return FrequencyType{}, fmt.Errorf("invalid frequency type %q, valid options: %s", value, strings.Join(validOptions, ", "))
 	}
 	return ft, nil
 }

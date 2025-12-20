@@ -1,7 +1,10 @@
 // Package currentmetric represents a validated current progress value (must be >= 0).
 package currentmetric
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // CurrentMetric represents a validated current progress for result tracking.
 // Must be non-negative (>= 0). Upper bound validation against TargetMetric
@@ -28,6 +31,22 @@ func (m CurrentMetric) Equal(m2 CurrentMetric) bool {
 // MarshalText provides support for logging and any marshal needs.
 func (m CurrentMetric) MarshalText() ([]byte, error) {
 	return []byte(m.String()), nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+func (m *CurrentMetric) UnmarshalText(data []byte) error {
+	value, err := strconv.Atoi(string(data))
+	if err != nil {
+		return fmt.Errorf("invalid current metric value %q: %w", string(data), err)
+	}
+
+	parsed, err := Parse(value)
+	if err != nil {
+		return err
+	}
+
+	*m = parsed
+	return nil
 }
 
 // Parse validates and creates a CurrentMetric (must be >= 0).

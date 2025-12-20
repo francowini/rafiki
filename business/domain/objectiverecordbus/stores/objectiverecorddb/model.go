@@ -86,7 +86,7 @@ func toBusRecordsDecrypted(dbs []objectiveRecord, enc encrypt.Encryptor) ([]obje
 		var err error
 		records[i], err = toBusRecordDecrypted(db, enc)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to decrypt record at index %d (recordID[%s]): %w", i, db.ID, err)
 		}
 	}
 

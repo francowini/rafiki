@@ -175,8 +175,11 @@ func (b *Business) Update(ctx context.Context, record ObjectiveRecord, ur Update
 		record.Status = *ur.Status
 	}
 
-	if ur.Notes != nil {
-		record.Notes = *ur.Notes
+	// ClearNotes takes precedence: if true, set Notes to nil
+	if ur.ClearNotes {
+		record.Notes = nil
+	} else if ur.Notes != nil {
+		record.Notes = ur.Notes
 	}
 
 	if err := b.storer.Update(ctx, record); err != nil {

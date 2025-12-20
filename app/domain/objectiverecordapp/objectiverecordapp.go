@@ -30,6 +30,24 @@ func newApp(objectiveBus objectivebus.ExtBusiness, objectiveRecordBus objectiver
 	}
 }
 
+// getObjectiveWithOwnership fetches an objective and validates the user owns it.
+// Returns the objective or an errs.Error with appropriate status code.
+func (a *app) getObjectiveWithOwnership(ctx context.Context, objectiveID, userID uuid.UUID) (objectivebus.Objective, error) {
+	objective, err := a.objectiveBus.QueryByID(ctx, objectiveID)
+	if err != nil {
+		if errors.Is(err, objectivebus.ErrNotFound) {
+			return objectivebus.Objective{}, errs.New(errs.NotFound, errors.New("objective not found"))
+		}
+		return objectivebus.Objective{}, errs.Newf(errs.Internal, "querybyid: objectiveID[%s]: %s", objectiveID, err)
+	}
+
+	if objective.UserID != userID {
+		return objectivebus.Objective{}, errs.New(errs.PermissionDenied, errors.New("user not authorized"))
+	}
+
+	return objective, nil
+}
+
 // create handles POST /v1/objectives/{objective_id}/records
 func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 	var appRecord NewObjectiveRecord
@@ -52,16 +70,8 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	// Verify objective exists and user owns it
-	objective, err := a.objectiveBus.QueryByID(ctx, objectiveID)
-	if err != nil {
-		if errors.Is(err, objectivebus.ErrNotFound) {
-			return errs.New(errs.NotFound, errors.New("objective not found"))
-		}
-		return errs.Newf(errs.Internal, "querybyid: objectiveID[%s]: %s", objectiveID, err)
-	}
-
-	if objective.UserID != userID {
-		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
+	if _, err := a.getObjectiveWithOwnership(ctx, objectiveID, userID); err != nil {
+		return err.(web.Encoder)
 	}
 
 	nr, err := toBusNewRecord(appRecord, objectiveID, userID)
@@ -132,16 +142,8 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	// Verify objective exists and user owns it
-	objective, err := a.objectiveBus.QueryByID(ctx, objectiveID)
-	if err != nil {
-		if errors.Is(err, objectivebus.ErrNotFound) {
-			return errs.New(errs.NotFound, errors.New("objective not found"))
-		}
-		return errs.Newf(errs.Internal, "querybyid: objectiveID[%s]: %s", objectiveID, err)
-	}
-
-	if objective.UserID != userID {
-		return errs.New(errs.PermissionDenied, errors.New("user not authorized"))
+	if _, err := a.getObjectiveWithOwnership(ctx, objectiveID, userID); err != nil {
+		return err.(web.Encoder)
 	}
 
 	pg, err := page.Parse(qp.Page, qp.Rows)
@@ -159,8 +161,9 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	// Parse date filters if provided
+	var startDate, endDate time.Time
 	if qp.StartDate != "" {
-		startDate, err := time.Parse("2006-01-02", qp.StartDate)
+		startDate, err = time.Parse("2006-01-02", qp.StartDate)
 		if err != nil {
 			return errs.NewFieldErrors("startDate", err)
 		}
@@ -168,11 +171,16 @@ func (a *app) query(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	if qp.EndDate != "" {
-		endDate, err := time.Parse("2006-01-02", qp.EndDate)
+		endDate, err = time.Parse("2006-01-02", qp.EndDate)
 		if err != nil {
 			return errs.NewFieldErrors("endDate", err)
 		}
 		filter.EndDate = &endDate
+	}
+
+	// Validate date range: startDate must be <= endDate
+	if filter.StartDate != nil && filter.EndDate != nil && startDate.After(endDate) {
+		return errs.NewFieldErrors("startDate", errors.New("startDate must be before or equal to endDate"))
 	}
 
 	records, err := a.objectiveRecordBus.Query(ctx, filter, orderBy, pg)

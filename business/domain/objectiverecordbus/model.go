@@ -43,7 +43,10 @@ type NewObjectiveRecord struct {
 }
 
 // UpdateObjectiveRecord contains information to update a record.
+// Nil pointer fields mean "no update".
+// To clear Notes, pass a pointer to an empty notes.Notes value.
 type UpdateObjectiveRecord struct {
-	Status *recordstatus.RecordStatus
-	Notes  **notes.Notes // Double pointer to distinguish between "not updating" and "setting to null"
+	Status     *recordstatus.RecordStatus
+	Notes      *notes.Notes
+	ClearNotes bool // When true, sets Notes to NULL (takes precedence over Notes field)
 }
