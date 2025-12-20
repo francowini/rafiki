@@ -31,6 +31,10 @@ This document catalogs critical errors specific to backend (Go) development.
 23. [Bulk Operations: Missing Context in Decryption Errors](#23-bulk-operations-missing-context-in-decryption-errors)
 24. [API Parameters: Missing Date Range Validation](#24-api-parameters-missing-date-range-validation)
 25. [Code Duplication: Repeated Ownership Validation](#25-code-duplication-repeated-ownership-validation)
+26. [SQL Syntax: Non-PostgreSQL Pagination](#26-sql-syntax-non-postgresql-pagination)
+27. [Filter Logic: Conflicting WHERE Conditions](#27-filter-logic-conflicting-where-conditions)
+28. [Boolean Parsing: Silent Failures](#28-boolean-parsing-silent-failures)
+29. [Time Formatting: Hardcoded Format Strings](#29-time-formatting-hardcoded-format-strings)
 
 ---
 
@@ -1030,3 +1034,180 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 - [ ] Extract helper methods for patterns repeated across handlers
 - [ ] Helper returns appropriate error types for HTTP status mapping
 - [ ] Use type assertion to return errors as web.Encoder
+
+---
+
+## 26. SQL Syntax: Non-PostgreSQL Pagination
+
+### Severity: CRITICAL (Query Failure in Production)
+
+### Problem
+
+Using SQL Server/Oracle pagination syntax (`OFFSET ... ROWS FETCH NEXT ... ROWS ONLY`) in a PostgreSQL database causes query failures.
+
+### Bad Example
+
+```go
+// BAD: SQL Server/Oracle syntax - will fail on PostgreSQL
+q := fmt.Sprintf(`
+SELECT id, name FROM users
+%s
+%s
+OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`, whereClause, orderByClause)
+```
+
+### Good Example
+
+```go
+// GOOD: PostgreSQL-compatible syntax
+q := fmt.Sprintf(`
+SELECT id, name FROM users
+%s
+%s
+LIMIT :rows_per_page OFFSET :offset`, whereClause, orderByClause)
+```
+
+### Checklist
+
+- [ ] All pagination queries use `LIMIT :rows_per_page OFFSET :offset`
+- [ ] Never use `OFFSET ... ROWS FETCH NEXT ... ROWS ONLY`
+
+---
+
+## 27. Filter Logic: Conflicting WHERE Conditions
+
+### Severity: MAJOR (Logic Bug)
+
+### Problem
+
+When filter structs have mutually exclusive options (e.g., `ObjectiveID` and `InboxOnly`), building WHERE conditions independently can produce conflicting clauses like `objective_id = :objective_id AND objective_id IS NULL`.
+
+### Bad Example
+
+```go
+// BAD: Can produce conflicting conditions
+func buildWhereClause(filter QueryFilter, data map[string]any) string {
+    var conditions []string
+
+    if filter.ObjectiveID != nil {
+        data["objective_id"] = *filter.ObjectiveID
+        conditions = append(conditions, "objective_id = :objective_id")
+    }
+
+    if filter.InboxOnly {
+        conditions = append(conditions, "objective_id IS NULL")
+    }
+    // If both are set, WHERE clause becomes:
+    // objective_id = :objective_id AND objective_id IS NULL (impossible!)
+}
+```
+
+### Good Example
+
+```go
+// GOOD: InboxOnly takes precedence to prevent conflicting conditions
+func buildWhereClause(filter QueryFilter, data map[string]any) string {
+    var conditions []string
+
+    // InboxOnly takes precedence over ObjectiveID to prevent conflicting conditions.
+    if filter.InboxOnly {
+        conditions = append(conditions, "objective_id IS NULL")
+    } else if filter.ObjectiveID != nil {
+        data["objective_id"] = *filter.ObjectiveID
+        conditions = append(conditions, "objective_id = :objective_id")
+    }
+}
+```
+
+### Checklist
+
+- [ ] Identify mutually exclusive filter options
+- [ ] Add comments explaining precedence rules
+- [ ] Consider validating at API layer and returning error for conflicting filters
+
+---
+
+## 28. Boolean Parsing: Silent Failures
+
+### Severity: MAJOR (User Input Validation)
+
+### Problem
+
+Parsing boolean query parameters and silently returning `false` for invalid values masks user errors and makes debugging difficult.
+
+### Bad Example
+
+```go
+// BAD: Silently returns false for invalid values like "yes" or "nope"
+func parseBool(s string) bool {
+    if s == "" {
+        return false
+    }
+    v, err := strconv.ParseBool(s)
+    if err != nil {
+        return false  // User typed "yes" but got false silently
+    }
+    return v
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Returns error for invalid non-empty values
+func parseBool(s string) (bool, error) {
+    if s == "" {
+        return false, nil  // Empty is acceptable, defaults to false
+    }
+    v, err := strconv.ParseBool(s)
+    if err != nil {
+        return false, fmt.Errorf("invalid boolean value %q", s)
+    }
+    return v, nil
+}
+
+// Caller handles error:
+inboxOnly, err := parseBool(qp.InboxOnly)
+if err != nil {
+    return errs.NewFieldErrors("inboxOnly", err)
+}
+```
+
+### Checklist
+
+- [ ] Boolean parsing returns `(bool, error)` for non-empty invalid values
+- [ ] Callers check and return field-specific errors
+- [ ] Empty string is treated as `false` (or whatever the default should be)
+
+---
+
+## 29. Time Formatting: Hardcoded Format Strings
+
+### Severity: LOW (Code Quality)
+
+### Problem
+
+Using hardcoded time format strings instead of standard constants reduces readability and risks typos.
+
+### Bad Example
+
+```go
+// BAD: Hardcoded format string
+DateCreated: t.DateCreated.Format("2006-01-02T15:04:05Z07:00"),
+DateUpdated: t.DateUpdated.Format("2006-01-02T15:04:05Z07:00"),
+```
+
+### Good Example
+
+```go
+import "time"
+
+// GOOD: Use standard library constant
+DateCreated: t.DateCreated.Format(time.RFC3339),
+DateUpdated: t.DateUpdated.Format(time.RFC3339),
+```
+
+### Checklist
+
+- [ ] Use `time.RFC3339` for ISO 8601/RFC 3339 format
+- [ ] Import `time` package when using time format constants

@@ -143,7 +143,7 @@ func (s *Store) Query(ctx context.Context, filter lifevisionbus.QueryFilter, ord
 	FROM life_visions
 	%s
 	%s
-	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`, whereClause, orderByClause)
+	LIMIT :rows_per_page OFFSET :offset`, whereClause, orderByClause)
 
 	var dbLifeVisions []lifeVision
 	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, q, data, &dbLifeVisions); err != nil {

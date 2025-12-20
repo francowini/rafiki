@@ -129,7 +129,7 @@ func (s *Store) Query(ctx context.Context, filter userbus.QueryFilter, orderBy o
 	}
 
 	buf.WriteString(orderByClause)
-	buf.WriteString(" OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY")
+	buf.WriteString(" LIMIT :rows_per_page OFFSET :offset")
 
 	var dbUsrs []user
 	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &dbUsrs); err != nil {

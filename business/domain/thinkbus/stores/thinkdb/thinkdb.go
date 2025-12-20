@@ -73,7 +73,7 @@ func (s *Store) Query(ctx context.Context, userID uuid.UUID, orderBy order.By, p
 	WHERE
 		user_id = :user_id
 	%s
-	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`, orderByClause)
+	LIMIT :rows_per_page OFFSET :offset`, orderByClause)
 
 	var dbThinks []think
 	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, q, data, &dbThinks); err != nil {
