@@ -16,6 +16,7 @@ import (
 	"github.com/francowini/rafiki/business/domain/momentbus"
 	"github.com/francowini/rafiki/business/domain/objectivebus"
 	"github.com/francowini/rafiki/business/domain/objectiverecordbus"
+	"github.com/francowini/rafiki/business/domain/taskbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/domain/valuebus"
@@ -65,6 +66,7 @@ type BusConfig struct {
 	LifeVisionBus      lifevisionbus.ExtBusiness
 	ObjectiveBus       objectivebus.ExtBusiness
 	ObjectiveRecordBus objectiverecordbus.ExtBusiness
+	TaskBus            taskbus.ExtBusiness
 	VExportBus         vexportbus.ExtBusiness
 	UserBus            userbus.ExtBusiness
 	Auth               *auth.Auth
