@@ -240,7 +240,10 @@ func (a *app) uncomplete(ctx context.Context, r *http.Request) web.Encoder {
 			return errs.Newf(errs.Internal, "objective.querybyid: %s", err)
 		}
 
-		// Reverse progress for result tracking type
+		// Reverse progress for result tracking type.
+		// ErrProgressExceedsTarget is intentionally ignored here because decrementing
+		// progress during uncomplete may drive the value to zero or below the minimum
+		// bound, which is safely clamped by the objective business layer.
 		if objective.TrackingType.IsResult() && task.Contribution != nil {
 			decrement := -task.Contribution.Value()
 			_, err = objectiveBusTx.UpdateProgress(ctx, objective, objectivebus.UpdateProgressRequest{

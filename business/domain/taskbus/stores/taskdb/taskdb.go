@@ -90,8 +90,13 @@ func (s *Store) Update(ctx context.Context, tsk taskbus.Task) error {
 		return fmt.Errorf("encrypt: %w", err)
 	}
 
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, dbTask); err != nil {
+	rowsAffected, err := sqldb.NamedExecContextWithResult(ctx, s.log, s.db, q, dbTask)
+	if err != nil {
 		return fmt.Errorf("namedexeccontext: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return taskbus.ErrNotFound
 	}
 
 	return nil
@@ -109,8 +114,13 @@ func (s *Store) Delete(ctx context.Context, tsk taskbus.Task) error {
 		ID: tsk.ID.String(),
 	}
 
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
+	rowsAffected, err := sqldb.NamedExecContextWithResult(ctx, s.log, s.db, q, data)
+	if err != nil {
 		return fmt.Errorf("namedexeccontext: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return taskbus.ErrNotFound
 	}
 
 	return nil

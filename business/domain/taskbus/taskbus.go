@@ -98,6 +98,11 @@ func (b *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 func (b *Business) Create(ctx context.Context, nt NewTask) (Task, error) {
 	b.log.Info(ctx, "taskbus.create", "userID", nt.UserID, "objectiveID", nt.ObjectiveID)
 
+	// Inbox tasks (no objective) cannot have a contribution
+	if nt.ObjectiveID == nil && nt.Contribution != nil {
+		return Task{}, ErrContributionNotAllowedInbox
+	}
+
 	// Validate objective link if provided
 	if nt.ObjectiveID != nil {
 		objective, err := b.objectiveBus.QueryByID(ctx, *nt.ObjectiveID)

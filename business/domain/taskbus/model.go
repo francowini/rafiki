@@ -29,6 +29,7 @@ var (
 	ErrCannotUpdateTerminalTask     = errors.New("cannot update task with terminal status (completed or canceled)")
 	ErrCannotSetContributionOnInbox = errors.New("cannot set contribution on inbox task")
 	ErrCannotCancelCompletedTask    = errors.New("cannot cancel completed task (use Uncomplete first)")
+	ErrContributionNotAllowedInbox  = errors.New("contribution not allowed for inbox tasks")
 )
 
 // Task represents a task in the system (inbox or objective-linked).

@@ -32,6 +32,16 @@ func (tt TaskTitle) MarshalText() ([]byte, error) {
 	return []byte(tt.value), nil
 }
 
+// UnmarshalText implements encoding.TextUnmarshaler for text-based unmarshaling.
+func (tt *TaskTitle) UnmarshalText(data []byte) error {
+	parsed, err := Parse(string(data))
+	if err != nil {
+		return err
+	}
+	*tt = parsed
+	return nil
+}
+
 // =============================================================================
 
 // Parse validates the string value and returns a TaskTitle if the value complies
