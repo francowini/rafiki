@@ -8,12 +8,10 @@ import (
 	"github.com/francowini/rafiki/app/domain/momentapp"
 	"github.com/francowini/rafiki/app/domain/objectiveapp"
 	"github.com/francowini/rafiki/app/domain/objectiverecordapp"
-	"github.com/francowini/rafiki/app/domain/taskapp"
 	"github.com/francowini/rafiki/app/domain/thinkapp"
 	"github.com/francowini/rafiki/app/domain/valueapp"
 	"github.com/francowini/rafiki/app/domain/vexportapp"
 	"github.com/francowini/rafiki/app/sdk/mux"
-	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/web"
 )
 
@@ -69,13 +67,6 @@ func (Add) Add(app *web.App, cfg mux.Config) {
 		ObjectiveBus:       cfg.BusConfig.ObjectiveBus,
 		ObjectiveRecordBus: cfg.BusConfig.ObjectiveRecordBus,
 		Auth:               cfg.BusConfig.Auth,
-	})
-
-	taskapp.Routes(app, taskapp.Config{
-		TaskBus:      cfg.BusConfig.TaskBus,
-		ObjectiveBus: cfg.BusConfig.ObjectiveBus,
-		Auth:         cfg.BusConfig.Auth,
-		DB:           sqldb.NewBeginner(cfg.DB),
 	})
 
 	vexportapp.Routes(app, vexportapp.Config{

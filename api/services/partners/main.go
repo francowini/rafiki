@@ -31,8 +31,6 @@ import (
 	"github.com/francowini/rafiki/business/domain/objectivebus/stores/objectivedb"
 	"github.com/francowini/rafiki/business/domain/objectiverecordbus"
 	"github.com/francowini/rafiki/business/domain/objectiverecordbus/stores/objectiverecorddb"
-	"github.com/francowini/rafiki/business/domain/taskbus"
-	"github.com/francowini/rafiki/business/domain/taskbus/stores/taskdb"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
 	"github.com/francowini/rafiki/business/domain/userbus"
@@ -265,10 +263,6 @@ func run(ctx context.Context, log *logger.Logger) error {
 	objectiveRecordStore := objectiverecorddb.NewStore(log, db, encryptor)
 	objectiveRecordBus := objectiverecordbus.NewBusiness(log, objectiveBus, dlg, objectiveRecordStore)
 
-	// Create task domain (child of objective)
-	taskStore := taskdb.NewStore(log, db, encryptor)
-	taskBus := taskbus.NewBusiness(log, objectiveBus, dlg, taskStore)
-
 	// Create vexport domain (query-only view domain)
 	vexportStore := vexportdb.NewStore(log, db, encryptor)
 	vexportBus := vexportbus.NewBusiness(log, vexportStore)
@@ -498,7 +492,6 @@ func run(ctx context.Context, log *logger.Logger) error {
 			LifeVisionBus:      lifeVisionBus,
 			ObjectiveBus:       objectiveBus,
 			ObjectiveRecordBus: objectiveRecordBus,
-			TaskBus:            taskBus,
 			VExportBus:         vexportBus,
 			UserBus:            userBus,
 			Auth:               authInstance,
