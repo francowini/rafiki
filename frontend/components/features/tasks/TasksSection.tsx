@@ -19,6 +19,7 @@ import {
   useUncompleteTask,
   useDeleteTask,
 } from '@/lib/hooks/use-tasks';
+import { useLogRecordDynamic } from '@/lib/hooks/use-objectives';
 import type { Task, CompleteTaskResponse } from '@/lib/types';
 
 interface TasksSectionProps {
@@ -47,6 +48,7 @@ export function TasksSection({
   const completeMutation = useCompleteTask();
   const uncompleteMutation = useUncompleteTask();
   const deleteMutation = useDeleteTask();
+  const logRecordMutation = useLogRecordDynamic();
 
   const handleFormClose = useCallback(() => {
     setIsFormOpen(false);
@@ -90,11 +92,47 @@ export function TasksSection({
           onSuccess: (response: CompleteTaskResponse) => {
             setCompletingTaskId(null);
 
-            // Build description based on tracking type
-            let description = 'Tarea marcada como completada';
+            // For frequency objectives, show toast with "Marcar hoy" action
             if (isFrequencyObjective) {
-              description = 'Tarea completada (checklist)';
-            } else if (response.objectiveProgress && targetMetric) {
+              const { id } = toast({
+                title: 'Tarea completada',
+                description: `¿Marcar hoy como Hecho en "${objectiveName}"?`,
+                duration: 10000,
+                action: (
+                  <ToastAction
+                    altText="Marcar hoy"
+                    onClick={async () => {
+                      try {
+                        await logRecordMutation.mutateAsync({
+                          objectiveId,
+                          data: {
+                            recordDate: new Date().toISOString().split('T')[0],
+                            status: 'completed',
+                          },
+                        });
+                        dismiss(id);
+                        toast({ title: 'Hoy marcado como Hecho' });
+                      } catch (err) {
+                        console.error('Failed to mark day:', err);
+                        toast({
+                          variant: 'destructive',
+                          title: 'Error',
+                          description: 'No se pudo marcar el día. Intenta de nuevo.',
+                        });
+                      }
+                    }}
+                  >
+                    Marcar hoy
+                  </ToastAction>
+                ),
+              });
+              toastIdRef.current = id;
+              return;
+            }
+
+            // Build description for result objectives
+            let description = 'Tarea marcada como completada';
+            if (response.objectiveProgress && targetMetric) {
               description = `+${response.task.contribution} -> ${response.objectiveProgress}/${targetMetric} ${objectiveName}`;
             }
 
@@ -140,7 +178,7 @@ export function TasksSection({
         });
       }
     },
-    [tasksData, completeMutation, uncompleteMutation, toast, dismiss, objectiveName, targetMetric, isFrequencyObjective],
+    [tasksData, completeMutation, uncompleteMutation, logRecordMutation, toast, dismiss, objectiveId, objectiveName, targetMetric, isFrequencyObjective],
   );
 
   const handleDeleteTask = useCallback(() => {
