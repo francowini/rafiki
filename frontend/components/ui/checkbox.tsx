@@ -28,5 +28,6 @@ function Checkbox({
     </CheckboxPrimitive.Root>
   );
 }
+Checkbox.displayName = 'Checkbox';
 
 export { Checkbox };

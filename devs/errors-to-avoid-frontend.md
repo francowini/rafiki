@@ -25,6 +25,7 @@ This document catalogs critical errors specific to frontend (TypeScript/React) d
 - [F17. Functions: Silent Empty Returns for Unknown Values](#f17-functions-silent-empty-returns-for-unknown-values)
 - [F18. React Query: Readonly Query Keys from getQueriesData](#f18-react-query-readonly-query-keys-from-getqueriesdata)
 - [F19. Types: Null Coalescing for Optional-to-Nullable Conversion](#f19-types-null-coalescing-for-optional-to-nullable-conversion)
+- [F20. React Query: Cache Invalidation Key Hierarchy Mismatch](#f20-react-query-cache-invalidation-key-hierarchy-mismatch)
 
 ---
 
@@ -1037,3 +1038,83 @@ await api.tasks.create({
 - [ ] Use `?? null` when passing optional values to APIs expecting nullable types
 - [ ] Consider if the schema should use `.nullable()` instead of `.optional().nullable()`
 - [ ] Document API type expectations in type definitions
+
+---
+
+## F20. React Query: Cache Invalidation Key Hierarchy Mismatch
+
+### Severity: Major (Cache Bug - Data Not Refreshing)
+
+### Problem
+
+When using hierarchical query keys, invalidating a parent key only affects queries that start with that exact prefix. If you have queries using different key structures (e.g., `['tasks', 'list']` vs `['tasks', 'objective', id]`), invalidating one won't affect the other.
+
+### Bad Example
+
+```typescript
+// Query keys with different hierarchies
+const queryKeys = {
+  tasks: {
+    all: ['tasks'] as const,
+    lists: () => [...queryKeys.tasks.all, 'list'] as const,           // ['tasks', 'list']
+    byObjective: (id: string) => [...queryKeys.tasks.all, 'objective', id] as const, // ['tasks', 'objective', id]
+  },
+};
+
+// Hook uses byObjective
+export function useTasksByObjective(objectiveId: string) {
+  return useQuery({
+    queryKey: queryKeys.tasks.byObjective(objectiveId), // ['tasks', 'objective', id]
+    queryFn: () => api.tasks.getByObjective(objectiveId),
+  });
+}
+
+// BAD: Create mutation only invalidates 'lists', not 'byObjective'
+export function useCreateTask() {
+  return useMutation({
+    mutationFn: (data) => api.tasks.create(data),
+    onSuccess: () => {
+      // Only invalidates ['tasks', 'list', ...] - NOT ['tasks', 'objective', ...]!
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+    },
+  });
+}
+// Result: Task created but list doesn't refresh because query keys don't match
+```
+
+### Good Example
+
+```typescript
+// GOOD: Invalidate the root key to affect ALL task queries
+export function useCreateTask() {
+  return useMutation({
+    mutationFn: (data) => api.tasks.create(data),
+    onSuccess: () => {
+      // Invalidates ALL queries starting with ['tasks']
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+}
+```
+
+### Alternative: Restructure Keys Under Common Parent
+
+```typescript
+// ALTERNATIVE: Structure byObjective under lists
+const queryKeys = {
+  tasks: {
+    all: ['tasks'] as const,
+    lists: () => [...queryKeys.tasks.all, 'list'] as const,
+    list: (filters?) => [...queryKeys.tasks.lists(), filters] as const,
+    // Now byObjective is under lists, so invalidating lists() affects it
+    byObjective: (id: string, status?) => [...queryKeys.tasks.lists(), 'objective', id, status] as const,
+  },
+};
+```
+
+### Checklist
+
+- [ ] Verify query key hierarchy: child keys should share parent prefixes
+- [ ] When invalidating, use the most specific common ancestor
+- [ ] Test that mutations properly refresh all related queries
+- [ ] Consider using `queryKeys.all` when in doubt about which queries to invalidate

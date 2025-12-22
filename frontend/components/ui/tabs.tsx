@@ -17,6 +17,7 @@ function Tabs({
     />
   );
 }
+Tabs.displayName = 'Tabs';
 
 function TabsList({
   className,
@@ -33,6 +34,7 @@ function TabsList({
     />
   );
 }
+TabsList.displayName = 'TabsList';
 
 function TabsTrigger({
   className,
@@ -49,6 +51,7 @@ function TabsTrigger({
     />
   );
 }
+TabsTrigger.displayName = 'TabsTrigger';
 
 function TabsContent({
   className,
@@ -62,5 +65,6 @@ function TabsContent({
     />
   );
 }
+TabsContent.displayName = 'TabsContent';
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };

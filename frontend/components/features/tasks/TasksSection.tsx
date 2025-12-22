@@ -46,8 +46,11 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
     setTaskToEdit(null);
   }, []);
 
-  const handleCompleteTask = useCallback(
+  const handleToggleTask = useCallback(
     (taskId: string) => {
+      const task = tasksData?.items.find((t) => t.id === taskId);
+      if (!task) return;
+
       setCompletingTaskId(taskId);
 
       // Dismiss previous toast
@@ -55,43 +58,65 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
         dismiss(toastIdRef.current);
       }
 
-      completeMutation.mutate(taskId, {
-        onSuccess: (response: CompleteTaskResponse) => {
-          setCompletingTaskId(null);
+      if (task.status === 'completed') {
+        // Uncomplete the task
+        uncompleteMutation.mutate(taskId, {
+          onSuccess: () => {
+            setCompletingTaskId(null);
+            toast({
+              title: 'Tarea reabierta',
+              description: 'La tarea ha vuelto a pendiente',
+            });
+          },
+          onError: () => {
+            setCompletingTaskId(null);
+            toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'No se pudo reabrir la tarea',
+            });
+          },
+        });
+      } else {
+        // Complete the task
+        completeMutation.mutate(taskId, {
+          onSuccess: (response: CompleteTaskResponse) => {
+            setCompletingTaskId(null);
 
-          // Show toast with undo - 10 second duration
-          const { id } = toast({
-            title: 'Tarea completada',
-            description: response.objectiveProgress
-              ? `+${response.task.contribution} → ${response.objectiveProgress}/${targetMetric} ${objectiveName}`
-              : 'Tarea marcada como completada',
-            duration: 10000,
-            action: (
-              <ToastAction
-                altText="Deshacer"
-                onClick={() => {
-                  uncompleteMutation.mutate(taskId);
-                  dismiss(id);
-                }}
-              >
-                Deshacer
-              </ToastAction>
-            ),
-          });
+            // Show toast with undo - 10 second duration
+            const { id } = toast({
+              title: 'Tarea completada',
+              description: response.objectiveProgress
+                ? `+${response.task.contribution} → ${response.objectiveProgress}/${targetMetric} ${objectiveName}`
+                : 'Tarea marcada como completada',
+              duration: 10000,
+              action: (
+                <ToastAction
+                  altText="Deshacer"
+                  onClick={() => {
+                    uncompleteMutation.mutate(taskId);
+                    dismiss(id);
+                  }}
+                >
+                  Deshacer
+                </ToastAction>
+              ),
+            });
 
-          toastIdRef.current = id;
-        },
-        onError: () => {
-          setCompletingTaskId(null);
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'No se pudo completar la tarea',
-          });
-        },
-      });
+            toastIdRef.current = id;
+          },
+          onError: () => {
+            setCompletingTaskId(null);
+            toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'No se pudo completar la tarea',
+            });
+          },
+        });
+      }
     },
-    [completeMutation, uncompleteMutation, toast, dismiss, objectiveName, targetMetric],
+    [tasksData, completeMutation, uncompleteMutation, toast, dismiss, objectiveName, targetMetric],
   );
 
   const handleDeleteTask = useCallback(() => {
@@ -120,7 +145,7 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
       <TaskList
         tasks={tasksData?.items ?? []}
         isLoading={isLoading}
-        onToggleTask={handleCompleteTask}
+        onToggleTask={handleToggleTask}
         onEditTask={(task) => {
           setTaskToEdit(task);
           setIsFormOpen(true);

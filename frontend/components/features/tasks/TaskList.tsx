@@ -77,9 +77,14 @@ export function TaskList({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b">
+      <div role="tablist" className="flex gap-2 border-b" aria-label="Estado de tareas">
         <button
           type="button"
+          role="tab"
+          id="tab-pending"
+          aria-selected={activeTab === 'pending'}
+          aria-controls="panel-pending"
+          tabIndex={activeTab === 'pending' ? 0 : -1}
           onClick={() => setActiveTab('pending')}
           className={cn(
             'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
@@ -104,6 +109,11 @@ export function TaskList({
 
         <button
           type="button"
+          role="tab"
+          id="tab-completed"
+          aria-selected={activeTab === 'completed'}
+          aria-controls="panel-completed"
+          tabIndex={activeTab === 'completed' ? 0 : -1}
           onClick={() => setActiveTab('completed')}
           className={cn(
             'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
@@ -130,9 +140,14 @@ export function TaskList({
       </div>
 
       {/* Task List or Empty State */}
-      {displayedTasks.length === 0 ? (
-        <div className="border border-dashed rounded-lg p-12 text-center">
-          {activeTab === 'pending' ? (
+      <div
+        role="tabpanel"
+        id={activeTab === 'pending' ? 'panel-pending' : 'panel-completed'}
+        aria-labelledby={activeTab === 'pending' ? 'tab-pending' : 'tab-completed'}
+      >
+        {displayedTasks.length === 0 ? (
+          <div className="border border-dashed rounded-lg p-12 text-center">
+            {activeTab === 'pending' ? (
             <>
               <Circle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">No hay tareas pendientes</h3>
@@ -147,9 +162,9 @@ export function TaskList({
           ) : (
             <>
               <CheckCircle2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aun no has completado tareas</h3>
+              <h3 className="text-lg font-medium mb-2">Aún no has completado tareas</h3>
               <p className="text-muted-foreground">
-                Las tareas completadas apareceran aqui. Sigue adelante!
+                Las tareas completadas aparecerán aquí. ¡Sigue adelante!
               </p>
             </>
           )}
@@ -168,6 +183,7 @@ export function TaskList({
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

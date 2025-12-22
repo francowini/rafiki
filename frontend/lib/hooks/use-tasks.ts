@@ -57,7 +57,8 @@ export function useCreateTask(): UseMutationResult<Task, Error, NewTask> {
   return useMutation({
     mutationFn: (data: NewTask) => api.tasks.create(data),
     onSuccess: (newTask) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+      // Invalidate ALL task queries (lists + byObjective)
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
       if (newTask.objectiveId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.objectives.detail(newTask.objectiveId),
@@ -78,7 +79,8 @@ export function useUpdateTask(): UseMutationResult<
     mutationFn: ({ id, data }) => api.tasks.update(id, data),
     onSuccess: (updatedTask) => {
       queryClient.setQueryData(queryKeys.tasks.detail(updatedTask.id), updatedTask);
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+      // Invalidate ALL task queries (lists + byObjective)
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
 }
@@ -90,7 +92,8 @@ export function useDeleteTask(): UseMutationResult<void, Error, string> {
     mutationFn: (id: string) => api.tasks.delete(id),
     onSuccess: (_, deletedId) => {
       queryClient.removeQueries({ queryKey: queryKeys.tasks.detail(deletedId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+      // Invalidate ALL task queries (lists + byObjective)
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
     },
   });
 }
@@ -113,7 +116,7 @@ export function useCompleteTask(): UseMutationResult<CompleteTaskResponse, Error
     // OPTIMISTIC UPDATE
     onMutate: async (taskId): Promise<CompleteTaskContext> => {
       await queryClient.cancelQueries({ queryKey: queryKeys.tasks.detail(taskId) });
-      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.lists() });
+      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
 
       const previousTask = queryClient.getQueryData<Task>(queryKeys.tasks.detail(taskId));
 
@@ -127,10 +130,10 @@ export function useCompleteTask(): UseMutationResult<CompleteTaskResponse, Error
         queryClient.setQueryData(queryKeys.tasks.detail(taskId), optimisticTask);
       }
 
-      // Snapshot and update lists
+      // Snapshot and update all task lists (lists + byObjective)
       const previousLists: Array<{ key: readonly unknown[]; data: TaskListResponse }> = [];
       const listQueries = queryClient.getQueriesData<TaskListResponse>({
-        queryKey: queryKeys.tasks.lists(),
+        queryKey: queryKeys.tasks.all,
       });
 
       listQueries.forEach(([key, data]) => {
@@ -168,7 +171,8 @@ export function useCompleteTask(): UseMutationResult<CompleteTaskResponse, Error
 
     // Refetch on settle
     onSettled: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+      // Invalidate ALL task queries (lists + byObjective)
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
 
       // Cross-domain cache invalidation
       if (data?.task?.objectiveId) {
@@ -181,14 +185,21 @@ export function useCompleteTask(): UseMutationResult<CompleteTaskResponse, Error
   });
 }
 
-export function useUncompleteTask(): UseMutationResult<Task, Error, string> {
+interface UncompleteTaskContext {
+  previousTask?: Task;
+  previousLists?: Array<{ key: readonly unknown[]; data: TaskListResponse }>;
+}
+
+export function useUncompleteTask(): UseMutationResult<Task, Error, string, UncompleteTaskContext> {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (taskId: string) => api.tasks.uncomplete(taskId),
 
-    onMutate: async (taskId): Promise<{ previousTask?: Task }> => {
+    // OPTIMISTIC UPDATE
+    onMutate: async (taskId): Promise<UncompleteTaskContext> => {
       await queryClient.cancelQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
 
       const previousTask = queryClient.getQueryData<Task>(queryKeys.tasks.detail(taskId));
 
@@ -201,17 +212,49 @@ export function useUncompleteTask(): UseMutationResult<Task, Error, string> {
         });
       }
 
-      return { previousTask };
+      // Snapshot and update all task lists (lists + byObjective)
+      const previousLists: Array<{ key: readonly unknown[]; data: TaskListResponse }> = [];
+      const listQueries = queryClient.getQueriesData<TaskListResponse>({
+        queryKey: queryKeys.tasks.all,
+      });
+
+      listQueries.forEach(([key, data]) => {
+        if (!data) return;
+        previousLists.push({ key, data });
+
+        const updatedItems = data.items.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                status: 'pending' as TaskStatus,
+                completedAt: null,
+                dateUpdated: new Date().toISOString(),
+              }
+            : task,
+        );
+        queryClient.setQueryData(key, { ...data, items: updatedItems });
+      });
+
+      return { previousTask, previousLists };
     },
 
+    // Rollback on error
     onError: (_err, taskId, context) => {
-      if (context?.previousTask) {
+      if (!context) return;
+
+      if (context.previousTask) {
         queryClient.setQueryData(queryKeys.tasks.detail(taskId), context.previousTask);
       }
+
+      context.previousLists?.forEach(({ key, data }) => {
+        queryClient.setQueryData(key, data);
+      });
     },
 
+    // Refetch on settle
     onSettled: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+      // Invalidate ALL task queries (lists + byObjective)
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
 
       if (data?.objectiveId) {
         queryClient.invalidateQueries({

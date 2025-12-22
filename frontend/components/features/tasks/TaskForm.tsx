@@ -11,6 +11,7 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { useCreateTask, useUpdateTask } from '@/lib/hooks/use-tasks';
 import type { Task } from '@/lib/types';
 
@@ -22,14 +23,15 @@ interface TaskFormProps {
 }
 
 function getContributionLabel(value: number): string {
-  if (value <= 3) return 'Pequeno paso';
-  if (value <= 6) return 'Avance solido';
-  if (value <= 8) return 'Gran contribucion';
-  return 'Contribucion maxima';
+  if (value <= 3) return 'Pequeño paso';
+  if (value <= 6) return 'Avance sólido';
+  if (value <= 8) return 'Gran contribución';
+  return 'Contribución máxima';
 }
 
 export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormProps) {
   const isEditMode = !!task;
+  const { toast } = useToast();
   const createMutation = useCreateTask();
   const updateMutation = useUpdateTask();
 
@@ -95,6 +97,13 @@ export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormPro
       onSuccess();
     } catch (error) {
       console.error('Task form submission failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: isEditMode
+          ? 'No se pudo actualizar la tarea. Intenta de nuevo.'
+          : 'No se pudo crear la tarea. Intenta de nuevo.',
+      });
     }
   };
 
@@ -105,12 +114,12 @@ export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormPro
       {/* Title */}
       <div className="space-y-2">
         <Label htmlFor="task-title" className="text-base font-medium">
-          Titulo de la tarea
+          Título de la tarea
         </Label>
         <Input
           id="task-title"
           {...register('title')}
-          placeholder="Ej: Leer capitulo 3 del libro"
+          placeholder="Ej: Leer capítulo 3 del libro"
           autoFocus
           aria-invalid={!!errors.title}
           aria-describedby={errors.title ? 'title-error' : undefined}
@@ -128,7 +137,7 @@ export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormPro
       {/* Description */}
       <div className="space-y-2">
         <Label htmlFor="task-description" className="text-base font-medium flex items-center gap-2">
-          Descripcion (opcional)
+          Descripción (opcional)
           <HelpTooltip content="Agrega detalles adicionales sobre esta tarea" />
         </Label>
         <Textarea
@@ -152,7 +161,7 @@ export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormPro
           htmlFor="task-contribution"
           className="text-base font-medium flex items-center gap-2"
         >
-          Contribucion al objetivo
+          Contribución al objetivo
           <HelpTooltip content="Cuanto aporta esta tarea al progreso de tu objetivo (1-10)" />
         </Label>
 
@@ -169,11 +178,11 @@ export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormPro
           value={[contribution]}
           onValueChange={(value) => setValue('contribution', value[0])}
           className="py-4"
-          aria-label="Contribucion al objetivo"
+          aria-label="Contribución al objetivo"
         />
 
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Pequeno</span>
+          <span>Pequeño</span>
           <span>Moderado</span>
           <span>Grande</span>
         </div>

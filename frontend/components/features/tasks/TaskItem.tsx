@@ -36,10 +36,10 @@ export function TaskItem({ task, onToggle, onEdit, onDelete, isLoading }: TaskIt
     >
       <Checkbox
         checked={isCompleted}
-        onCheckedChange={() => !isCompleted && onToggle()}
-        disabled={isLoading || isCompleted}
+        onCheckedChange={onToggle}
+        disabled={isLoading}
         className="h-5 w-5"
-        aria-label={isCompleted ? 'Tarea completada' : 'Marcar como completada'}
+        aria-label={isCompleted ? 'Marcar como pendiente' : 'Marcar como completada'}
       />
 
       <div className="flex-1 min-w-0">

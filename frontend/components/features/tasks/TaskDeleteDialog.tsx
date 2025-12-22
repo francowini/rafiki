@@ -33,9 +33,9 @@ export function TaskDeleteDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Eliminar tarea?</AlertDialogTitle>
+          <AlertDialogTitle>¿Eliminar tarea?</AlertDialogTitle>
           <AlertDialogDescription>
-            Estas a punto de eliminar la tarea. Puedes crear una nueva despues si lo necesitas.
+            Estás a punto de eliminar la tarea. Puedes crear una nueva después si lo necesitas.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
