@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 interface TaskItemProps {
   task: Task;
   onToggle: () => void;
-  onEdit: () => void;
+  onEdit?: () => void;
   onDelete: () => void;
   isLoading?: boolean;
 }
@@ -82,10 +82,12 @@ export function TaskItem({ task, onToggle, onEdit, onDelete, isLoading }: TaskIt
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={onEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Editar
-          </DropdownMenuItem>
+          {onEdit && (
+            <DropdownMenuItem onClick={onEdit}>
+              <Edit className="h-4 w-4 mr-2" />
+              Editar
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={onDelete} className="text-destructive">
             <Trash2 className="h-4 w-4 mr-2" />
             Eliminar

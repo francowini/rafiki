@@ -35,6 +35,8 @@ This document catalogs critical errors specific to backend (Go) development.
 27. [Filter Logic: Conflicting WHERE Conditions](#27-filter-logic-conflicting-where-conditions)
 28. [Boolean Parsing: Silent Failures](#28-boolean-parsing-silent-failures)
 29. [Time Formatting: Hardcoded Format Strings](#29-time-formatting-hardcoded-format-strings)
+30. [Transaction Safety: Non-Atomic Multi-Operation Business Logic](#30-transaction-safety-non-atomic-multi-operation-business-logic)
+31. [Defense-in-Depth: Dropping Constraints Without Trigger Replacement](#31-defense-in-depth-dropping-constraints-without-trigger-replacement)
 
 ---
 
@@ -1211,3 +1213,152 @@ DateUpdated: t.DateUpdated.Format(time.RFC3339),
 
 - [ ] Use `time.RFC3339` for ISO 8601/RFC 3339 format
 - [ ] Import `time` package when using time format constants
+
+---
+
+## 30. Transaction Safety: Non-Atomic Multi-Operation Business Logic
+
+### Severity: CRITICAL (Data Integrity)
+
+### Problem
+
+When business logic requires multiple database operations (e.g., create + delete for a "move" operation), executing them without a transaction can leave data in an inconsistent state if one operation fails.
+
+### Bad Example
+
+```go
+// BAD: Non-atomic create + delete - partial failure leaves orphaned data
+func (b *Business) MoveTask(ctx context.Context, task Task, targetID uuid.UUID) (Task, error) {
+    // If this succeeds but delete fails, we have duplicates
+    newTask := Task{...}
+    if err := b.storer.Create(ctx, newTask); err != nil {
+        return Task{}, err
+    }
+
+    // If this fails, newTask exists but original wasn't deleted
+    if err := b.storer.Delete(ctx, task); err != nil {
+        return Task{}, err
+    }
+
+    return newTask, nil
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Atomic transaction ensures all-or-nothing semantics
+func (b *Business) MoveTask(ctx context.Context, task Task, targetID uuid.UUID) (Task, error) {
+    // Begin transaction to ensure atomicity
+    tx, err := b.beginner.Begin()
+    if err != nil {
+        return Task{}, fmt.Errorf("begin transaction: %w", err)
+    }
+
+    // Create transaction-bound storer
+    txStorer, err := b.storer.NewWithTx(tx)
+    if err != nil {
+        tx.Rollback()
+        return Task{}, fmt.Errorf("new tx storer: %w", err)
+    }
+
+    // Create new task within transaction
+    newTask := Task{...}
+    if err := txStorer.Create(ctx, newTask); err != nil {
+        tx.Rollback()
+        return Task{}, fmt.Errorf("create: %w", err)
+    }
+
+    // Delete original within same transaction
+    if err := txStorer.Delete(ctx, task); err != nil {
+        tx.Rollback()
+        return Task{}, fmt.Errorf("delete: %w", err)
+    }
+
+    // Commit transaction
+    if err := tx.Commit(); err != nil {
+        return Task{}, fmt.Errorf("commit: %w", err)
+    }
+
+    return newTask, nil
+}
+```
+
+### Checklist
+
+- [ ] Business struct includes `beginner sqldb.Beginner` field for transaction support
+- [ ] Multi-operation logic uses `beginner.Begin()` to start transaction
+- [ ] Create transaction-bound storer with `storer.NewWithTx(tx)`
+- [ ] All rollbacks log errors if they fail
+- [ ] Commit only after all operations succeed
+
+---
+
+## 31. Defense-in-Depth: Dropping Constraints Without Trigger Replacement
+
+### Severity: MAJOR (Data Integrity)
+
+### Problem
+
+When moving validation from database constraints to the business layer (for flexibility), removing the constraint without adding a defense-in-depth trigger leaves the database unprotected against direct inserts or bugs in the business layer.
+
+### Bad Example
+
+```sql
+-- BAD: Dropping constraint without replacement
+DROP CONSTRAINT tasks_contribution_required;
+-- Now there's no database-level protection!
+```
+
+### Good Example
+
+```sql
+-- GOOD: Replace constraint with flexible trigger for defense-in-depth
+CREATE OR REPLACE FUNCTION validate_task_contribution()
+RETURNS TRIGGER AS $
+DECLARE
+    objective_tracking_type TEXT;
+BEGIN
+    -- Rule 1: Inbox tasks must have NULL contribution
+    IF NEW.objective_id IS NULL THEN
+        IF NEW.contribution IS NOT NULL THEN
+            RAISE EXCEPTION 'Inbox tasks cannot have contribution';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    -- Get objective tracking type
+    SELECT tracking_type INTO objective_tracking_type
+    FROM objectives WHERE objective_id = NEW.objective_id;
+
+    -- Rule 2: Result objectives require contribution 1-10
+    IF objective_tracking_type = 'result' THEN
+        IF NEW.contribution IS NULL OR NEW.contribution < 1 OR NEW.contribution > 10 THEN
+            RAISE EXCEPTION 'Result tasks require contribution between 1 and 10';
+        END IF;
+    END IF;
+
+    -- Rule 3: Frequency objectives must have NULL contribution
+    IF objective_tracking_type = 'frequency' THEN
+        IF NEW.contribution IS NOT NULL THEN
+            RAISE EXCEPTION 'Frequency tasks cannot have contribution';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS validate_task_contribution_trigger ON tasks;
+CREATE TRIGGER validate_task_contribution_trigger
+    BEFORE INSERT OR UPDATE ON tasks
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_task_contribution();
+```
+
+### Checklist
+
+- [ ] Never drop a constraint without understanding why it existed
+- [ ] If business layer handles validation, add trigger for defense-in-depth
+- [ ] Triggers should use RAISE EXCEPTION with SQLSTATE for proper error handling
+- [ ] Document the business layer validation that the trigger backs up

@@ -31,10 +31,10 @@ interface AssignToObjectiveDialogProps {
 }
 
 function getContributionLabel(value: number): string {
-  if (value <= 3) return 'Pequeno paso';
-  if (value <= 6) return 'Avance solido';
-  if (value <= 8) return 'Gran contribucion';
-  return 'Contribucion maxima';
+  if (value <= 3) return 'Pequeño paso';
+  if (value <= 6) return 'Avance sólido';
+  if (value <= 8) return 'Gran contribución';
+  return 'Contribución máxima';
 }
 
 export function AssignToObjectiveDialog({ task, open, onOpenChange }: AssignToObjectiveDialogProps) {
@@ -134,7 +134,7 @@ export function AssignToObjectiveDialog({ task, open, onOpenChange }: AssignToOb
           {objectiveId && !isFrequencyObjective && (
             <div className="space-y-4 bg-blue-50 rounded-lg p-4">
               <Label className="text-base font-medium flex items-center gap-2">
-                Contribucion al objetivo
+                Contribución al objetivo
                 <span className="text-destructive">*</span>
               </Label>
 
@@ -155,7 +155,7 @@ export function AssignToObjectiveDialog({ task, open, onOpenChange }: AssignToOb
               />
 
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Pequeno</span>
+                <span>Pequeño</span>
                 <span>Moderado</span>
                 <span>Grande</span>
               </div>
@@ -166,7 +166,7 @@ export function AssignToObjectiveDialog({ task, open, onOpenChange }: AssignToOb
           {objectiveId && isFrequencyObjective && (
             <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
               <p className="text-sm text-purple-700">
-                Este objetivo es de frecuencia. La tarea se asignara sin contribucion numerica.
+                Este objetivo es de frecuencia. La tarea se asignará sin contribución numérica.
               </p>
             </div>
           )}

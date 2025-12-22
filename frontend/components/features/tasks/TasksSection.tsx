@@ -116,7 +116,7 @@ export function TasksSection({
                         toast({
                           variant: 'destructive',
                           title: 'Error',
-                          description: 'No se pudo deshacer la accion',
+                          description: 'No se pudo deshacer la acción',
                         });
                       },
                     });

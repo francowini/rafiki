@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTasks, useCompleteTask, useUncompleteTask, useDeleteTask } from '@/lib/hooks/use-tasks';
-import { useObjectives } from '@/lib/hooks/use-objectives';
+import { useObjectives, useLogRecordDynamic } from '@/lib/hooks/use-objectives';
 import { TaskItem } from '@/components/features/tasks/TaskItem';
 import { TaskDeleteDialog } from '@/components/features/tasks/TaskDeleteDialog';
 import { AssignToObjectiveDialog } from '@/components/features/tasks/AssignToObjectiveDialog';
@@ -40,6 +40,7 @@ export default function EnfoquePage() {
   const completeMutation = useCompleteTask();
   const uncompleteMutation = useUncompleteTask();
   const deleteMutation = useDeleteTask();
+  const logRecordMutation = useLogRecordDynamic();
 
   const tasks = tasksData?.items ?? [];
   const objectives = objectivesData?.items ?? [];
@@ -79,34 +80,21 @@ export default function EnfoquePage() {
               <ToastAction
                 altText="Marcar hoy"
                 onClick={async () => {
-                  // F11: Error handling for follow-up async calls
                   try {
-                    const res = await fetch(
-                      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/v1/objectives/${objective.id}/records`,
-                      {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-                        },
-                        body: JSON.stringify({
-                          recordDate: new Date().toISOString().split('T')[0],
-                          status: 'completed',
-                        }),
+                    await logRecordMutation.mutateAsync({
+                      objectiveId: objective.id,
+                      data: {
+                        recordDate: new Date().toISOString().split('T')[0],
+                        status: 'completed',
                       },
-                    );
-
-                    if (!res.ok) {
-                      throw new Error('Failed to mark day as completed');
-                    }
-
+                    });
                     toast({ title: 'Hoy marcado como Hecho' });
                   } catch (err) {
                     console.error('Failed to mark day:', err);
                     toast({
                       variant: 'destructive',
                       title: 'Error',
-                      description: 'No se pudo marcar el dia. Intenta de nuevo.',
+                      description: 'No se pudo marcar el día. Intenta de nuevo.',
                     });
                   }
                 }}
@@ -234,7 +222,6 @@ export default function EnfoquePage() {
                       <TaskItem
                         task={task}
                         onToggle={() => handleToggleTask(task)}
-                        onEdit={() => {}}
                         onDelete={() => setTaskToDelete(task)}
                       />
                     </div>
@@ -262,6 +249,9 @@ export default function EnfoquePage() {
           <Accordion type="single" collapsible className="w-full">
             {Object.entries(tasksByObjective).map(([objectiveId, objTasks]) => {
               const objective = objectives.find((o) => o.id === objectiveId);
+              if (!objective) {
+                console.warn(`Tasks reference unknown objective: ${objectiveId}`);
+              }
               return (
                 <AccordionItem key={objectiveId} value={objectiveId}>
                   <AccordionTrigger>
@@ -282,7 +272,6 @@ export default function EnfoquePage() {
                           key={task.id}
                           task={task}
                           onToggle={() => handleToggleTask(task)}
-                          onEdit={() => {}}
                           onDelete={() => setTaskToDelete(task)}
                         />
                       ))}

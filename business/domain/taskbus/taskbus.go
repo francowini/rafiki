@@ -51,6 +51,7 @@ type Business struct {
 	objectiveBus objectivebus.ExtBusiness
 	delegate     *delegate.Delegate
 	storer       Storer
+	beginner     sqldb.Beginner
 }
 
 // NewBusiness constructs a Business for task domain.
@@ -59,12 +60,14 @@ func NewBusiness(
 	objectiveBus objectivebus.ExtBusiness,
 	dlg *delegate.Delegate,
 	storer Storer,
+	beginner sqldb.Beginner,
 ) ExtBusiness {
 	b := &Business{
 		log:          log,
 		objectiveBus: objectiveBus,
 		delegate:     dlg,
 		storer:       storer,
+		beginner:     beginner,
 	}
 
 	// Register delegate functions on the root business instance.
@@ -290,8 +293,8 @@ func (b *Business) Cancel(ctx context.Context, task Task) (Task, error) {
 }
 
 // MoveTask relocates an inbox task to an objective. This creates a new task
-// with the target objective and deletes the original. This pattern preserves
-// parent-reference immutability and maintains audit trails.
+// with the target objective and deletes the original within a single transaction.
+// This pattern preserves parent-reference immutability and maintains audit trails.
 func (b *Business) MoveTask(ctx context.Context, task Task, targetObjectiveID uuid.UUID, cont *contribution.Contribution) (Task, error) {
 	b.log.Info(ctx, "taskbus.move", "taskID", task.ID, "targetObjectiveID", targetObjectiveID)
 
@@ -336,25 +339,59 @@ func (b *Business) MoveTask(ctx context.Context, task Task, targetObjectiveID uu
 		// contPtr remains nil
 	}
 
-	// Create new task with target objective
-	newTask := NewTask{
+	// Begin transaction to ensure atomicity of create + delete
+	tx, err := b.beginner.Begin()
+	if err != nil {
+		b.log.Error(ctx, "taskbus.move.begin_tx", "err", err)
+		return Task{}, fmt.Errorf("begin transaction: %w", err)
+	}
+
+	// Create transaction-bound storer
+	txStorer, err := b.storer.NewWithTx(tx)
+	if err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			b.log.Error(ctx, "taskbus.move.rollback", "err", rbErr)
+		}
+		return Task{}, fmt.Errorf("new tx storer: %w", err)
+	}
+
+	// Build new task
+	now := time.Now().UTC()
+	createdTask := Task{
+		ID:           uuid.New(),
 		UserID:       task.UserID,
 		ObjectiveID:  &targetObjectiveID,
 		Title:        task.Title,
 		Description:  task.Description,
 		Contribution: contPtr,
+		Status:       taskstatus.StatusPending,
+		CompletedAt:  nil,
+		DateCreated:  now,
+		DateUpdated:  now,
 	}
 
-	createdTask, err := b.Create(ctx, newTask)
-	if err != nil {
+	// Create new task within transaction
+	if err := txStorer.Create(ctx, createdTask); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			b.log.Error(ctx, "taskbus.move.rollback", "err", rbErr)
+		}
 		b.log.Error(ctx, "taskbus.move.create_failed", "err", err)
 		return Task{}, fmt.Errorf("create new task: %w", err)
 	}
 
-	// Delete original inbox task
-	if err := b.Delete(ctx, task); err != nil {
-		// Delegate handler - log but don't fail since new task is already created
+	// Delete original inbox task within same transaction
+	if err := txStorer.Delete(ctx, task); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			b.log.Error(ctx, "taskbus.move.rollback", "err", rbErr)
+		}
 		b.log.Error(ctx, "taskbus.move.delete_original", "taskID", task.ID, "err", err)
+		return Task{}, fmt.Errorf("delete original task: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		b.log.Error(ctx, "taskbus.move.commit", "err", err)
+		return Task{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	b.log.Info(ctx, "taskbus.move.success", "oldTaskID", task.ID, "newTaskID", createdTask.ID)

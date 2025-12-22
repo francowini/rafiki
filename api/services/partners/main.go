@@ -267,7 +267,8 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	// Create task domain (child of objective)
 	taskStore := taskdb.NewStore(log, db, encryptor)
-	taskBus := taskbus.NewBusiness(log, objectiveBus, dlg, taskStore)
+	taskBeginner := sqldb.NewBeginner(db)
+	taskBus := taskbus.NewBusiness(log, objectiveBus, dlg, taskStore, taskBeginner)
 
 	// Create vexport domain (query-only view domain)
 	vexportStore := vexportdb.NewStore(log, db, encryptor)

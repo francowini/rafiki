@@ -9,6 +9,11 @@ export function detectMilestone(
   newProgress: number,
   targetMetric: number,
 ): MilestoneInfo | null {
+  // Guard against division by zero
+  if (targetMetric <= 0) {
+    return null;
+  }
+
   const prevPercentage = (previousProgress / targetMetric) * 100;
   const newPercentage = (newProgress / targetMetric) * 100;
 
