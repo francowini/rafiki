@@ -779,7 +779,7 @@ BEGIN
     -- Rule 1: Inbox tasks (no objective) must have NULL contribution
     IF NEW.objective_id IS NULL THEN
         IF NEW.contribution IS NOT NULL THEN
-            RAISE EXCEPTION 'Inbox tasks cannot have contribution (SQLSTATE 23514)'
+            RAISE EXCEPTION 'Inbox tasks cannot have contribution'
                 USING ERRCODE = '23514'; -- check_violation
         END IF;
         RETURN NEW;
@@ -798,11 +798,11 @@ BEGIN
     -- Rule 2: Result objectives require contribution 1-10
     IF objective_tracking_type = 'result' THEN
         IF NEW.contribution IS NULL THEN
-            RAISE EXCEPTION 'Result objective tasks require contribution (SQLSTATE 23514)'
+            RAISE EXCEPTION 'Result objective tasks require contribution'
                 USING ERRCODE = '23514';
         END IF;
         IF NEW.contribution < 1 OR NEW.contribution > 10 THEN
-            RAISE EXCEPTION 'Contribution must be between 1 and 10 (SQLSTATE 23514)'
+            RAISE EXCEPTION 'Contribution must be between 1 and 10'
                 USING ERRCODE = '23514';
         END IF;
     END IF;
@@ -810,7 +810,7 @@ BEGIN
     -- Rule 3: Frequency objectives must have NULL contribution
     IF objective_tracking_type = 'frequency' THEN
         IF NEW.contribution IS NOT NULL THEN
-            RAISE EXCEPTION 'Frequency objective tasks cannot have contribution (SQLSTATE 23514)'
+            RAISE EXCEPTION 'Frequency objective tasks cannot have contribution'
                 USING ERRCODE = '23514';
         END IF;
     END IF;

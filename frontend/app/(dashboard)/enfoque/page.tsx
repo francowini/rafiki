@@ -23,6 +23,7 @@ import { Inbox, Target, ChevronDown, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { detectMilestone } from '@/lib/utils/milestone-utils';
+import { formatDateForInput } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import type { Task, TaskStatus } from '@/lib/types';
 
@@ -70,25 +71,29 @@ export default function EnfoquePage() {
       onSuccess: (response) => {
         const objective = objectives.find((o) => o.id === task.objectiveId);
 
-        // Smart prompt for frequency objectives
+        // Smart prompt for frequency objectives - prominent toast
         if (response.objectiveTracking === 'frequency' && objective) {
           toast({
-            title: 'Tarea completada',
-            description: `Marcar hoy como Hecho en "${objective.title}"?`,
-            duration: 10000,
+            title: '🎯 ¡Tarea completada!',
+            description: `¿Registrar hoy como completado en "${objective.title}"?`,
+            duration: 15000,
             action: (
               <ToastAction
                 altText="Marcar hoy"
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4"
                 onClick={async () => {
+                  // Prevent duplicate submissions
+                  if (logRecordMutation.isPending) return;
+
                   try {
                     await logRecordMutation.mutateAsync({
                       objectiveId: objective.id,
                       data: {
-                        recordDate: new Date().toISOString().split('T')[0],
+                        recordDate: formatDateForInput(new Date()),
                         status: 'completed',
                       },
                     });
-                    toast({ title: 'Hoy marcado como Hecho' });
+                    toast({ title: '✅ Hoy marcado como Hecho' });
                   } catch (err) {
                     console.error('Failed to mark day:', err);
                     toast({
@@ -99,7 +104,7 @@ export default function EnfoquePage() {
                   }
                 }}
               >
-                Marcar hoy
+                ✓ Marcar hoy
               </ToastAction>
             ),
           });

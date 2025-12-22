@@ -20,6 +20,7 @@ import {
   useDeleteTask,
 } from '@/lib/hooks/use-tasks';
 import { useLogRecordDynamic } from '@/lib/hooks/use-objectives';
+import { formatDateForInput } from '@/lib/date-utils';
 import type { Task, CompleteTaskResponse } from '@/lib/types';
 
 interface TasksSectionProps {
@@ -92,26 +93,30 @@ export function TasksSection({
           onSuccess: (response: CompleteTaskResponse) => {
             setCompletingTaskId(null);
 
-            // For frequency objectives, show toast with "Marcar hoy" action
+            // For frequency objectives, show prominent toast with "Marcar hoy" action
             if (isFrequencyObjective) {
               const { id } = toast({
-                title: 'Tarea completada',
-                description: `¿Marcar hoy como Hecho en "${objectiveName}"?`,
-                duration: 10000,
+                title: '🎯 ¡Tarea completada!',
+                description: `¿Registrar hoy como completado en "${objectiveName}"?`,
+                duration: 15000,
                 action: (
                   <ToastAction
                     altText="Marcar hoy"
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4"
                     onClick={async () => {
+                      // Prevent duplicate submissions
+                      if (logRecordMutation.isPending) return;
+
                       try {
                         await logRecordMutation.mutateAsync({
                           objectiveId,
                           data: {
-                            recordDate: new Date().toISOString().split('T')[0],
+                            recordDate: formatDateForInput(new Date()),
                             status: 'completed',
                           },
                         });
                         dismiss(id);
-                        toast({ title: 'Hoy marcado como Hecho' });
+                        toast({ title: '✅ Hoy marcado como Hecho' });
                       } catch (err) {
                         console.error('Failed to mark day:', err);
                         toast({
@@ -122,7 +127,7 @@ export function TasksSection({
                       }
                     }}
                   >
-                    Marcar hoy
+                    ✓ Marcar hoy
                   </ToastAction>
                 ),
               });
