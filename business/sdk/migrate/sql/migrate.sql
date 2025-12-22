@@ -751,3 +751,81 @@ COMMENT ON COLUMN tasks.contribution IS 'Contribution to objective progress (1-1
 COMMENT ON COLUMN tasks.objective_id IS 'NULL for inbox tasks, UUID for objective-linked tasks';
 COMMENT ON COLUMN tasks.status IS 'Task status: pending, completed, cancelled';
 COMMENT ON COLUMN tasks.completed_at IS 'Timestamp when task was completed (NULL if not completed)';
+
+
+-- Version: 17
+-- Description: Allow tasks for frequency objectives with NULL contribution
+-- Business layer now enforces:
+-- - RESULT objectives: contribution REQUIRED (1-10)
+-- - FREQUENCY objectives: contribution must be NULL
+-- - Inbox tasks: contribution must be NULL
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_contribution_required;
+
+
+-- Version: 18
+-- Description: Defense-in-depth trigger for tasks contribution validation
+-- This trigger enforces contribution rules at the database level as a safety net
+-- for the business layer validation. Rules:
+-- - Inbox tasks (objective_id IS NULL): contribution MUST be NULL
+-- - Result objectives: contribution REQUIRED and BETWEEN 1 AND 10
+-- - Frequency objectives: contribution MUST be NULL
+
+-- Create or replace the trigger function
+CREATE OR REPLACE FUNCTION validate_task_contribution()
+RETURNS TRIGGER AS $$
+DECLARE
+    objective_tracking_type TEXT;
+BEGIN
+    -- Rule 1: Inbox tasks (no objective) must have NULL contribution
+    IF NEW.objective_id IS NULL THEN
+        IF NEW.contribution IS NOT NULL THEN
+            RAISE EXCEPTION 'Inbox tasks cannot have contribution'
+                USING ERRCODE = '23514'; -- check_violation
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    -- Get the tracking type for the objective
+    SELECT tracking_type INTO objective_tracking_type
+    FROM objectives
+    WHERE objective_id = NEW.objective_id;
+
+    -- If objective not found, let the FK constraint handle it
+    IF objective_tracking_type IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Rule 2: Result objectives require contribution 1-10
+    IF objective_tracking_type = 'result' THEN
+        IF NEW.contribution IS NULL THEN
+            RAISE EXCEPTION 'Result objective tasks require contribution'
+                USING ERRCODE = '23514';
+        END IF;
+        IF NEW.contribution < 1 OR NEW.contribution > 10 THEN
+            RAISE EXCEPTION 'Contribution must be between 1 and 10'
+                USING ERRCODE = '23514';
+        END IF;
+    END IF;
+
+    -- Rule 3: Frequency objectives must have NULL contribution
+    IF objective_tracking_type = 'frequency' THEN
+        IF NEW.contribution IS NOT NULL THEN
+            RAISE EXCEPTION 'Frequency objective tasks cannot have contribution'
+                USING ERRCODE = '23514';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Drop existing trigger if any
+DROP TRIGGER IF EXISTS validate_task_contribution_trigger ON tasks;
+
+-- Create the trigger for both INSERT and UPDATE
+CREATE TRIGGER validate_task_contribution_trigger
+    BEFORE INSERT OR UPDATE ON tasks
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_task_contribution();
+
+COMMENT ON FUNCTION validate_task_contribution() IS 'Defense-in-depth validation for task contribution rules';

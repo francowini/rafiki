@@ -18,6 +18,7 @@ import type { Task } from '@/lib/types';
 interface TaskFormProps {
   objectiveId: string;
   task?: Task | null;
+  isFrequencyObjective?: boolean;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -29,7 +30,13 @@ function getContributionLabel(value: number): string {
   return 'Contribución máxima';
 }
 
-export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormProps) {
+export function TaskForm({
+  objectiveId,
+  task,
+  isFrequencyObjective = false,
+  onSuccess,
+  onCancel,
+}: TaskFormProps) {
   const isEditMode = !!task;
   const { toast } = useToast();
   const createMutation = useCreateTask();
@@ -77,13 +84,16 @@ export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormPro
 
   const onSubmit = async (data: TaskFormData) => {
     try {
+      // Frequency objectives don't have contribution
+      const contributionValue = isFrequencyObjective ? null : data.contribution;
+
       if (isEditMode && task) {
         await updateMutation.mutateAsync({
           id: task.id,
           data: {
             title: data.title,
             description: data.description || null,
-            contribution: data.contribution,
+            contribution: contributionValue,
           },
         });
       } else {
@@ -91,7 +101,7 @@ export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormPro
           objectiveId: data.objectiveId ?? null,
           title: data.title,
           description: data.description || null,
-          contribution: data.contribution,
+          contribution: contributionValue,
         });
       }
       onSuccess();
@@ -155,42 +165,54 @@ export function TaskForm({ objectiveId, task, onSuccess, onCancel }: TaskFormPro
         )}
       </div>
 
-      {/* Contribution Slider */}
-      <div className="space-y-4 bg-blue-50 rounded-lg p-4">
-        <Label
-          htmlFor="task-contribution"
-          className="text-base font-medium flex items-center gap-2"
-        >
-          Contribución al objetivo
-          <HelpTooltip content="Cuanto aporta esta tarea al progreso de tu objetivo (1-10)" />
-        </Label>
+      {/* Contribution Slider - Only for result objectives */}
+      {!isFrequencyObjective && (
+        <div className="space-y-4 bg-blue-50 rounded-lg p-4">
+          <Label
+            htmlFor="task-contribution"
+            className="text-base font-medium flex items-center gap-2"
+          >
+            Contribucion al objetivo
+            <HelpTooltip content="Cuanto aporta esta tarea al progreso de tu objetivo (1-10)" />
+          </Label>
 
-        <div className="text-center py-2">
-          <span className="text-4xl font-bold text-blue-600">+{contribution}</span>
-          <p className="text-sm text-muted-foreground mt-1">{getContributionLabel(contribution)}</p>
+          <div className="text-center py-2">
+            <span className="text-4xl font-bold text-blue-600">+{contribution}</span>
+            <p className="text-sm text-muted-foreground mt-1">{getContributionLabel(contribution)}</p>
+          </div>
+
+          <Slider
+            id="task-contribution"
+            min={1}
+            max={10}
+            step={1}
+            value={[contribution]}
+            onValueChange={(value) => setValue('contribution', value[0])}
+            className="py-4"
+            aria-label="Contribucion al objetivo"
+          />
+
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Pequeno</span>
+            <span>Moderado</span>
+            <span>Grande</span>
+          </div>
+
+          {errors.contribution && (
+            <p className="text-sm text-destructive">{errors.contribution.message}</p>
+          )}
         </div>
+      )}
 
-        <Slider
-          id="task-contribution"
-          min={1}
-          max={10}
-          step={1}
-          value={[contribution]}
-          onValueChange={(value) => setValue('contribution', value[0])}
-          className="py-4"
-          aria-label="Contribución al objetivo"
-        />
-
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Pequeño</span>
-          <span>Moderado</span>
-          <span>Grande</span>
+      {/* Frequency objective notice */}
+      {isFrequencyObjective && (
+        <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+          <p className="text-sm text-purple-700">
+            Las tareas de objetivos de frecuencia sirven como checklist organizacional y no tienen
+            contribucion numerica.
+          </p>
         </div>
-
-        {errors.contribution && (
-          <p className="text-sm text-destructive">{errors.contribution.message}</p>
-        )}
-      </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3 pt-4">

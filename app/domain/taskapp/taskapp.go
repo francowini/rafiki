@@ -17,6 +17,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/contribution"
 	"github.com/francowini/rafiki/foundation/web"
 )
 
@@ -66,7 +67,10 @@ func (a *app) create(ctx context.Context, r *http.Request) web.Encoder {
 		if errors.Is(err, taskbus.ErrContributionRequiredForLink) {
 			return errs.New(errs.InvalidArgument, err)
 		}
-		if errors.Is(err, taskbus.ErrOnlyResultAllowsContribution) {
+		if errors.Is(err, taskbus.ErrFrequencyTasksNoContribution) {
+			return errs.New(errs.InvalidArgument, err)
+		}
+		if errors.Is(err, taskbus.ErrContributionNotAllowedInbox) {
 			return errs.New(errs.InvalidArgument, err)
 		}
 		return errs.Newf(errs.Internal, "create: %s", err)
@@ -206,9 +210,20 @@ func (a *app) complete(ctx context.Context, r *http.Request) web.Encoder {
 		return errs.Newf(errs.Internal, "commit: %s", err)
 	}
 
+	// Prepare tracking type string for frontend smart prompt
+	var trackingType *string
+	if objective.TrackingType.IsResult() {
+		t := "result"
+		trackingType = &t
+	} else if objective.TrackingType.IsFrequency() {
+		t := "frequency"
+		trackingType = &t
+	}
+
 	return CompleteTaskResponse{
 		Task:              toAppTask(task),
 		ObjectiveProgress: objectiveProgress,
+		ObjectiveTracking: trackingType,
 	}
 }
 
@@ -315,6 +330,62 @@ func (a *app) cancel(ctx context.Context, r *http.Request) web.Encoder {
 	}
 
 	return toAppTask(task)
+}
+
+// move handles POST /v1/tasks/{task_id}/move
+func (a *app) move(ctx context.Context, r *http.Request) web.Encoder {
+	task, respErr := a.getTaskWithOwnership(ctx, r)
+	if respErr != nil {
+		return respErr
+	}
+
+	var req MoveTaskRequest
+	if err := web.Decode(r, &req); err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return errs.New(errs.InvalidArgument, err)
+	}
+
+	// Parse objective ID
+	objectiveID, err := uuid.Parse(req.ObjectiveID)
+	if err != nil {
+		return errs.NewFieldErrors("objectiveId", errors.New("invalid UUID format"))
+	}
+
+	// Parse contribution if provided
+	var contPtr *contribution.Contribution
+	if req.Contribution != nil {
+		cont, err := contribution.Parse(*req.Contribution)
+		if err != nil {
+			return errs.NewFieldErrors("contribution", err)
+		}
+		contPtr = &cont
+	}
+
+	// Move task
+	movedTask, err := a.taskBus.MoveTask(ctx, task, objectiveID, contPtr)
+	if err != nil {
+		if errors.Is(err, taskbus.ErrObjectiveNotFound) {
+			return errs.New(errs.NotFound, errors.New("objective not found"))
+		}
+		if errors.Is(err, taskbus.ErrNotObjectiveOwner) {
+			return errs.New(errs.PermissionDenied, errors.New("not objective owner"))
+		}
+		if errors.Is(err, taskbus.ErrTaskAlreadyLinked) {
+			return errs.New(errs.InvalidArgument, errors.New("task already linked to objective"))
+		}
+		if errors.Is(err, taskbus.ErrFrequencyTasksNoContribution) {
+			return errs.New(errs.InvalidArgument, err)
+		}
+		if errors.Is(err, taskbus.ErrContributionRequiredForLink) {
+			return errs.New(errs.InvalidArgument, err)
+		}
+		return errs.Newf(errs.Internal, "move task: taskID[%s]: %s", task.ID, err)
+	}
+
+	return toAppTask(movedTask)
 }
 
 // query handles GET /v1/tasks

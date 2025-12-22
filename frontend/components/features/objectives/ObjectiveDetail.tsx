@@ -186,14 +186,13 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
         </div>
       )}
 
-      {/* Tasks section for Result objectives */}
-      {isResult && objective.targetMetric && (
-        <TasksSection
-          objectiveId={objectiveId}
-          objectiveName={objective.title}
-          targetMetric={objective.targetMetric}
-        />
-      )}
+      {/* Tasks section - available for both Result and Frequency objectives */}
+      <TasksSection
+        objectiveId={objectiveId}
+        objectiveName={objective.title}
+        targetMetric={objective.targetMetric}
+        trackingType={objective.trackingType}
+      />
 
       {/* Log record button for Frequency */}
       {!isResult && (

@@ -38,6 +38,9 @@ func Routes(app *web.App, cfg Config) {
 	app.HandlerFunc(http.MethodPut, version, "/tasks/{task_id}/uncomplete", api.uncomplete, bearer)
 	app.HandlerFunc(http.MethodPut, version, "/tasks/{task_id}/cancel", api.cancel, bearer)
 
+	// Move operation (inbox → objective)
+	app.HandlerFunc(http.MethodPost, version, "/tasks/{task_id}/move", api.move, bearer)
+
 	// Query by objective (nested endpoint)
 	app.HandlerFunc(http.MethodGet, version, "/objectives/{objective_id}/tasks", api.queryByObjective, bearer)
 }

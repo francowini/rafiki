@@ -266,6 +266,31 @@ export function useLogRecord(
   });
 }
 
+// Dynamic version of useLogRecord for cases where objectiveId varies per call
+// (e.g., toast actions in Enfoque page)
+export function useLogRecordDynamic(): UseMutationResult<
+  ObjectiveRecord,
+  Error,
+  { objectiveId: string; data: NewObjectiveRecord }
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ objectiveId, data }) => api.objectives.logRecord(objectiveId, data),
+    onSuccess: (_, { objectiveId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.objectives.records(objectiveId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.objectives.activity(objectiveId, new Date().getFullYear()),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.objectives.detail(objectiveId),
+      });
+    },
+  });
+}
+
 export function useDeleteRecord(objectiveId: string): UseMutationResult<void, Error, string> {
   const queryClient = useQueryClient();
 

@@ -35,6 +35,7 @@ import type {
   UpdateTask,
   TaskStatus,
   CompleteTaskResponse,
+  MoveTaskRequest,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -587,6 +588,13 @@ export const api = {
     uncomplete: async (id: string): Promise<Task> => {
       return fetchAPI<Task>(`/v1/tasks/${id}/uncomplete`, {
         method: 'PUT',
+      });
+    },
+
+    move: async (id: string, data: MoveTaskRequest): Promise<Task> => {
+      return fetchAPI<Task>(`/v1/tasks/${id}/move`, {
+        method: 'POST',
+        body: JSON.stringify(data),
       });
     },
   },

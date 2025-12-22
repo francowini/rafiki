@@ -26,6 +26,7 @@ This document catalogs critical errors specific to frontend (TypeScript/React) d
 - [F18. React Query: Readonly Query Keys from getQueriesData](#f18-react-query-readonly-query-keys-from-getqueriesdata)
 - [F19. Types: Null Coalescing for Optional-to-Nullable Conversion](#f19-types-null-coalescing-for-optional-to-nullable-conversion)
 - [F20. React Query: Cache Invalidation Key Hierarchy Mismatch](#f20-react-query-cache-invalidation-key-hierarchy-mismatch)
+- [F21. API Calls: Inline Fetch Bypassing Centralized Patterns](#f21-api-calls-inline-fetch-bypassing-centralized-patterns)
 
 ---
 
@@ -1118,3 +1119,88 @@ const queryKeys = {
 - [ ] When invalidating, use the most specific common ancestor
 - [ ] Test that mutations properly refresh all related queries
 - [ ] Consider using `queryKeys.all` when in doubt about which queries to invalidate
+
+---
+
+## F21. API Calls: Inline Fetch Bypassing Centralized Patterns
+
+### Severity: Medium (Maintainability, Consistency)
+
+### Problem
+
+Using inline `fetch()` calls inside components bypasses centralized API patterns (api client, hooks), duplicating URL construction, auth header logic, and error handling. This makes refactoring difficult and creates inconsistency.
+
+### Bad Example
+
+```typescript
+// BAD: Inline fetch duplicates API URL, auth, and error handling
+const handleAction = async () => {
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/records`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ date: new Date().toISOString() }),
+    });
+
+    if (!response.ok) throw new Error('Failed');
+
+    toast({ title: 'Success' });
+  } catch (err) {
+    toast({ variant: 'destructive', title: 'Error' });
+  }
+};
+```
+
+### Good Example
+
+```typescript
+// GOOD: Use centralized hook with proper cache invalidation
+import { useLogRecordDynamic } from '@/lib/hooks/use-objectives';
+
+const logRecordMutation = useLogRecordDynamic();
+
+const handleAction = async () => {
+  try {
+    await logRecordMutation.mutateAsync({
+      objectiveId: objective.id,
+      data: {
+        recordDate: new Date().toISOString().split('T')[0],
+        status: 'completed',
+      },
+    });
+    toast({ title: 'Success' });
+  } catch (err) {
+    console.error('Failed:', err);
+    toast({ variant: 'destructive', title: 'Error' });
+  }
+};
+```
+
+### When to Create a New Hook
+
+If no existing hook fits your use case:
+
+```typescript
+// lib/hooks/use-my-feature.ts
+export function useMyAction(): UseMutationResult<Response, Error, Params> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params) => api.myFeature.doAction(params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.myFeature.all });
+    },
+  });
+}
+```
+
+### Checklist
+
+- [ ] All API calls go through the centralized `api` client in `lib/api.ts`
+- [ ] Mutations use React Query hooks for proper cache invalidation
+- [ ] If toast action needs to call API, use existing mutation hooks
+- [ ] Create new hooks in `lib/hooks/` for missing use cases

@@ -19,15 +19,24 @@ import {
   useUncompleteTask,
   useDeleteTask,
 } from '@/lib/hooks/use-tasks';
+import { useLogRecordDynamic } from '@/lib/hooks/use-objectives';
+import { formatDateForInput } from '@/lib/date-utils';
 import type { Task, CompleteTaskResponse } from '@/lib/types';
 
 interface TasksSectionProps {
   objectiveId: string;
   objectiveName: string;
-  targetMetric: number;
+  targetMetric?: number;
+  trackingType: 'result' | 'frequency';
 }
 
-export function TasksSection({ objectiveId, objectiveName, targetMetric }: TasksSectionProps) {
+export function TasksSection({
+  objectiveId,
+  objectiveName,
+  targetMetric,
+  trackingType,
+}: TasksSectionProps) {
+  const isFrequencyObjective = trackingType === 'frequency';
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -40,6 +49,7 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
   const completeMutation = useCompleteTask();
   const uncompleteMutation = useUncompleteTask();
   const deleteMutation = useDeleteTask();
+  const logRecordMutation = useLogRecordDynamic();
 
   const handleFormClose = useCallback(() => {
     setIsFormOpen(false);
@@ -83,12 +93,58 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
           onSuccess: (response: CompleteTaskResponse) => {
             setCompletingTaskId(null);
 
+            // For frequency objectives, show prominent toast with "Marcar hoy" action
+            if (isFrequencyObjective) {
+              const { id } = toast({
+                title: '🎯 ¡Tarea completada!',
+                description: `¿Registrar hoy como completado en "${objectiveName}"?`,
+                duration: 15000,
+                action: (
+                  <ToastAction
+                    altText="Marcar hoy"
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4"
+                    onClick={async () => {
+                      // Prevent duplicate submissions
+                      if (logRecordMutation.isPending) return;
+
+                      try {
+                        await logRecordMutation.mutateAsync({
+                          objectiveId,
+                          data: {
+                            recordDate: formatDateForInput(new Date()),
+                            status: 'completed',
+                          },
+                        });
+                        dismiss(id);
+                        toast({ title: '✅ Hoy marcado como Hecho' });
+                      } catch (err) {
+                        console.error('Failed to mark day:', err);
+                        toast({
+                          variant: 'destructive',
+                          title: 'Error',
+                          description: 'No se pudo marcar el día. Intenta de nuevo.',
+                        });
+                      }
+                    }}
+                  >
+                    ✓ Marcar hoy
+                  </ToastAction>
+                ),
+              });
+              toastIdRef.current = id;
+              return;
+            }
+
+            // Build description for result objectives
+            let description = 'Tarea marcada como completada';
+            if (response.objectiveProgress && targetMetric) {
+              description = `+${response.task.contribution} -> ${response.objectiveProgress}/${targetMetric} ${objectiveName}`;
+            }
+
             // Show toast with undo - 10 second duration
             const { id } = toast({
               title: 'Tarea completada',
-              description: response.objectiveProgress
-                ? `+${response.task.contribution} → ${response.objectiveProgress}/${targetMetric} ${objectiveName}`
-                : 'Tarea marcada como completada',
+              description,
               duration: 10000,
               action: (
                 <ToastAction
@@ -127,7 +183,7 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
         });
       }
     },
-    [tasksData, completeMutation, uncompleteMutation, toast, dismiss, objectiveName, targetMetric],
+    [tasksData, completeMutation, uncompleteMutation, logRecordMutation, toast, dismiss, objectiveId, objectiveName, targetMetric, isFrequencyObjective],
   );
 
   const handleDeleteTask = useCallback(() => {
@@ -184,6 +240,7 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
             <TaskForm
               objectiveId={objectiveId}
               task={taskToEdit}
+              isFrequencyObjective={isFrequencyObjective}
               onSuccess={handleFormClose}
               onCancel={handleFormClose}
             />

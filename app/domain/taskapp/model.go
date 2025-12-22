@@ -78,8 +78,28 @@ func (ut UpdateTask) Validate() error {
 
 // CompleteTaskResponse represents the response after completing a task.
 type CompleteTaskResponse struct {
-	Task              Task `json:"task"`
-	ObjectiveProgress *int `json:"objectiveProgress,omitempty"` // New currentMetric for objective-linked tasks
+	Task              Task    `json:"task"`
+	ObjectiveProgress *int    `json:"objectiveProgress,omitempty"` // New currentMetric for objective-linked tasks
+	ObjectiveTracking *string `json:"objectiveTracking,omitempty"` // "result" or "frequency"
+}
+
+// MoveTaskRequest represents a request to move an inbox task to an objective.
+type MoveTaskRequest struct {
+	ObjectiveID  string `json:"objectiveId" validate:"required,uuid"`
+	Contribution *int   `json:"contribution" validate:"omitempty,min=1,max=10"`
+}
+
+// Decode implements the decoder interface.
+func (mt *MoveTaskRequest) Decode(data []byte) error {
+	return json.Unmarshal(data, mt)
+}
+
+// Validate checks the data for correctness.
+func (mt MoveTaskRequest) Validate() error {
+	if err := errs.Check(mt); err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
+	return nil
 }
 
 // Encode implements the encoder interface.
