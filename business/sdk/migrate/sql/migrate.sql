@@ -788,7 +788,7 @@ BEGIN
     -- Get the tracking type for the objective
     SELECT tracking_type INTO objective_tracking_type
     FROM objectives
-    WHERE id = NEW.objective_id;
+    WHERE objective_id = NEW.objective_id;
 
     -- If objective not found, let the FK constraint handle it
     IF objective_tracking_type IS NULL THEN
