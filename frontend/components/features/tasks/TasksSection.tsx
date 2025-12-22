@@ -1,0 +1,168 @@
+'use client';
+
+import { useState, useRef, useCallback } from 'react';
+import { TaskList } from './TaskList';
+import { TaskForm } from './TaskForm';
+import { TaskDeleteDialog } from './TaskDeleteDialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
+import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import {
+  useTasksByObjective,
+  useCompleteTask,
+  useUncompleteTask,
+  useDeleteTask,
+} from '@/lib/hooks/use-tasks';
+import type { Task, CompleteTaskResponse } from '@/lib/types';
+
+interface TasksSectionProps {
+  objectiveId: string;
+  objectiveName: string;
+  targetMetric: number;
+}
+
+export function TasksSection({ objectiveId, objectiveName, targetMetric }: TasksSectionProps) {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
+
+  const { toast, dismiss } = useToast();
+  const toastIdRef = useRef<string | null>(null);
+
+  const { data: tasksData, isLoading } = useTasksByObjective(objectiveId);
+  const completeMutation = useCompleteTask();
+  const uncompleteMutation = useUncompleteTask();
+  const deleteMutation = useDeleteTask();
+
+  const handleFormClose = useCallback(() => {
+    setIsFormOpen(false);
+    setTaskToEdit(null);
+  }, []);
+
+  const handleCompleteTask = useCallback(
+    (taskId: string) => {
+      setCompletingTaskId(taskId);
+
+      // Dismiss previous toast
+      if (toastIdRef.current) {
+        dismiss(toastIdRef.current);
+      }
+
+      completeMutation.mutate(taskId, {
+        onSuccess: (response: CompleteTaskResponse) => {
+          setCompletingTaskId(null);
+
+          // Show toast with undo - 10 second duration
+          const { id } = toast({
+            title: 'Tarea completada',
+            description: response.objectiveProgress
+              ? `+${response.task.contribution} → ${response.objectiveProgress}/${targetMetric} ${objectiveName}`
+              : 'Tarea marcada como completada',
+            duration: 10000,
+            action: (
+              <ToastAction
+                altText="Deshacer"
+                onClick={() => {
+                  uncompleteMutation.mutate(taskId);
+                  dismiss(id);
+                }}
+              >
+                Deshacer
+              </ToastAction>
+            ),
+          });
+
+          toastIdRef.current = id;
+        },
+        onError: () => {
+          setCompletingTaskId(null);
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'No se pudo completar la tarea',
+          });
+        },
+      });
+    },
+    [completeMutation, uncompleteMutation, toast, dismiss, objectiveName, targetMetric],
+  );
+
+  const handleDeleteTask = useCallback(() => {
+    if (!taskToDelete) return;
+
+    deleteMutation.mutate(taskToDelete.id, {
+      onSuccess: () => {
+        setTaskToDelete(null);
+        toast({
+          title: 'Tarea eliminada',
+          description: 'La tarea ha sido eliminada',
+        });
+      },
+      onError: () => {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'No se pudo eliminar la tarea',
+        });
+      },
+    });
+  }, [taskToDelete, deleteMutation, toast]);
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <TaskList
+        tasks={tasksData?.items ?? []}
+        isLoading={isLoading}
+        onToggleTask={handleCompleteTask}
+        onEditTask={(task) => {
+          setTaskToEdit(task);
+          setIsFormOpen(true);
+        }}
+        onDeleteTask={setTaskToDelete}
+        onCreateTask={() => {
+          setTaskToEdit(null);
+          setIsFormOpen(true);
+        }}
+        completingTaskId={completingTaskId}
+      />
+
+      {/* Task Form Sheet */}
+      <Sheet open={isFormOpen} onOpenChange={(open) => !open && handleFormClose()}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{taskToEdit ? 'Editar tarea' : 'Nueva tarea'}</SheetTitle>
+            <SheetDescription>
+              {taskToEdit
+                ? 'Modifica los detalles de la tarea'
+                : 'Crea una nueva tarea para este objetivo'}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <TaskForm
+              objectiveId={objectiveId}
+              task={taskToEdit}
+              onSuccess={handleFormClose}
+              onCancel={handleFormClose}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Delete Confirmation */}
+      <TaskDeleteDialog
+        task={taskToDelete}
+        open={!!taskToDelete}
+        onOpenChange={(open) => !open && setTaskToDelete(null)}
+        onConfirm={handleDeleteTask}
+        isDeleting={deleteMutation.isPending}
+      />
+    </div>
+  );
+}

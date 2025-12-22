@@ -15,6 +15,10 @@
   - Create handler that aggregates records by date
   - Calculate streak statistics
 
+
+- [ ] **Fix bad login message** - query: email[{ test@rafiki.lat}]: query: email[{ test@rafiki.lat}]: db: user not found
+
+
 ### UX/Design Questions
 
 - [ ] **Completed Objectives Display** - We don't know how to visually handle objectives with `status: completado` to make them look nice. Questions to resolve:
@@ -23,3 +27,5 @@
   - Should they be moved to a separate "Completed" section?
   - Should the heatmap still be interactive or read-only?
   - How to differentiate from archived objectives?
+
+
