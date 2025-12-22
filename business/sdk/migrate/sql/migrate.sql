@@ -751,3 +751,12 @@ COMMENT ON COLUMN tasks.contribution IS 'Contribution to objective progress (1-1
 COMMENT ON COLUMN tasks.objective_id IS 'NULL for inbox tasks, UUID for objective-linked tasks';
 COMMENT ON COLUMN tasks.status IS 'Task status: pending, completed, cancelled';
 COMMENT ON COLUMN tasks.completed_at IS 'Timestamp when task was completed (NULL if not completed)';
+
+
+-- Version: 17
+-- Description: Allow tasks for frequency objectives with NULL contribution
+-- Business layer now enforces:
+-- - RESULT objectives: contribution REQUIRED (1-10)
+-- - FREQUENCY objectives: contribution must be NULL
+-- - Inbox tasks: contribution must be NULL
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_contribution_required;

@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TaskItemProps {
@@ -59,6 +59,14 @@ export function TaskItem({ task, onToggle, onEdit, onDelete, isLoading }: TaskIt
       {task.contribution && (
         <Badge variant="outline" className="shrink-0 bg-blue-50 text-blue-700 border-blue-200">
           +{task.contribution}
+        </Badge>
+      )}
+
+      {/* Frequency indicator - shown for objective-linked tasks without contribution */}
+      {task.objectiveId && !task.contribution && (
+        <Badge variant="outline" className="shrink-0 bg-purple-50 text-purple-700 border-purple-200">
+          <Calendar className="h-3 w-3 mr-1" />
+          Frecuencia
         </Badge>
       )}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/contribution"
 	"github.com/francowini/rafiki/business/types/taskstatus"
 	"github.com/francowini/rafiki/foundation/logger"
 )
@@ -38,6 +39,7 @@ type ExtBusiness interface {
 	Complete(ctx context.Context, task Task) (Task, error)
 	Uncomplete(ctx context.Context, task Task) (Task, error)
 	Cancel(ctx context.Context, task Task) (Task, error)
+	MoveTask(ctx context.Context, task Task, targetObjectiveID uuid.UUID, cont *contribution.Contribution) (Task, error)
 	Query(ctx context.Context, filter QueryFilter, orderBy order.By, page page.Page) ([]Task, error)
 	QueryByID(ctx context.Context, taskID uuid.UUID) (Task, error)
 	Count(ctx context.Context, filter QueryFilter) (int, error)
@@ -118,14 +120,18 @@ func (b *Business) Create(ctx context.Context, nt NewTask) (Task, error) {
 			return Task{}, ErrNotObjectiveOwner
 		}
 
-		// Contribution required for objective-linked tasks
-		if nt.Contribution == nil {
-			return Task{}, ErrContributionRequiredForLink
+		// RESULT objectives: contribution REQUIRED (1-10)
+		if objective.TrackingType.IsResult() {
+			if nt.Contribution == nil {
+				return Task{}, ErrContributionRequiredForLink
+			}
 		}
 
-		// Only result tracking type allows contribution
-		if !objective.TrackingType.IsResult() {
-			return Task{}, ErrOnlyResultAllowsContribution
+		// FREQUENCY objectives: contribution must be NULL
+		if objective.TrackingType.IsFrequency() {
+			if nt.Contribution != nil {
+				return Task{}, ErrFrequencyTasksNoContribution
+			}
 		}
 	}
 
@@ -281,6 +287,78 @@ func (b *Business) Cancel(ctx context.Context, task Task) (Task, error) {
 
 	b.log.Info(ctx, "taskbus.cancel.success", "taskID", task.ID)
 	return task, nil
+}
+
+// MoveTask relocates an inbox task to an objective. This creates a new task
+// with the target objective and deletes the original. This pattern preserves
+// parent-reference immutability and maintains audit trails.
+func (b *Business) MoveTask(ctx context.Context, task Task, targetObjectiveID uuid.UUID, cont *contribution.Contribution) (Task, error) {
+	b.log.Info(ctx, "taskbus.move", "taskID", task.ID, "targetObjectiveID", targetObjectiveID)
+
+	// Can only move inbox tasks
+	if task.ObjectiveID != nil {
+		b.log.Error(ctx, "taskbus.move", "err", "task already linked to objective")
+		return Task{}, ErrTaskAlreadyLinked
+	}
+
+	// Validate target objective
+	objective, err := b.objectiveBus.QueryByID(ctx, targetObjectiveID)
+	if err != nil {
+		if errors.Is(err, objectivebus.ErrNotFound) {
+			b.log.Error(ctx, "taskbus.move.objective_not_found", "objectiveID", targetObjectiveID)
+			return Task{}, ErrObjectiveNotFound
+		}
+		b.log.Error(ctx, "taskbus.move.query_objective", "err", err, "objectiveID", targetObjectiveID)
+		return Task{}, fmt.Errorf("objective.querybyid: objectiveID[%s]: %w", targetObjectiveID, err)
+	}
+
+	// Security: Verify authenticated user owns both the task and target objective
+	if objective.UserID != task.UserID {
+		b.log.Error(ctx, "taskbus.move.ownership_violation", "taskUserID", task.UserID, "objectiveUserID", objective.UserID)
+		return Task{}, ErrNotObjectiveOwner
+	}
+
+	// Validate contribution based on tracking type
+	var contPtr *contribution.Contribution
+	if objective.TrackingType.IsResult() {
+		// Contribution required for result objectives
+		if cont == nil {
+			b.log.Error(ctx, "taskbus.move.contribution_required", "objectiveID", targetObjectiveID)
+			return Task{}, ErrContributionRequiredForLink
+		}
+		contPtr = cont
+	} else if objective.TrackingType.IsFrequency() {
+		// Contribution not allowed for frequency objectives
+		if cont != nil {
+			b.log.Error(ctx, "taskbus.move.contribution_not_allowed", "objectiveID", targetObjectiveID)
+			return Task{}, ErrFrequencyTasksNoContribution
+		}
+		// contPtr remains nil
+	}
+
+	// Create new task with target objective
+	newTask := NewTask{
+		UserID:       task.UserID,
+		ObjectiveID:  &targetObjectiveID,
+		Title:        task.Title,
+		Description:  task.Description,
+		Contribution: contPtr,
+	}
+
+	createdTask, err := b.Create(ctx, newTask)
+	if err != nil {
+		b.log.Error(ctx, "taskbus.move.create_failed", "err", err)
+		return Task{}, fmt.Errorf("create new task: %w", err)
+	}
+
+	// Delete original inbox task
+	if err := b.Delete(ctx, task); err != nil {
+		// Delegate handler - log but don't fail since new task is already created
+		b.log.Error(ctx, "taskbus.move.delete_original", "taskID", task.ID, "err", err)
+	}
+
+	b.log.Info(ctx, "taskbus.move.success", "oldTaskID", task.ID, "newTaskID", createdTask.ID)
+	return createdTask, nil
 }
 
 // Query retrieves tasks based on filter criteria.

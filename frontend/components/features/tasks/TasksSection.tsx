@@ -24,10 +24,17 @@ import type { Task, CompleteTaskResponse } from '@/lib/types';
 interface TasksSectionProps {
   objectiveId: string;
   objectiveName: string;
-  targetMetric: number;
+  targetMetric?: number;
+  trackingType: 'result' | 'frequency';
 }
 
-export function TasksSection({ objectiveId, objectiveName, targetMetric }: TasksSectionProps) {
+export function TasksSection({
+  objectiveId,
+  objectiveName,
+  targetMetric,
+  trackingType,
+}: TasksSectionProps) {
+  const isFrequencyObjective = trackingType === 'frequency';
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -83,12 +90,18 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
           onSuccess: (response: CompleteTaskResponse) => {
             setCompletingTaskId(null);
 
+            // Build description based on tracking type
+            let description = 'Tarea marcada como completada';
+            if (isFrequencyObjective) {
+              description = 'Tarea completada (checklist)';
+            } else if (response.objectiveProgress && targetMetric) {
+              description = `+${response.task.contribution} -> ${response.objectiveProgress}/${targetMetric} ${objectiveName}`;
+            }
+
             // Show toast with undo - 10 second duration
             const { id } = toast({
               title: 'Tarea completada',
-              description: response.objectiveProgress
-                ? `+${response.task.contribution} → ${response.objectiveProgress}/${targetMetric} ${objectiveName}`
-                : 'Tarea marcada como completada',
+              description,
               duration: 10000,
               action: (
                 <ToastAction
@@ -103,7 +116,7 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
                         toast({
                           variant: 'destructive',
                           title: 'Error',
-                          description: 'No se pudo deshacer la acción',
+                          description: 'No se pudo deshacer la accion',
                         });
                       },
                     });
@@ -127,7 +140,7 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
         });
       }
     },
-    [tasksData, completeMutation, uncompleteMutation, toast, dismiss, objectiveName, targetMetric],
+    [tasksData, completeMutation, uncompleteMutation, toast, dismiss, objectiveName, targetMetric, isFrequencyObjective],
   );
 
   const handleDeleteTask = useCallback(() => {
@@ -184,6 +197,7 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
             <TaskForm
               objectiveId={objectiveId}
               task={taskToEdit}
+              isFrequencyObjective={isFrequencyObjective}
               onSuccess={handleFormClose}
               onCancel={handleFormClose}
             />

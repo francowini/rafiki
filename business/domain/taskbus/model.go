@@ -19,8 +19,8 @@ var (
 	ErrMissingUserID                = errors.New("userID is required for querying tasks")
 	ErrNotObjectiveOwner            = errors.New("user does not own the specified objective")
 	ErrObjectiveNotFound            = errors.New("objective not found")
-	ErrContributionRequiredForLink  = errors.New("contribution required when task is linked to objective")
-	ErrOnlyResultAllowsContribution = errors.New("contribution only valid for result tracking type objectives")
+	ErrContributionRequiredForLink  = errors.New("contribution required when task is linked to result objective")
+	ErrFrequencyTasksNoContribution = errors.New("frequency objectives cannot have contribution values")
 	ErrStatusChangeMustUseMethod    = errors.New("status changes must use Complete/Uncomplete/Cancel methods")
 	ErrAlreadyCompleted             = errors.New("task is already completed")
 	ErrAlreadyCanceled              = errors.New("task is already canceled")
@@ -30,6 +30,7 @@ var (
 	ErrCannotSetContributionOnInbox = errors.New("cannot set contribution on inbox task")
 	ErrCannotCancelCompletedTask    = errors.New("cannot cancel completed task (use Uncomplete first)")
 	ErrContributionNotAllowedInbox  = errors.New("contribution not allowed for inbox tasks")
+	ErrTaskAlreadyLinked            = errors.New("task already linked to objective")
 )
 
 // Task represents a task in the system (inbox or objective-linked).

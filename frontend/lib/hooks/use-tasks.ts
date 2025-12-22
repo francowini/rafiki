@@ -15,6 +15,7 @@ import type {
   CompleteTaskResponse,
   TaskStatus,
   TaskFilters,
+  MoveTaskRequest,
 } from '@/lib/types';
 
 // ============================================================================
@@ -262,6 +263,27 @@ export function useUncompleteTask(): UseMutationResult<Task, Error, string, Unco
         });
         queryClient.invalidateQueries({ queryKey: queryKeys.objectives.lists() });
       }
+    },
+  });
+}
+
+// ============================================================================
+// Move Task Hook (Inbox → Objective)
+// ============================================================================
+
+export function useMoveTask(): UseMutationResult<
+  Task,
+  Error,
+  { taskId: string; data: MoveTaskRequest }
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, data }) => api.tasks.move(taskId, data),
+    onSuccess: () => {
+      // F20: Invalidate root keys to affect ALL related queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.objectives.all });
     },
   });
 }

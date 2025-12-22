@@ -408,6 +408,12 @@ export interface UpdateTask {
 export interface CompleteTaskResponse {
   task: Task;
   objectiveProgress: number | null;
+  objectiveTracking: 'result' | 'frequency' | null; // Tracking type for smart prompt
+}
+
+export interface MoveTaskRequest {
+  objectiveId: string;
+  contribution: number | null;
 }
 
 export interface TaskListResponse {
