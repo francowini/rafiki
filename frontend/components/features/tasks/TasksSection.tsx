@@ -94,8 +94,19 @@ export function TasksSection({ objectiveId, objectiveName, targetMetric }: Tasks
                 <ToastAction
                   altText="Deshacer"
                   onClick={() => {
-                    uncompleteMutation.mutate(taskId);
-                    dismiss(id);
+                    uncompleteMutation.mutate(taskId, {
+                      onSuccess: () => {
+                        dismiss(id);
+                      },
+                      onError: () => {
+                        dismiss(id);
+                        toast({
+                          variant: 'destructive',
+                          title: 'Error',
+                          description: 'No se pudo deshacer la acción',
+                        });
+                      },
+                    });
                   }}
                 >
                   Deshacer
