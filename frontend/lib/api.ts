@@ -29,6 +29,12 @@ import type {
   ObjectiveRecordListResponse,
   NewObjectiveRecord,
   ObjectiveActivityData,
+  Task,
+  TaskListResponse,
+  NewTask,
+  UpdateTask,
+  TaskStatus,
+  CompleteTaskResponse,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -512,6 +518,76 @@ export const api = {
 
     getActivity: async (objectiveId: string, year: number): Promise<ObjectiveActivityData> => {
       return fetchAPI<ObjectiveActivityData>(`/v1/objectives/${objectiveId}/activity?year=${year}`);
+    },
+  },
+
+  tasks: {
+    getAll: async (params?: {
+      page?: number;
+      rows?: number;
+      orderBy?: string;
+      objectiveId?: string;
+      status?: TaskStatus;
+      inboxOnly?: boolean;
+    }): Promise<TaskListResponse> => {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.rows) queryParams.set('rows', params.rows.toString());
+      if (params?.orderBy) queryParams.set('orderBy', params.orderBy);
+      if (params?.objectiveId) queryParams.set('objectiveId', params.objectiveId);
+      if (params?.status) queryParams.set('status', params.status);
+      if (params?.inboxOnly) queryParams.set('inboxOnly', 'true');
+
+      const query = queryParams.toString();
+      return fetchAPI<TaskListResponse>(`/v1/tasks${query ? `?${query}` : ''}`);
+    },
+
+    getByObjective: async (
+      objectiveId: string,
+      params?: { status?: TaskStatus },
+    ): Promise<TaskListResponse> => {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.set('status', params.status);
+      const query = queryParams.toString();
+      return fetchAPI<TaskListResponse>(
+        `/v1/objectives/${objectiveId}/tasks${query ? `?${query}` : ''}`,
+      );
+    },
+
+    getById: async (id: string): Promise<Task> => {
+      return fetchAPI<Task>(`/v1/tasks/${id}`);
+    },
+
+    create: async (data: NewTask): Promise<Task> => {
+      return fetchAPI<Task>('/v1/tasks', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    update: async (id: string, data: UpdateTask): Promise<Task> => {
+      return fetchAPI<Task>(`/v1/tasks/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+
+    delete: async (id: string): Promise<void> => {
+      return fetchAPI<void>(`/v1/tasks/${id}`, {
+        method: 'DELETE',
+      });
+    },
+
+    complete: async (id: string): Promise<CompleteTaskResponse> => {
+      return fetchAPI<CompleteTaskResponse>(`/v1/tasks/${id}/complete`, {
+        method: 'PUT',
+      });
+    },
+
+    uncomplete: async (id: string): Promise<Task> => {
+      return fetchAPI<Task>(`/v1/tasks/${id}/uncomplete`, {
+        method: 'PUT',
+      });
     },
   },
 };

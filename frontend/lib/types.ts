@@ -366,3 +366,59 @@ export interface ObjectiveActivityData {
   streakDays: number;
   longestStreak: number;
 }
+
+// ============================================================================
+// Task Types
+// ============================================================================
+
+export type TaskStatus = 'pending' | 'completed' | 'cancelled';
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  pending: 'Pendiente',
+  completed: 'Completada',
+  cancelled: 'Cancelada',
+};
+
+export interface Task {
+  id: string;
+  objectiveId: string | null;
+  title: string;
+  description: string | null;
+  contribution: number | null;
+  status: TaskStatus;
+  completedAt: string | null;
+  dateCreated: string;
+  dateUpdated: string;
+}
+
+export interface NewTask {
+  objectiveId: string | null;
+  title: string;
+  description?: string | null;
+  contribution?: number | null;
+}
+
+export interface UpdateTask {
+  title?: string;
+  description?: string | null;
+  clearDescription?: boolean;
+  contribution?: number | null;
+}
+
+export interface CompleteTaskResponse {
+  task: Task;
+  objectiveProgress: number | null;
+}
+
+export interface TaskListResponse {
+  items: Task[];
+  total: number;
+  page: number;
+  rowsPerPage: number;
+}
+
+export interface TaskFilters {
+  objectiveId?: string;
+  status?: TaskStatus;
+  inboxOnly?: boolean;
+}

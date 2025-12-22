@@ -1,3 +1,5 @@
+import type { TaskFilters, TaskStatus } from './types';
+
 export interface ObjectiveFilters {
   lifeVisionId?: string;
   status?: 'active' | 'completed' | 'abandoned' | 'paused';
@@ -24,5 +26,15 @@ export const queryKeys = {
     lists: () => [...queryKeys.lifeVisions.all, 'list'] as const,
     list: (filters?: { valueId?: string; includeArchived?: boolean }) =>
       [...queryKeys.lifeVisions.lists(), filters] as const,
+  },
+
+  tasks: {
+    all: ['tasks'] as const,
+    lists: () => [...queryKeys.tasks.all, 'list'] as const,
+    list: (filters?: TaskFilters) => [...queryKeys.tasks.lists(), filters] as const,
+    details: () => [...queryKeys.tasks.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.tasks.details(), id] as const,
+    byObjective: (objectiveId: string, status?: TaskStatus) =>
+      [...queryKeys.tasks.all, 'objective', objectiveId, status] as const,
   },
 } as const;

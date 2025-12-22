@@ -13,6 +13,19 @@ This document catalogs critical errors specific to frontend (TypeScript/React) d
 - [F5. Accessibility: Clickable Div Without Keyboard Support](#f5-accessibility-clickable-div-without-keyboard-support)
 - [F6. Storage: Unguarded localStorage JSON.parse](#f6-storage-unguarded-localstorage-jsonparse)
 - [F7. Dates: Unvalidated Date Parsing](#f7-dates-unvalidated-date-parsing)
+- [F8. Async: Using Promise.all for Batch Operations with Partial Failure Risk](#f8-async-using-promiseall-for-batch-operations-with-partial-failure-risk)
+- [F9. State Management: Not Resetting Dialog State on Close](#f9-state-management-not-resetting-dialog-state-on-close)
+- [F10. Accessibility: Labels Not Associated with Form Controls](#f10-accessibility-labels-not-associated-with-form-controls)
+- [F11. Error Handling: Missing Try-Catch for Follow-up Async Calls](#f11-error-handling-missing-try-catch-for-follow-up-async-calls)
+- [F12. React Query: Cache Key Not Including All Parameters](#f12-react-query-cache-key-not-including-all-parameters)
+- [F13. Optimistic Updates: Weak Temporary ID Generation](#f13-optimistic-updates-weak-temporary-id-generation)
+- [F14. Route Parameters: Unvalidated Dynamic Segments](#f14-route-parameters-unvalidated-dynamic-segments)
+- [F15. Rendering: State Updates During Render](#f15-rendering-state-updates-during-render)
+- [F16. UI Controls: Not Disabling for Terminal States](#f16-ui-controls-not-disabling-for-terminal-states)
+- [F17. Functions: Silent Empty Returns for Unknown Values](#f17-functions-silent-empty-returns-for-unknown-values)
+- [F18. React Query: Readonly Query Keys from getQueriesData](#f18-react-query-readonly-query-keys-from-getqueriesdata)
+- [F19. Types: Null Coalescing for Optional-to-Nullable Conversion](#f19-types-null-coalescing-for-optional-to-nullable-conversion)
+- [F20. React Query: Cache Invalidation Key Hierarchy Mismatch](#f20-react-query-cache-invalidation-key-hierarchy-mismatch)
 
 ---
 
@@ -941,3 +954,167 @@ function getLabel(type: string, entityId?: string): string {
 - [ ] Return user-friendly fallback for unknown values
 - [ ] Log warning with context (entity ID, actual value) for debugging
 - [ ] Consider if unknown values should throw or be reported to error tracking
+
+---
+
+## F18. React Query: Readonly Query Keys from getQueriesData
+
+### Severity: Medium (TypeScript Error)
+
+### Problem
+
+When using `queryClient.getQueriesData()`, the returned query keys are `readonly unknown[]`, not `unknown[]`. Storing them in a mutable array type causes TypeScript errors.
+
+### Bad Example
+
+```typescript
+// BAD: Mutable array type doesn't match readonly keys
+const previousLists: Array<{ key: unknown[]; data: TaskListResponse }> = [];
+const listQueries = queryClient.getQueriesData<TaskListResponse>({
+  queryKey: queryKeys.tasks.lists(),
+});
+
+listQueries.forEach(([key, data]) => {
+  if (!data) return;
+  previousLists.push({ key, data }); // Error: readonly unknown[] not assignable to unknown[]
+});
+```
+
+### Good Example
+
+```typescript
+// GOOD: Use readonly unknown[] for query keys
+const previousLists: Array<{ key: readonly unknown[]; data: TaskListResponse }> = [];
+const listQueries = queryClient.getQueriesData<TaskListResponse>({
+  queryKey: queryKeys.tasks.lists(),
+});
+
+listQueries.forEach(([key, data]) => {
+  if (!data) return;
+  previousLists.push({ key, data }); // Works correctly
+});
+```
+
+### Checklist
+
+- [ ] Use `readonly unknown[]` when storing query keys from `getQueriesData`
+- [ ] Update related interface definitions to use readonly
+
+---
+
+## F19. Types: Null Coalescing for Optional-to-Nullable Conversion
+
+### Severity: Medium (TypeScript Error)
+
+### Problem
+
+When a Zod schema defines a field as `optional().nullable()`, the inferred type is `T | null | undefined`. However, API types often expect `T | null` (no undefined). Passing the raw value causes type errors.
+
+### Bad Example
+
+```typescript
+// Schema: z.string().uuid().optional().nullable()
+// Inferred type: string | null | undefined
+
+// BAD: Type error when API expects string | null
+await api.tasks.create({
+  objectiveId: data.objectiveId, // Error: undefined not assignable to string | null
+  title: data.title,
+});
+```
+
+### Good Example
+
+```typescript
+// GOOD: Use null coalescing to convert undefined to null
+await api.tasks.create({
+  objectiveId: data.objectiveId ?? null, // Converts undefined to null
+  title: data.title,
+});
+```
+
+### Checklist
+
+- [ ] Use `?? null` when passing optional values to APIs expecting nullable types
+- [ ] Consider if the schema should use `.nullable()` instead of `.optional().nullable()`
+- [ ] Document API type expectations in type definitions
+
+---
+
+## F20. React Query: Cache Invalidation Key Hierarchy Mismatch
+
+### Severity: Major (Cache Bug - Data Not Refreshing)
+
+### Problem
+
+When using hierarchical query keys, invalidating a parent key only affects queries that start with that exact prefix. If you have queries using different key structures (e.g., `['tasks', 'list']` vs `['tasks', 'objective', id]`), invalidating one won't affect the other.
+
+### Bad Example
+
+```typescript
+// Query keys with different hierarchies
+const queryKeys = {
+  tasks: {
+    all: ['tasks'] as const,
+    lists: () => [...queryKeys.tasks.all, 'list'] as const,           // ['tasks', 'list']
+    byObjective: (id: string) => [...queryKeys.tasks.all, 'objective', id] as const, // ['tasks', 'objective', id]
+  },
+};
+
+// Hook uses byObjective
+export function useTasksByObjective(objectiveId: string) {
+  return useQuery({
+    queryKey: queryKeys.tasks.byObjective(objectiveId), // ['tasks', 'objective', id]
+    queryFn: () => api.tasks.getByObjective(objectiveId),
+  });
+}
+
+// BAD: Create mutation only invalidates 'lists', not 'byObjective'
+export function useCreateTask() {
+  return useMutation({
+    mutationFn: (data) => api.tasks.create(data),
+    onSuccess: () => {
+      // Only invalidates ['tasks', 'list', ...] - NOT ['tasks', 'objective', ...]!
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.lists() });
+    },
+  });
+}
+// Result: Task created but list doesn't refresh because query keys don't match
+```
+
+### Good Example
+
+```typescript
+// GOOD: Invalidate the root key to affect ALL task queries
+export function useCreateTask() {
+  return useMutation({
+    mutationFn: (data) => api.tasks.create(data),
+    onSuccess: () => {
+      // Invalidates ALL queries starting with ['tasks']
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+    },
+  });
+}
+```
+
+### Alternative: Restructure Keys Under Common Parent
+
+```typescript
+// ALTERNATIVE: Structure byObjective under lists
+const queryKeys = {
+  tasks: {
+    all: ['tasks'] as const,
+    lists: () => [...queryKeys.tasks.all, 'list'] as const,
+    list: (filters?) => [...queryKeys.tasks.lists(), filters] as const,
+    // Now byObjective is under lists, so invalidating lists() affects it
+    byObjective: (id: string, status?) => [...queryKeys.tasks.lists(), 'objective', id, status] as const,
+  },
+};
+```
+
+### Checklist
+
+- [ ] Verify query key hierarchy: child keys should share parent prefixes
+- [ ] When invalidating, use the most specific common ancestor
+- [ ] Test that mutations properly refresh all related queries
+- [ ] Consider using `queryKeys.all` when in doubt about which queries to invalidate

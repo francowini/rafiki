@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { ObjectiveHeatmap } from './ObjectiveHeatmap';
 import { FrequencyLogDialog } from './FrequencyLogDialog';
+import { TasksSection } from '@/components/features/tasks';
 import {
   useObjective,
   useObjectiveRecords,
@@ -183,6 +184,15 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
           <Progress value={progress} className="h-3" />
           <p className="text-sm text-muted-foreground text-center">{progress}% completado</p>
         </div>
+      )}
+
+      {/* Tasks section for Result objectives */}
+      {isResult && objective.targetMetric && (
+        <TasksSection
+          objectiveId={objectiveId}
+          objectiveName={objective.title}
+          targetMetric={objective.targetMetric}
+        />
       )}
 
       {/* Log record button for Frequency */}
