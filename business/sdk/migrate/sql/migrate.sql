@@ -829,3 +829,149 @@ CREATE TRIGGER validate_task_contribution_trigger
     EXECUTE FUNCTION validate_task_contribution();
 
 COMMENT ON FUNCTION validate_task_contribution() IS 'Defense-in-depth validation for task contribution rules';
+
+
+-- Version: 19
+-- Description: Add begin_metric column and view_objective_activity view for Query Domain
+-- Enables objective progress calculation and activity aggregation
+
+-- =============================================================================
+-- Add begin_metric column to objectives table
+-- =============================================================================
+-- This column stores the starting metric value for result-type objectives
+-- Enables progress calculation: (current_metric - begin_metric) / (target_metric - begin_metric)
+-- Only applies to result-type objectives; NULL for frequency-type objectives
+
+ALTER TABLE objectives
+ADD COLUMN IF NOT EXISTS begin_metric INTEGER NULL
+CHECK (begin_metric IS NULL OR (begin_metric >= 0 AND (target_metric IS NULL OR begin_metric != target_metric)));
+
+COMMENT ON COLUMN objectives.begin_metric IS 'Starting metric value for result-type objectives; enables progress calculation (NULL for frequency-type)';
+
+-- =============================================================================
+-- Create indexes for view performance and filtering
+-- =============================================================================
+
+-- Composite index for LEFT JOIN in view_objective_activity
+-- Supports: WHERE objective_id = X AND record_date >= Y
+CREATE INDEX IF NOT EXISTS objective_records_objective_date_composite_idx
+ON objective_records(objective_id, record_date DESC)
+WHERE status IN ('completed', 'intentionally_skipped', 'skipped');
+
+COMMENT ON INDEX objective_records_objective_date_composite_idx IS 'Supports view_objective_activity LEFT JOIN and date-range filtering';
+
+-- Index for filtering objectives by begin_metric
+CREATE INDEX IF NOT EXISTS objectives_begin_metric_idx
+ON objectives(user_id, begin_metric DESC)
+WHERE tracking_type = 'result' AND archived_at IS NULL;
+
+COMMENT ON INDEX objectives_begin_metric_idx IS 'Supports queries filtering by result-type objectives with begin_metric set';
+
+-- =============================================================================
+-- Create view_objective_activity for Query Domain
+-- =============================================================================
+-- This view aggregates objective activity from objective_records
+-- Combines result-type and frequency-type objectives with their activity data
+-- LEFT JOIN ensures all non-archived objectives appear even without recent records
+-- Limits to 365 days for performance (typical year-based heatmap)
+
+CREATE OR REPLACE VIEW view_objective_activity AS
+SELECT
+    o.objective_id,
+    o.user_id,
+    o.title,
+    o.tracking_type,
+    o.status,
+    o.target_metric,
+    o.current_metric,
+    o.begin_metric,
+    o.frequency_type,
+    o.frequency_count,
+    o.compliance_target_pct,
+    COALESCE(activity.record_date, CURRENT_DATE) AS activity_date,
+    COALESCE(activity.activity_count, 0) AS activity_count,
+    COALESCE(activity.status, ARRAY['no_record']) AS activity_status,
+    o.date_created,
+    o.date_updated
+FROM objectives o
+LEFT JOIN (
+    SELECT
+        objective_id,
+        record_date,
+        COUNT(*) AS activity_count,
+        ARRAY_AGG(DISTINCT status ORDER BY status) AS status
+    FROM objective_records
+    WHERE record_date >= CURRENT_DATE - INTERVAL '365 days'
+    GROUP BY objective_id, record_date
+) activity ON o.objective_id = activity.objective_id
+WHERE o.archived_at IS NULL;
+
+COMMENT ON VIEW view_objective_activity IS 'Aggregates objective activity from records; supports year-based heatmap queries';
+
+-- =============================================================================
+-- Fix constraints to support inverse objectives (begin > target) and contribution=0
+-- =============================================================================
+
+-- Fix objectives_progress_bounds: Allow current_metric > target_metric for inverse objectives
+ALTER TABLE objectives DROP CONSTRAINT IF EXISTS objectives_progress_bounds;
+ALTER TABLE objectives ADD CONSTRAINT objectives_progress_bounds CHECK (
+    current_metric IS NULL OR current_metric >= 0
+);
+
+-- Fix tasks contribution: Allow contribution = 0 for tasks that don't contribute numerically
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_contribution_check;
+ALTER TABLE tasks ADD CONSTRAINT tasks_contribution_check CHECK (
+    contribution IS NULL OR (contribution >= 0 AND contribution <= 10)
+);
+
+-- Update trigger function to allow contribution = 0
+CREATE OR REPLACE FUNCTION validate_task_contribution()
+RETURNS TRIGGER AS $$
+DECLARE
+    objective_tracking_type TEXT;
+BEGIN
+    -- If no objective_id, contribution should be NULL (inbox task)
+    IF NEW.objective_id IS NULL THEN
+        IF NEW.contribution IS NOT NULL THEN
+            RAISE EXCEPTION 'Inbox tasks cannot have contribution'
+                USING ERRCODE = '23514';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    -- Get the objective's tracking type
+    SELECT tracking_type INTO objective_tracking_type
+    FROM objectives
+    WHERE objective_id = NEW.objective_id;
+
+    -- If objective not found, let FK constraint handle it
+    IF objective_tracking_type IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Rule 2: Result objectives require contribution 0-10
+    IF objective_tracking_type = 'result' THEN
+        IF NEW.contribution IS NULL THEN
+            RAISE EXCEPTION 'Result objective tasks require contribution'
+                USING ERRCODE = '23514';
+        END IF;
+        IF NEW.contribution < 0 OR NEW.contribution > 10 THEN
+            RAISE EXCEPTION 'Contribution must be between 0 and 10'
+                USING ERRCODE = '23514';
+        END IF;
+    END IF;
+
+    -- Rule 3: Frequency objectives must have NULL contribution
+    IF objective_tracking_type = 'frequency' THEN
+        IF NEW.contribution IS NOT NULL THEN
+            RAISE EXCEPTION 'Frequency objective tasks cannot have contribution'
+                USING ERRCODE = '23514';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON CONSTRAINT objectives_progress_bounds ON objectives IS 'Allows current_metric >= 0; upper bound validated by business logic for inverse objectives';
+COMMENT ON CONSTRAINT tasks_contribution_check ON tasks IS 'Contribution 0-10 scale; 0 for tasks tracked without numeric contribution';

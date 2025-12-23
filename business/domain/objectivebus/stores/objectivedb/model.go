@@ -9,6 +9,7 @@ import (
 
 	"github.com/francowini/rafiki/business/domain/objectivebus"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
+	"github.com/francowini/rafiki/business/types/beginmetric"
 	"github.com/francowini/rafiki/business/types/compliancepct"
 	"github.com/francowini/rafiki/business/types/currentmetric"
 	"github.com/francowini/rafiki/business/types/frequencycount"
@@ -29,6 +30,7 @@ type objective struct {
 	Status              string     `db:"status"`
 	TargetMetric        *int       `db:"target_metric"`
 	CurrentMetric       *int       `db:"current_metric"`
+	BeginMetric         *int       `db:"begin_metric"`
 	FrequencyType       *string    `db:"frequency_type"`
 	FrequencyCount      *int       `db:"frequency_count"`
 	ComplianceTargetPct *int       `db:"compliance_target_pct"`
@@ -75,6 +77,12 @@ func toDBObjectiveEncrypted(bus objectivebus.Objective, enc encrypt.Encryptor) (
 		currentMetricVal = &v
 	}
 
+	var beginMetricVal *int
+	if bus.BeginMetric != nil {
+		v := bus.BeginMetric.Value()
+		beginMetricVal = &v
+	}
+
 	var frequencyCountVal *int
 	if bus.FrequencyCount != nil {
 		v := bus.FrequencyCount.Value()
@@ -90,6 +98,7 @@ func toDBObjectiveEncrypted(bus objectivebus.Objective, enc encrypt.Encryptor) (
 		Status:              bus.Status.String(),
 		TargetMetric:        targetMetricVal,
 		CurrentMetric:       currentMetricVal,
+		BeginMetric:         beginMetricVal,
 		FrequencyType:       frequencyType,
 		FrequencyCount:      frequencyCountVal,
 		ComplianceTargetPct: complianceTargetPct,
@@ -160,6 +169,15 @@ func toBusObjectiveDecrypted(db objective, enc encrypt.Encryptor) (objectivebus.
 		currentMetricPtr = &cm
 	}
 
+	var beginMetricPtr *beginmetric.BeginMetric
+	if db.BeginMetric != nil {
+		bm, err := beginmetric.Parse(*db.BeginMetric)
+		if err != nil {
+			return objectivebus.Objective{}, fmt.Errorf("parse begin_metric: %w", err)
+		}
+		beginMetricPtr = &bm
+	}
+
 	var frequencyCountPtr *frequencycount.FrequencyCount
 	if db.FrequencyCount != nil {
 		fc, err := frequencycount.Parse(*db.FrequencyCount)
@@ -184,6 +202,7 @@ func toBusObjectiveDecrypted(db objective, enc encrypt.Encryptor) (objectivebus.
 		Status:              status,
 		TargetMetric:        targetMetricPtr,
 		CurrentMetric:       currentMetricPtr,
+		BeginMetric:         beginMetricPtr,
 		FrequencyType:       frequencyTypePtr,
 		FrequencyCount:      frequencyCountPtr,
 		ComplianceTargetPct: complianceTargetPctPtr,

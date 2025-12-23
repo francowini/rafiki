@@ -21,6 +21,7 @@ import (
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/domain/valuebus"
 	"github.com/francowini/rafiki/business/domain/vexportbus"
+	"github.com/francowini/rafiki/business/domain/vobjectiveactivitybus"
 	"github.com/francowini/rafiki/foundation/logger"
 	"github.com/francowini/rafiki/foundation/web"
 )
@@ -60,16 +61,17 @@ func WithFileServer(react bool, static embed.FS, dir, path string) func(opts *Op
 
 // BusConfig contains the business layer dependencies for route handlers.
 type BusConfig struct {
-	ThinkBus           *thinkbus.Business
-	MomentBus          *momentbus.Business
-	ValueBus           valuebus.ExtBusiness
-	LifeVisionBus      lifevisionbus.ExtBusiness
-	ObjectiveBus       objectivebus.ExtBusiness
-	ObjectiveRecordBus objectiverecordbus.ExtBusiness
-	TaskBus            taskbus.ExtBusiness
-	VExportBus         vexportbus.ExtBusiness
-	UserBus            userbus.ExtBusiness
-	Auth               *auth.Auth
+	ThinkBus              *thinkbus.Business
+	MomentBus             *momentbus.Business
+	ValueBus              valuebus.ExtBusiness
+	LifeVisionBus         lifevisionbus.ExtBusiness
+	ObjectiveBus          objectivebus.ExtBusiness
+	ObjectiveRecordBus    objectiverecordbus.ExtBusiness
+	TaskBus               taskbus.ExtBusiness
+	VExportBus            vexportbus.ExtBusiness
+	VObjectiveActivityBus vobjectiveactivitybus.ExtBusiness
+	UserBus               userbus.ExtBusiness
+	Auth                  *auth.Auth
 }
 
 // Config contains all the mandatory systems required by handlers.

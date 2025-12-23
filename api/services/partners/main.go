@@ -43,6 +43,8 @@ import (
 	"github.com/francowini/rafiki/business/domain/vexportbus/stores/vexportdb"
 	"github.com/francowini/rafiki/business/domain/vnotificationbus"
 	"github.com/francowini/rafiki/business/domain/vnotificationbus/stores/vnotificationdb"
+	"github.com/francowini/rafiki/business/domain/vobjectiveactivitybus"
+	"github.com/francowini/rafiki/business/domain/vobjectiveactivitybus/stores/vobjectiveactivitydb"
 	"github.com/francowini/rafiki/business/sdk/delegate"
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/migrate"
@@ -281,6 +283,10 @@ func run(ctx context.Context, log *logger.Logger) error {
 	vnotificationStore := vnotificationdb.NewStore(log, db, encryptor)
 	vnotificationBus := vnotificationbus.NewBusiness(log, vnotificationStore)
 
+	// Create vobjectiveactivity domain (query-only view domain for activity heatmaps)
+	vobjectiveactivityStore := vobjectiveactivitydb.NewStore(log, db)
+	vobjectiveactivityBus := vobjectiveactivitybus.NewBusiness(log, vobjectiveactivityStore)
+
 	// -------------------------------------------------------------------------
 	// Initialize Telegram Client (optional - only if token configured)
 
@@ -493,16 +499,17 @@ func run(ctx context.Context, log *logger.Logger) error {
 		DB:     db,
 		Tracer: tracer,
 		BusConfig: mux.BusConfig{
-			ThinkBus:           thinkBus,
-			MomentBus:          momentBus,
-			ValueBus:           valueBus,
-			LifeVisionBus:      lifeVisionBus,
-			ObjectiveBus:       objectiveBus,
-			ObjectiveRecordBus: objectiveRecordBus,
-			TaskBus:            taskBus,
-			VExportBus:         vexportBus,
-			UserBus:            userBus,
-			Auth:               authInstance,
+			ThinkBus:              thinkBus,
+			MomentBus:             momentBus,
+			ValueBus:              valueBus,
+			LifeVisionBus:         lifeVisionBus,
+			ObjectiveBus:          objectiveBus,
+			ObjectiveRecordBus:    objectiveRecordBus,
+			TaskBus:               taskBus,
+			VExportBus:            vexportBus,
+			VObjectiveActivityBus: vobjectiveactivityBus,
+			UserBus:               userBus,
+			Auth:                  authInstance,
 		},
 	}
 

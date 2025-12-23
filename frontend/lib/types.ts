@@ -282,6 +282,7 @@ export interface Objective {
   // Result fields (null if frequency)
   targetMetric?: number;
   currentMetric?: number;
+  beginMetric?: number;
 
   // Frequency fields (null if result)
   frequencyType?: FrequencyType;
@@ -305,6 +306,7 @@ export interface NewObjective {
   title: string;
   trackingType: TrackingType;
   targetMetric?: number;
+  beginMetric?: number;
   frequencyType?: FrequencyType;
   frequencyCount?: number;
   complianceTargetPct?: number;
@@ -315,6 +317,7 @@ export interface UpdateObjective {
   lifeVisionId?: string;
   status?: ObjectiveStatus;
   targetMetric?: number;
+  beginMetric?: number;
   frequencyType?: FrequencyType;
   frequencyCount?: number;
   complianceTargetPct?: number;
@@ -353,18 +356,28 @@ export interface ObjectiveRecordListResponse {
 // Activity Heatmap Types
 // ============================================================================
 
+export interface ActivityItem {
+  type: 'task' | 'record';
+  id: string;
+  title?: string;
+  contribution?: number;
+  status?: string;
+  notes?: string;
+}
+
 export interface ObjectiveActivityDay {
   date: string; // YYYY-MM-DD
-  count: number;
-  level: 0 | 1 | 2 | 3 | 4;
+  hasActivity: boolean;
+  items: ActivityItem[];
 }
 
 export interface ObjectiveActivityData {
   year: number;
   days: ObjectiveActivityDay[];
   totalCompletions: number;
-  streakDays: number;
+  currentStreak: number;
   longestStreak: number;
+  streakUnit: 'days' | 'weeks' | 'months';
 }
 
 // ============================================================================

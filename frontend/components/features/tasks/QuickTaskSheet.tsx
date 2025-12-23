@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { quickTaskSchema, type QuickTaskFormData } from '@/lib/schemas/quick-task-schema';
@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -25,6 +26,13 @@ import { Loader2 } from 'lucide-react';
 import { useCreateTask } from '@/lib/hooks/use-tasks';
 import { useObjectives } from '@/lib/hooks/use-objectives';
 import { useToast } from '@/hooks/use-toast';
+
+function getContributionLabel(value: number): string {
+  if (value <= 3) return 'Pequeño paso';
+  if (value <= 6) return 'Avance sólido';
+  if (value <= 8) return 'Gran contribución';
+  return 'Contribución máxima';
+}
 
 // Sentinel value for inbox (Radix Select doesn't handle empty strings well)
 const INBOX_VALUE = '__INBOX__';
@@ -38,6 +46,7 @@ export function QuickTaskSheet({ open, onOpenChange }: QuickTaskSheetProps) {
   const { toast } = useToast();
   const createMutation = useCreateTask();
   const { data: objectivesData } = useObjectives({ status: 'active' });
+  const [contribution, setContribution] = useState(5);
 
   const form = useForm<QuickTaskFormData>({
     resolver: zodResolver(quickTaskSchema),
@@ -49,6 +58,10 @@ export function QuickTaskSheet({ open, onOpenChange }: QuickTaskSheetProps) {
 
   const selectedObjectiveId = form.watch('objectiveId');
 
+  // Get selected objective to check tracking type
+  const selectedObjective = objectivesData?.items.find((o) => o.id === selectedObjectiveId);
+  const isResultObjective = selectedObjective?.trackingType === 'result';
+
   // Convert null to sentinel value for Select display
   const selectValue = selectedObjectiveId ?? INBOX_VALUE;
 
@@ -57,6 +70,7 @@ export function QuickTaskSheet({ open, onOpenChange }: QuickTaskSheetProps) {
     (newOpen: boolean) => {
       if (!newOpen) {
         form.reset();
+        setContribution(5);
       }
       onOpenChange(newOpen);
     },
@@ -70,10 +84,13 @@ export function QuickTaskSheet({ open, onOpenChange }: QuickTaskSheetProps) {
 
   const onSubmit = async (data: QuickTaskFormData) => {
     try {
+      // Determine contribution: required for result objectives, null otherwise
+      const contributionValue = isResultObjective ? contribution : null;
+
       await createMutation.mutateAsync({
         title: data.title,
         objectiveId: data.objectiveId ?? null,
-        contribution: null, // Inbox tasks don't have contribution
+        contribution: contributionValue,
       });
 
       toast({
@@ -128,7 +145,14 @@ export function QuickTaskSheet({ open, onOpenChange }: QuickTaskSheetProps) {
                 <SelectItem value={INBOX_VALUE}>Sin objetivo (Inbox)</SelectItem>
                 {objectivesData?.items.map((obj) => (
                   <SelectItem key={obj.id} value={obj.id}>
-                    {obj.title}
+                    <div className="flex flex-col">
+                      <span>{obj.title}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {obj.trackingType === 'result'
+                          ? `${obj.currentMetric ?? 0}/${obj.targetMetric}`
+                          : 'Frecuencia'}
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -137,6 +161,38 @@ export function QuickTaskSheet({ open, onOpenChange }: QuickTaskSheetProps) {
               Si no seleccionas un objetivo, la tarea ira a tu Inbox.
             </p>
           </div>
+
+          {/* Contribution Slider - Only for result objectives */}
+          {isResultObjective && (
+            <div className="space-y-4 bg-blue-50 rounded-lg p-4">
+              <Label className="text-base font-medium flex items-center gap-2">
+                Contribución al objetivo
+                <span className="text-destructive">*</span>
+              </Label>
+
+              <div className="text-center py-2">
+                <span className="text-4xl font-bold text-blue-600">+{contribution}</span>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {getContributionLabel(contribution)}
+                </p>
+              </div>
+
+              <Slider
+                min={1}
+                max={10}
+                step={1}
+                value={[contribution]}
+                onValueChange={(value) => setContribution(value[0])}
+                className="py-4"
+              />
+
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Pequeño</span>
+                <span>Moderado</span>
+                <span>Grande</span>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <Button

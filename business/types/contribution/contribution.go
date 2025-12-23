@@ -1,4 +1,4 @@
-// Package contribution represents a validated contribution value (1-10 scale) in the system.
+// Package contribution represents a validated contribution value (0-10 scale) in the system.
 package contribution
 
 import (
@@ -6,7 +6,8 @@ import (
 	"strconv"
 )
 
-// Contribution represents a validated contribution value on a 1-10 scale.
+// Contribution represents a validated contribution value on a 0-10 scale.
+// 0 means the task is tracked but doesn't contribute numerically to the objective.
 type Contribution struct {
 	value int
 }
@@ -50,10 +51,10 @@ func (c *Contribution) UnmarshalText(data []byte) error {
 // =============================================================================
 
 // Parse validates the int value and returns a Contribution if the value complies
-// with the rules for contribution (1-10 scale).
+// with the rules for contribution (0-10 scale).
 func Parse(value int) (Contribution, error) {
-	if value < 1 || value > 10 {
-		return Contribution{}, fmt.Errorf("contribution must be between 1 and 10, got %d", value)
+	if value < 0 || value > 10 {
+		return Contribution{}, fmt.Errorf("contribution must be between 0 and 10, got %d", value)
 	}
 
 	return Contribution{value}, nil

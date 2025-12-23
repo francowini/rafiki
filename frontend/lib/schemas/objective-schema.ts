@@ -2,12 +2,26 @@ import { z } from 'zod';
 
 export const objectiveSchema = z.discriminatedUnion('trackingType', [
   // Result tracking
-  z.object({
-    trackingType: z.literal('result'),
-    lifeVisionId: z.string().min(1, 'Visión de vida es requerida'),
-    title: z.string().min(5, 'Mínimo 5 caracteres').max(200, 'Máximo 200 caracteres'),
-    targetMetric: z.number().min(1, 'La meta debe ser mayor a 0'),
-  }),
+  z
+    .object({
+      trackingType: z.literal('result'),
+      lifeVisionId: z.string().min(1, 'Visión de vida es requerida'),
+      title: z.string().min(5, 'Mínimo 5 caracteres').max(200, 'Máximo 200 caracteres'),
+      targetMetric: z.number().min(1, 'La meta debe ser mayor a 0'),
+      beginMetric: z.number().optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.beginMetric !== undefined) {
+          return data.beginMetric !== data.targetMetric;
+        }
+        return true;
+      },
+      {
+        message: 'El valor inicial debe ser diferente de la meta',
+        path: ['beginMetric'],
+      },
+    ),
 
   // Frequency tracking
   z

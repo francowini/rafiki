@@ -19,21 +19,24 @@ interface TaskFormProps {
   objectiveId: string;
   task?: Task | null;
   isFrequencyObjective?: boolean;
+  isInverseObjective?: boolean;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-function getContributionLabel(value: number): string {
-  if (value <= 3) return 'Pequeño paso';
-  if (value <= 6) return 'Avance sólido';
-  if (value <= 8) return 'Gran contribución';
-  return 'Contribución máxima';
+function getContributionLabel(value: number, isInverse: boolean): string {
+  if (value === 0) return 'Sin contribución numérica';
+  if (value <= 3) return isInverse ? 'Pequeña reducción' : 'Pequeño paso';
+  if (value <= 6) return isInverse ? 'Reducción moderada' : 'Avance sólido';
+  if (value <= 8) return isInverse ? 'Gran reducción' : 'Gran contribución';
+  return isInverse ? 'Reducción máxima' : 'Contribución máxima';
 }
 
 export function TaskForm({
   objectiveId,
   task,
   isFrequencyObjective = false,
+  isInverseObjective = false,
   onSuccess,
   onCancel,
 }: TaskFormProps) {
@@ -167,35 +170,45 @@ export function TaskForm({
 
       {/* Contribution Slider - Only for result objectives */}
       {!isFrequencyObjective && (
-        <div className="space-y-4 bg-blue-50 rounded-lg p-4">
+        <div className={`space-y-4 rounded-lg p-4 ${isInverseObjective ? 'bg-orange-50' : 'bg-blue-50'}`}>
           <Label
             htmlFor="task-contribution"
             className="text-base font-medium flex items-center gap-2"
           >
-            Contribucion al objetivo
-            <HelpTooltip content="Cuanto aporta esta tarea al progreso de tu objetivo (1-10)" />
+            {isInverseObjective ? 'Reducción al completar' : 'Contribución al objetivo'}
+            <HelpTooltip
+              content={
+                isInverseObjective
+                  ? 'Cuanto reduce esta tarea del valor actual (0-10). Usa 0 para tareas que solo quieres trackear.'
+                  : 'Cuanto aporta esta tarea al progreso de tu objetivo (0-10). Usa 0 para tareas que solo quieres trackear.'
+              }
+            />
           </Label>
 
           <div className="text-center py-2">
-            <span className="text-4xl font-bold text-blue-600">+{contribution}</span>
-            <p className="text-sm text-muted-foreground mt-1">{getContributionLabel(contribution)}</p>
+            <span className={`text-4xl font-bold ${isInverseObjective ? 'text-orange-600' : 'text-blue-600'}`}>
+              {contribution === 0 ? '0' : isInverseObjective ? `-${contribution}` : `+${contribution}`}
+            </span>
+            <p className="text-sm text-muted-foreground mt-1">
+              {getContributionLabel(contribution, isInverseObjective)}
+            </p>
           </div>
 
           <Slider
             id="task-contribution"
-            min={1}
+            min={0}
             max={10}
             step={1}
             value={[contribution]}
             onValueChange={(value) => setValue('contribution', value[0])}
             className="py-4"
-            aria-label="Contribucion al objetivo"
+            aria-label={isInverseObjective ? 'Reducción al completar' : 'Contribución al objetivo'}
           />
 
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Pequeno</span>
-            <span>Moderado</span>
-            <span>Grande</span>
+            <span>Ninguna</span>
+            <span>Moderada</span>
+            <span>Máxima</span>
           </div>
 
           {errors.contribution && (

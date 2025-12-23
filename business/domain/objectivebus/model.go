@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/francowini/rafiki/business/types/beginmetric"
 	"github.com/francowini/rafiki/business/types/compliancepct"
 	"github.com/francowini/rafiki/business/types/currentmetric"
 	"github.com/francowini/rafiki/business/types/frequencycount"
@@ -19,26 +20,26 @@ import (
 
 // Domain errors
 var (
-	ErrNotFound                     = errors.New("objective not found")
-	ErrMissingUserID                = errors.New("userID is required for querying objectives")
-	ErrNotLifeVisionOwner           = errors.New("user does not own the specified life vision")
-	ErrTargetLifeVisionNotActive    = errors.New("target life vision must be active")
-	ErrStatusTransitionNotAllowed   = errors.New("status transition not allowed (completed/abandoned are terminal)")
-	ErrTrackingTypeImmutable        = errors.New("tracking type cannot be changed after creation")
-	ErrInvalidFrequencyConfig       = errors.New("frequency type requires frequency_count >= 1")
-	ErrMissingCompliancePct         = errors.New("compliance_target_pct required for frequency tracking")
-	ErrInvalidResultConfig          = errors.New("target_metric must be > 0 for result tracking")
-	ErrProgressExceedsTarget        = errors.New("current_metric cannot exceed target_metric")
-	ErrOnlyResultAllowsProgress     = errors.New("progress increment only allowed for result tracking type")
-	ErrAlreadyArchived              = errors.New("objective is already archived")
-	ErrNotArchived                  = errors.New("objective is not archived")
-	ErrTerminalStatusNoArchive      = errors.New("cannot archive objective with terminal status (completed/abandoned)")
-	ErrStatusChangeMustUseMethod    = errors.New("status changes must use ChangeStatus method")
-	ErrMetricNotInitialized         = errors.New("metric values not initialized")
-	ErrIncrementOrValueRequired     = errors.New("either increment or value must be provided")
-	ErrFrequencyTypeRequired        = errors.New("frequency_type required for frequency tracking")
-	ErrMetricOnlyForResult          = errors.New("target_metric only valid for result tracking")
-	ErrFrequencyOnlyForFrequency    = errors.New("frequency fields only valid for frequency tracking")
+	ErrNotFound                   = errors.New("objective not found")
+	ErrMissingUserID              = errors.New("userID is required for querying objectives")
+	ErrNotLifeVisionOwner         = errors.New("user does not own the specified life vision")
+	ErrTargetLifeVisionNotActive  = errors.New("target life vision must be active")
+	ErrStatusTransitionNotAllowed = errors.New("status transition not allowed (completed/abandoned are terminal)")
+	ErrTrackingTypeImmutable      = errors.New("tracking type cannot be changed after creation")
+	ErrInvalidFrequencyConfig     = errors.New("frequency type requires frequency_count >= 1")
+	ErrMissingCompliancePct       = errors.New("compliance_target_pct required for frequency tracking")
+	ErrInvalidResultConfig        = errors.New("target_metric must be > 0 for result tracking")
+	ErrProgressExceedsTarget      = errors.New("current_metric cannot exceed target_metric")
+	ErrOnlyResultAllowsProgress   = errors.New("progress increment only allowed for result tracking type")
+	ErrAlreadyArchived            = errors.New("objective is already archived")
+	ErrNotArchived                = errors.New("objective is not archived")
+	ErrTerminalStatusNoArchive    = errors.New("cannot archive objective with terminal status (completed/abandoned)")
+	ErrStatusChangeMustUseMethod  = errors.New("status changes must use ChangeStatus method")
+	ErrMetricNotInitialized       = errors.New("metric values not initialized")
+	ErrIncrementOrValueRequired   = errors.New("either increment or value must be provided")
+	ErrFrequencyTypeRequired      = errors.New("frequency_type required for frequency tracking")
+	ErrMetricOnlyForResult        = errors.New("target_metric only valid for result tracking")
+	ErrFrequencyOnlyForFrequency  = errors.New("frequency fields only valid for frequency tracking")
 )
 
 // Objective represents a measurable objective linked to a life vision.
@@ -53,6 +54,7 @@ type Objective struct {
 	// Result tracking fields (NULL if frequency)
 	TargetMetric  *targetmetric.TargetMetric   // Target metric (e.g., 35 books)
 	CurrentMetric *currentmetric.CurrentMetric // Current progress (auto-calculated from tasks in future)
+	BeginMetric   *beginmetric.BeginMetric     // Optional starting metric for progress calculation
 
 	// Frequency tracking fields (NULL if result)
 	FrequencyType       *frequencytype.FrequencyType   // daily, n_per_week, n_per_month
@@ -73,6 +75,7 @@ type NewObjective struct {
 
 	// Result fields (required if tracking_type = result)
 	TargetMetric *targetmetric.TargetMetric
+	BeginMetric  *beginmetric.BeginMetric // Optional starting metric for progress calculation
 
 	// Frequency fields (required if tracking_type = frequency)
 	FrequencyType       *frequencytype.FrequencyType
@@ -86,7 +89,9 @@ type UpdateObjective struct {
 	Status *objectivestatus.ObjectiveStatus
 
 	// Result fields
-	TargetMetric *targetmetric.TargetMetric
+	TargetMetric     *targetmetric.TargetMetric
+	BeginMetric      *beginmetric.BeginMetric
+	ClearBeginMetric bool // Use ClearNotes pattern for nullable fields
 
 	// Frequency fields
 	FrequencyType       *frequencytype.FrequencyType

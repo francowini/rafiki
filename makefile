@@ -119,6 +119,36 @@ ssh:
 db-shell:
 	docker exec -it rafiki-postgres psql -U rafiki -d rafiki
 
+# reset-dev: Clean reset of local dev environment with seed data
+reset-dev:
+	@echo "🗑️  Stopping and removing containers and volumes..."
+	docker compose down -v
+	@echo ""
+	@echo "🚀 Starting fresh containers..."
+	docker compose up -d --build --force-recreate
+	@echo ""
+	@echo "⏳ Waiting for database to be ready..."
+	@sleep 5
+	@until docker exec rafiki-postgres pg_isready -U rafiki -d rafiki > /dev/null 2>&1; do \
+		echo "   Waiting for PostgreSQL..."; \
+		sleep 2; \
+	done
+	@echo "✅ Database is ready"
+	@echo ""
+	@echo "⏳ Waiting for API to be ready..."
+	@sleep 3
+	@until curl -sf http://localhost:3000/v1/readiness > /dev/null 2>&1; do \
+		echo "   Waiting for API..."; \
+		sleep 2; \
+	done
+	@echo "✅ API is ready"
+	@echo ""
+	@echo "🌱 Running seed data script..."
+	./zarf/seed-data.sh
+	@echo ""
+	@echo "🎉 Dev environment reset complete!"
+	@echo "   Login: admin@rafiki.lat / admin123"
+
 db-shell-prod:
 	ssh $(PROD_SERVER) 'docker exec -it rafiki-postgres psql -U rafiki -d rafiki'
 
@@ -178,6 +208,6 @@ clean-all: clean
 .PHONY: run help version up down logs logs-all build rebuild restart ps dev-status \
         curl-ready curl-live health \
         deploy deploy-logs deploy-status deploy-health deploy-restart ssh \
-        db-shell db-shell-prod create-user create-user-prod \
+        db-shell db-shell-prod reset-dev create-user create-user-prod \
         tidy deps-upgrade deps-reset deps-list \
         clean clean-all

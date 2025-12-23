@@ -53,6 +53,7 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
       lifeVisionId: objective?.lifeVisionId || '',
       title: objective?.title || '',
       targetMetric: objective?.targetMetric || 100,
+      beginMetric: objective?.beginMetric,
       frequencyType: objective?.frequencyType || 'daily',
       frequencyCount: objective?.frequencyCount || 3,
       complianceTargetPct: objective?.complianceTargetPct || 80,
@@ -60,6 +61,8 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
   });
 
   const watchedFrequencyType = watch('frequencyType');
+  const watchedTargetMetric = watch('targetMetric');
+  const watchedBeginValue = watch('beginMetric');
 
   useEffect(() => {
     async function loadLifeVisions() {
@@ -85,6 +88,7 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
             lifeVisionId: data.lifeVisionId,
             ...(data.trackingType === 'result' && {
               targetMetric: data.targetMetric,
+              beginMetric: data.beginMetric,
             }),
             ...(data.trackingType === 'frequency' && {
               frequencyType: data.frequencyType,
@@ -100,6 +104,7 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
           trackingType: data.trackingType,
           ...(data.trackingType === 'result' && {
             targetMetric: data.targetMetric,
+            beginMetric: data.beginMetric,
           }),
           ...(data.trackingType === 'frequency' && {
             frequencyType: data.frequencyType,
@@ -229,22 +234,75 @@ export function ObjectiveForm({ objective, onSuccess, onCancel }: ObjectiveFormP
 
       {/* Result-specific fields */}
       {trackingType === 'result' && (
-        <div className="space-y-2">
-          <Label htmlFor="targetMetric" className="flex items-center gap-2">
-            Meta numérica
-            <HelpTooltip content="El valor que quieres alcanzar. Por ejemplo: 12 libros, 100 km, 10000 pasos." />
-          </Label>
-          <Input
-            id="targetMetric"
-            type="number"
-            min="1"
-            {...register('targetMetric', { valueAsNumber: true })}
-            placeholder="Ej: 12"
-          />
-          {'targetMetric' in errors && errors.targetMetric && (
-            <p className="text-sm text-red-500">{errors.targetMetric.message}</p>
-          )}
-        </div>
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="targetMetric" className="flex items-center gap-2">
+              Meta numérica
+              <HelpTooltip content="El valor que quieres alcanzar. Por ejemplo: 12 libros, 100 km, 10000 pasos." />
+            </Label>
+            <Input
+              id="targetMetric"
+              type="number"
+              min="1"
+              {...register('targetMetric', { valueAsNumber: true })}
+              placeholder="Ej: 12"
+            />
+            {'targetMetric' in errors && errors.targetMetric && (
+              <p className="text-sm text-red-500">{errors.targetMetric.message}</p>
+            )}
+          </div>
+
+          {/* Begin Value Field */}
+          <div className="space-y-2">
+            <Label htmlFor="beginMetric" className="flex items-center gap-2">
+              Valor inicial (opcional)
+              <HelpTooltip content="Tu punto de partida. Si está en blanco, se asume 0. Puedes establecer un valor mayor a la meta para objetivos de reducción (ej: perder peso)." />
+            </Label>
+            <Input
+              id="beginMetric"
+              type="number"
+              {...register('beginMetric', {
+                valueAsNumber: true,
+                setValueAs: (v: string) => (v === '' ? undefined : Number(v)),
+              })}
+              placeholder="Ej: 0 (predeterminado)"
+            />
+            {'beginMetric' in errors && errors.beginMetric && (
+              <p className="text-sm text-red-500">{errors.beginMetric.message}</p>
+            )}
+
+            {/* Live Preview */}
+            {watchedTargetMetric && !Number.isNaN(watchedTargetMetric) && (() => {
+              // Handle NaN from empty input (valueAsNumber converts empty string to NaN)
+              const beginVal = typeof watchedBeginValue === 'number' && !Number.isNaN(watchedBeginValue) ? watchedBeginValue : 0;
+              const isDecrease = beginVal > watchedTargetMetric;
+              const diff = isDecrease ? beginVal - watchedTargetMetric : watchedTargetMetric - beginVal;
+
+              return (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium text-gray-700">Vista previa:</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">
+                      {isDecrease ? '\u2193' : '\u2191'}
+                    </span>
+                    <div>
+                      <p className="text-sm text-gray-600">
+                        <span className="font-semibold">{beginVal}</span>
+                        {' \u2192 '}
+                        <span className="font-semibold text-blue-600">{watchedTargetMetric}</span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {isDecrease
+                          ? `Reducir ${diff} unidades`
+                          : `Aumentar ${diff} unidades`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </>
       )}
 
       {/* Frequency-specific fields */}

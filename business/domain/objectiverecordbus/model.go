@@ -13,12 +13,12 @@ import (
 
 // Domain errors
 var (
-	ErrNotFound             = errors.New("objective record not found")
-	ErrGracePeriodExceeded  = errors.New("can only log records for today or yesterday")
-	ErrNotFrequencyType     = errors.New("records only allowed for frequency tracking type")
-	ErrFutureDateNotAllowed = errors.New("cannot log record for future date")
-	ErrMissingUserID        = errors.New("userID is required for querying objective records")
-	ErrNotObjectiveOwner    = errors.New("user does not own the specified objective")
+	ErrNotFound               = errors.New("objective record not found")
+	ErrGracePeriodExceeded    = errors.New("can only log records for today or yesterday")
+	ErrNotFrequencyType       = errors.New("records only allowed for frequency tracking type")
+	ErrFutureDateNotAllowed   = errors.New("cannot log record for future date")
+	ErrMissingUserID          = errors.New("userID is required for querying objective records")
+	ErrNotObjectiveOwner      = errors.New("user does not own the specified objective")
 	ErrFrequencyCountRequired = errors.New("frequency_count required for n_per_week and n_per_month types")
 )
 
