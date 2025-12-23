@@ -224,6 +224,8 @@ func calculateDailyStreaks(days []vobjectiveactivitybus.DayActivity) (current, l
 }
 
 // calculateWeeklyStreaks computes streaks for n_per_week frequency.
+// Iterates backwards from the current week to find the current active streak,
+// then iterates forward through all weeks to find the longest streak.
 func calculateWeeklyStreaks(days []vobjectiveactivitybus.DayActivity, requiredPerWeek int) (current, longest int) {
 	if len(days) == 0 {
 		return 0, 0
@@ -231,7 +233,6 @@ func calculateWeeklyStreaks(days []vobjectiveactivitybus.DayActivity, requiredPe
 
 	// Group days by ISO week
 	weekActivity := make(map[string]int)
-
 	for _, day := range days {
 		year, week := day.Date.ISOWeek()
 		key := fmt.Sprintf("%d-%02d", year, week)
@@ -240,20 +241,64 @@ func calculateWeeklyStreaks(days []vobjectiveactivitybus.DayActivity, requiredPe
 		}
 	}
 
-	// Sort weeks and count consecutive weeks meeting the requirement
-	// For simplicity, we'll iterate through all weeks in the year
+	// Build ordered list of weeks from the data year
+	dataYear := days[0].Date.Year()
 	var weeks []string
-	currentDate := days[0].Date
-	for i := 0; i < 53; i++ {
+
+	// Start from first day of year and iterate week by week
+	startOfYear := time.Date(dataYear, 1, 1, 0, 0, 0, 0, time.UTC)
+	endOfYear := time.Date(dataYear, 12, 31, 0, 0, 0, 0, time.UTC)
+
+	currentDate := startOfYear
+	for currentDate.Before(endOfYear) || currentDate.Equal(endOfYear) {
 		year, week := currentDate.ISOWeek()
 		key := fmt.Sprintf("%d-%02d", year, week)
-		weeks = append(weeks, key)
+		// Avoid duplicates (multiple days map to same week)
+		if len(weeks) == 0 || weeks[len(weeks)-1] != key {
+			weeks = append(weeks, key)
+		}
 		currentDate = currentDate.AddDate(0, 0, 7)
 	}
 
+	// Determine current week
+	now := time.Now().UTC()
+	currentYear, currentWeek := now.ISOWeek()
+	currentWeekKey := fmt.Sprintf("%d-%02d", currentYear, currentWeek)
+
+	// Calculate current streak: iterate backwards from current week
+	foundCurrentStreak := false
 	streak := 0
-	for _, week := range weeks {
-		count := weekActivity[week]
+
+	for i := len(weeks) - 1; i >= 0; i-- {
+		weekKey := weeks[i]
+
+		// Skip future weeks
+		if weekKey > currentWeekKey {
+			continue
+		}
+
+		count := weekActivity[weekKey]
+		if count >= requiredPerWeek {
+			streak++
+		} else {
+			// First gap encountered - capture current streak
+			if !foundCurrentStreak && streak > 0 {
+				current = streak
+				foundCurrentStreak = true
+			}
+			streak = 0
+		}
+	}
+
+	// If no gap found, the entire run is current streak
+	if !foundCurrentStreak && streak > 0 {
+		current = streak
+	}
+
+	// Calculate longest streak: iterate forward through all weeks
+	streak = 0
+	for _, weekKey := range weeks {
+		count := weekActivity[weekKey]
 		if count >= requiredPerWeek {
 			streak++
 			if streak > longest {
@@ -264,11 +309,12 @@ func calculateWeeklyStreaks(days []vobjectiveactivitybus.DayActivity, requiredPe
 		}
 	}
 
-	current = streak
 	return current, longest
 }
 
 // calculateMonthlyStreaks computes streaks for n_per_month frequency.
+// Iterates backwards from the current month to find the current active streak,
+// then iterates forward through all months to find the longest streak.
 func calculateMonthlyStreaks(days []vobjectiveactivitybus.DayActivity, requiredPerMonth int) (current, longest int) {
 	if len(days) == 0 {
 		return 0, 0
@@ -276,7 +322,6 @@ func calculateMonthlyStreaks(days []vobjectiveactivitybus.DayActivity, requiredP
 
 	// Group days by month
 	monthActivity := make(map[string]int)
-
 	for _, day := range days {
 		key := day.Date.Format("2006-01")
 		if day.HasActivity {
@@ -284,11 +329,52 @@ func calculateMonthlyStreaks(days []vobjectiveactivitybus.DayActivity, requiredP
 		}
 	}
 
-	// Iterate through months
-	streak := 0
+	// Build ordered list of months for the data year
+	dataYear := days[0].Date.Year()
+	var months []string
 	for month := 1; month <= 12; month++ {
-		key := fmt.Sprintf("%d-%02d", days[0].Date.Year(), month)
-		count := monthActivity[key]
+		key := fmt.Sprintf("%d-%02d", dataYear, month)
+		months = append(months, key)
+	}
+
+	// Determine current month
+	now := time.Now().UTC()
+	currentMonthKey := now.Format("2006-01")
+
+	// Calculate current streak: iterate backwards from current month
+	foundCurrentStreak := false
+	streak := 0
+
+	for i := len(months) - 1; i >= 0; i-- {
+		monthKey := months[i]
+
+		// Skip future months
+		if monthKey > currentMonthKey {
+			continue
+		}
+
+		count := monthActivity[monthKey]
+		if count >= requiredPerMonth {
+			streak++
+		} else {
+			// First gap encountered - capture current streak
+			if !foundCurrentStreak && streak > 0 {
+				current = streak
+				foundCurrentStreak = true
+			}
+			streak = 0
+		}
+	}
+
+	// If no gap found, the entire run is current streak
+	if !foundCurrentStreak && streak > 0 {
+		current = streak
+	}
+
+	// Calculate longest streak: iterate forward through all months
+	streak = 0
+	for _, monthKey := range months {
+		count := monthActivity[monthKey]
 		if count >= requiredPerMonth {
 			streak++
 			if streak > longest {
@@ -299,6 +385,5 @@ func calculateMonthlyStreaks(days []vobjectiveactivitybus.DayActivity, requiredP
 		}
 	}
 
-	current = streak
 	return current, longest
 }
