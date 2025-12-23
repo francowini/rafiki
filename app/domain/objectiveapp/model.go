@@ -9,6 +9,7 @@ import (
 
 	"github.com/francowini/rafiki/app/sdk/errs"
 	"github.com/francowini/rafiki/business/domain/objectivebus"
+	"github.com/francowini/rafiki/business/types/beginmetric"
 	"github.com/francowini/rafiki/business/types/compliancepct"
 	"github.com/francowini/rafiki/business/types/frequencycount"
 	"github.com/francowini/rafiki/business/types/frequencytype"
@@ -27,6 +28,7 @@ type Objective struct {
 	Status              string  `json:"status"`
 	TargetMetric        *int    `json:"targetMetric,omitempty"`
 	CurrentMetric       *int    `json:"currentMetric,omitempty"`
+	BeginMetric         *int    `json:"beginMetric,omitempty"`
 	FrequencyType       *string `json:"frequencyType,omitempty"`
 	FrequencyCount      *int    `json:"frequencyCount,omitempty"`
 	ComplianceTargetPct *int    `json:"complianceTargetPct,omitempty"`
@@ -47,6 +49,7 @@ type NewObjective struct {
 	Title               string  `json:"title" validate:"required"`
 	TrackingType        string  `json:"trackingType" validate:"required,oneof=result frequency"`
 	TargetMetric        *int    `json:"targetMetric"`
+	BeginMetric         *int    `json:"beginMetric"`
 	FrequencyType       *string `json:"frequencyType" validate:"omitempty,oneof=daily n_per_week n_per_month"`
 	FrequencyCount      *int    `json:"frequencyCount"`
 	ComplianceTargetPct *int    `json:"complianceTargetPct" validate:"omitempty,min=1,max=100"`
@@ -69,6 +72,8 @@ func (no NewObjective) Validate() error {
 type UpdateObjective struct {
 	Title               *string `json:"title"`
 	TargetMetric        *int    `json:"targetMetric"`
+	BeginMetric         *int    `json:"beginMetric"`
+	ClearBeginMetric    *bool   `json:"clearBeginMetric"`
 	FrequencyType       *string `json:"frequencyType" validate:"omitempty,oneof=daily n_per_week n_per_month"`
 	FrequencyCount      *int    `json:"frequencyCount"`
 	ComplianceTargetPct *int    `json:"complianceTargetPct" validate:"omitempty,min=1,max=100"`
@@ -163,6 +168,12 @@ func toAppObjective(o objectivebus.Objective) Objective {
 		currentMetric = &v
 	}
 
+	var beginMetric *int
+	if o.BeginMetric != nil {
+		v := o.BeginMetric.Value()
+		beginMetric = &v
+	}
+
 	var frequencyCount *int
 	if o.FrequencyCount != nil {
 		v := o.FrequencyCount.Value()
@@ -177,6 +188,7 @@ func toAppObjective(o objectivebus.Objective) Objective {
 		Status:              o.Status.String(),
 		TargetMetric:        targetMetric,
 		CurrentMetric:       currentMetric,
+		BeginMetric:         beginMetric,
 		FrequencyType:       frequencyType,
 		FrequencyCount:      frequencyCount,
 		ComplianceTargetPct: complianceTargetPct,
@@ -261,6 +273,17 @@ func toBusNewObjective(no NewObjective, userID uuid.UUID) (objectivebus.NewObjec
 		}
 	}
 
+	// Parse begin_metric if provided
+	var beginMetricPtr *beginmetric.BeginMetric
+	if no.BeginMetric != nil {
+		bm, err := beginmetric.Parse(*no.BeginMetric)
+		if err != nil {
+			errors.Add("beginMetric", err)
+		} else {
+			beginMetricPtr = &bm
+		}
+	}
+
 	if len(errors) > 0 {
 		return objectivebus.NewObjective{}, fmt.Errorf("validate: %w", errors.ToError())
 	}
@@ -271,6 +294,7 @@ func toBusNewObjective(no NewObjective, userID uuid.UUID) (objectivebus.NewObjec
 		Title:               title,
 		TrackingType:        tt,
 		TargetMetric:        targetMetricPtr,
+		BeginMetric:         beginMetricPtr,
 		FrequencyType:       freqType,
 		FrequencyCount:      frequencyCountPtr,
 		ComplianceTargetPct: complianceTargetPct,
@@ -296,6 +320,18 @@ func toBusUpdateObjective(uo UpdateObjective) (objectivebus.UpdateObjective, err
 			errors.Add("targetMetric", err)
 		} else {
 			bus.TargetMetric = &tm
+		}
+	}
+
+	// Handle ClearBeginMetric (takes precedence over BeginMetric)
+	if uo.ClearBeginMetric != nil && *uo.ClearBeginMetric {
+		bus.ClearBeginMetric = true
+	} else if uo.BeginMetric != nil {
+		bm, err := beginmetric.Parse(*uo.BeginMetric)
+		if err != nil {
+			errors.Add("beginMetric", err)
+		} else {
+			bus.BeginMetric = &bm
 		}
 	}
 

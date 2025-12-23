@@ -27,6 +27,7 @@ interface TasksSectionProps {
   objectiveId: string;
   objectiveName: string;
   targetMetric?: number;
+  beginMetric?: number;
   trackingType: 'result' | 'frequency';
 }
 
@@ -34,9 +35,11 @@ export function TasksSection({
   objectiveId,
   objectiveName,
   targetMetric,
+  beginMetric,
   trackingType,
 }: TasksSectionProps) {
   const isFrequencyObjective = trackingType === 'frequency';
+  const isInverseObjective = targetMetric !== undefined && (beginMetric ?? 0) > targetMetric;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -137,8 +140,9 @@ export function TasksSection({
 
             // Build description for result objectives
             let description = 'Tarea marcada como completada';
-            if (response.objectiveProgress && targetMetric) {
-              description = `+${response.task.contribution} -> ${response.objectiveProgress}/${targetMetric} ${objectiveName}`;
+            if (response.objectiveProgress !== null && targetMetric) {
+              const sign = isInverseObjective ? '-' : '+';
+              description = `${sign}${response.task.contribution} → ${response.objectiveProgress}/${targetMetric} ${objectiveName}`;
             }
 
             // Show toast with undo - 10 second duration
@@ -183,7 +187,7 @@ export function TasksSection({
         });
       }
     },
-    [tasksData, completeMutation, uncompleteMutation, logRecordMutation, toast, dismiss, objectiveId, objectiveName, targetMetric, isFrequencyObjective],
+    [tasksData, completeMutation, uncompleteMutation, logRecordMutation, toast, dismiss, objectiveId, objectiveName, targetMetric, isFrequencyObjective, isInverseObjective],
   );
 
   const handleDeleteTask = useCallback(() => {
@@ -241,6 +245,7 @@ export function TasksSection({
               objectiveId={objectiveId}
               task={taskToEdit}
               isFrequencyObjective={isFrequencyObjective}
+              isInverseObjective={isInverseObjective}
               onSuccess={handleFormClose}
               onCancel={handleFormClose}
             />

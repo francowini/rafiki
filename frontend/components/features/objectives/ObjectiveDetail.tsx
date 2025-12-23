@@ -21,6 +21,8 @@ import {
   useUpdateObjectiveStatus,
   useIncrementProgress,
 } from '@/lib/hooks/use-objectives';
+import { calculateProgress, getProgressColors } from '@/lib/utils/progress';
+import { cn } from '@/lib/utils';
 import {
   Target,
   BarChart3,
@@ -31,6 +33,7 @@ import {
   XCircle,
   Plus,
   Minus,
+  AlertCircle,
 } from 'lucide-react';
 import { OBJECTIVE_STATUS_LABELS, RECORD_STATUS_LABELS } from '@/lib/types';
 import type { ObjectiveStatus } from '@/lib/types';
@@ -69,10 +72,13 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
 
   const isResult = objective.trackingType === 'result';
   const isTerminal = objective.status === 'completed' || objective.status === 'abandoned';
-  const progress =
-    isResult && objective.currentMetric && objective.targetMetric
-      ? Math.round((objective.currentMetric / objective.targetMetric) * 100)
-      : 0;
+
+  const progressData =
+    isResult && objective.currentMetric !== undefined && objective.targetMetric
+      ? calculateProgress(objective.beginMetric, objective.currentMetric, objective.targetMetric)
+      : { percentage: 0, isInverse: false, isNegativeProgress: false, displayText: '0 de 0' };
+
+  const colors = getProgressColors(progressData.isNegativeProgress);
 
   const handleStatusChange = (newStatus: ObjectiveStatus) => {
     // Don't allow changes for terminal states
@@ -153,36 +159,73 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
 
       {/* Progress section for Result */}
       {isResult && (
-        <div className="bg-blue-50 rounded-lg p-6 space-y-4">
+        <div className={cn('rounded-lg p-6 space-y-4', colors.bgColor)}>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+              <TrendingUp className={cn('h-5 w-5', colors.textColor)} />
               Progreso
             </h2>
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleIncrementProgress(-1)}
-                disabled={incrementProgressMutation.isPending || (objective.currentMetric || 0) <= 0}
+                onClick={() => handleIncrementProgress(progressData.isInverse ? 1 : -1)}
+                disabled={incrementProgressMutation.isPending || (progressData.isInverse ? false : (objective.currentMetric || 0) <= 0)}
+                title={progressData.isInverse ? 'Aumentar valor (retroceder)' : 'Disminuir valor'}
               >
-                <Minus className="h-4 w-4" />
+                {progressData.isInverse ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
               </Button>
-              <span className="font-bold text-xl min-w-[80px] text-center">
-                {objective.currentMetric || 0} / {objective.targetMetric}
-              </span>
+              <div className="text-center min-w-[120px]">
+                <span className="font-bold text-2xl">
+                  {objective.currentMetric ?? (objective.beginMetric ?? 0)}
+                </span>
+                <span className="text-xs text-muted-foreground block">
+                  Meta: {objective.targetMetric}
+                </span>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleIncrementProgress(1)}
+                onClick={() => handleIncrementProgress(progressData.isInverse ? -1 : 1)}
                 disabled={incrementProgressMutation.isPending}
+                title={progressData.isInverse ? 'Reducir valor (avanzar)' : 'Aumentar valor'}
               >
-                <Plus className="h-4 w-4" />
+                {progressData.isInverse ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               </Button>
             </div>
           </div>
-          <Progress value={progress} className="h-3" />
-          <p className="text-sm text-muted-foreground text-center">{progress}% completado</p>
+          <Progress value={progressData.percentage} className={cn('h-3', colors.barColor)} />
+          <div className="flex justify-between items-center">
+            <p className={cn('text-sm', colors.textColor)}>
+              {progressData.displayText} ({progressData.percentage}% completado)
+              {progressData.isNegativeProgress && ' - retroceso'}
+            </p>
+            {objective.beginMetric !== undefined && (
+              <p className="text-sm text-muted-foreground">
+                Inicio: {objective.beginMetric} {progressData.isInverse ? '\u2193' : '\u2191'}
+              </p>
+            )}
+          </div>
+
+          {/* Negative Progress Alert */}
+          {progressData.isNegativeProgress && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 space-y-2">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm font-medium text-amber-900">
+                    {progressData.isInverse
+                      ? `Has aumentado ${Math.abs((objective.currentMetric || 0) - (objective.beginMetric ?? 0))} desde el inicio`
+                      : `Has retrocedido ${Math.abs((objective.beginMetric ?? 0) - (objective.currentMetric || 0))} desde el inicio`}
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    Es normal tener altibajos en el camino. Lo importante es seguir intentando y
+                    aprender de cada experiencia. Cada día es una nueva oportunidad.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -191,6 +234,7 @@ export function ObjectiveDetail({ objectiveId }: ObjectiveDetailProps) {
         objectiveId={objectiveId}
         objectiveName={objective.title}
         targetMetric={objective.targetMetric}
+        beginMetric={objective.beginMetric}
         trackingType={objective.trackingType}
       />
 

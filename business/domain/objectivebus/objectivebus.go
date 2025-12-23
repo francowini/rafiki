@@ -133,6 +133,7 @@ func (b *Business) Create(ctx context.Context, no NewObjective) (Objective, erro
 		Status:              objectivestatus.Active,
 		TargetMetric:        no.TargetMetric,
 		CurrentMetric:       nil,
+		BeginMetric:         no.BeginMetric,
 		FrequencyType:       no.FrequencyType,
 		FrequencyCount:      no.FrequencyCount,
 		ComplianceTargetPct: no.ComplianceTargetPct,
@@ -141,10 +142,25 @@ func (b *Business) Create(ctx context.Context, no NewObjective) (Objective, erro
 		DateUpdated:         now,
 	}
 
-	// Initialize CurrentMetric to 0 for result tracking
+	// Initialize CurrentMetric for result tracking
 	if no.TrackingType.IsResult() {
-		zero := currentmetric.Zero()
-		objective.CurrentMetric = &zero
+		// For inverse goals (begin > target), start at begin value
+		// For normal goals, start at 0
+		var initial currentmetric.CurrentMetric
+		if no.BeginMetric != nil && no.TargetMetric != nil && no.BeginMetric.Value() > no.TargetMetric.Value() {
+			// Decrease goal: start at begin value
+			var err error
+			initial, err = currentmetric.Parse(no.BeginMetric.Value())
+			if err != nil {
+				// BeginMetric was already validated at app layer, but log and use safe default
+				b.log.Error(ctx, "objectivebus.create.parsecurrentmetric", "beginMetricValue", no.BeginMetric.Value(), "err", err)
+				initial = currentmetric.Zero()
+			}
+		} else {
+			// Increase goal: start at 0
+			initial = currentmetric.Zero()
+		}
+		objective.CurrentMetric = &initial
 	}
 
 	if err := b.storer.Create(ctx, objective); err != nil {
@@ -175,6 +191,17 @@ func (b *Business) Update(ctx context.Context, objective Objective, uo UpdateObj
 		}
 		// Validation (> 0) is handled by targetmetric.Parse at app layer
 		objective.TargetMetric = uo.TargetMetric
+	}
+
+	// Handle BeginMetric update (ClearBeginMetric takes precedence)
+	if uo.ClearBeginMetric {
+		objective.BeginMetric = nil
+	} else if uo.BeginMetric != nil {
+		if !objective.TrackingType.IsResult() {
+			return Objective{}, ErrMetricOnlyForResult
+		}
+		// Validation (>= 0) is handled by beginmetric.Parse at app layer
+		objective.BeginMetric = uo.BeginMetric
 	}
 
 	if uo.FrequencyType != nil {
@@ -324,8 +351,10 @@ func (b *Business) IncrementProgress(ctx context.Context, objective Objective, r
 	if newValue < 0 {
 		newValue = 0
 	}
-	if newValue > objective.TargetMetric.Value() {
-		return Objective{}, ErrProgressExceedsTarget
+
+	// Direction-aware validation: only block exceeding target for increasing goals
+	if err := validateProgressNotExceedsTarget(objective, newValue); err != nil {
+		return Objective{}, err
 	}
 
 	// Parse validates non-negative (which we've already ensured above)
@@ -371,8 +400,10 @@ func (b *Business) UpdateProgress(ctx context.Context, objective Objective, req 
 	if newValue < 0 {
 		newValue = 0
 	}
-	if newValue > objective.TargetMetric.Value() {
-		return Objective{}, ErrProgressExceedsTarget
+
+	// Direction-aware validation: only block exceeding target for increasing goals
+	if err := validateProgressNotExceedsTarget(objective, newValue); err != nil {
+		return Objective{}, err
 	}
 
 	// Parse validates non-negative (which we've already ensured above)
@@ -483,4 +514,20 @@ func validateStatusTransition(from, to objectivestatus.ObjectiveStatus) error {
 	}
 
 	return ErrStatusTransitionNotAllowed
+}
+
+// isInverseGoal returns true if this is a decrease goal (begin > target).
+// For example: reducing weight from 80kg to 70kg.
+func isInverseGoal(obj Objective) bool {
+	return obj.BeginMetric != nil && obj.TargetMetric != nil && obj.BeginMetric.Value() > obj.TargetMetric.Value()
+}
+
+// validateProgressNotExceedsTarget checks if the new progress value is valid.
+// For increasing goals: newValue must not exceed target.
+// For inverse goals: newValue CAN exceed target (that's 0-99% progress).
+func validateProgressNotExceedsTarget(obj Objective, newValue int) error {
+	if !isInverseGoal(obj) && obj.TargetMetric != nil && newValue > obj.TargetMetric.Value() {
+		return ErrProgressExceedsTarget
+	}
+	return nil
 }

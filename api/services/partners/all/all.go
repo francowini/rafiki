@@ -12,6 +12,7 @@ import (
 	"github.com/francowini/rafiki/app/domain/thinkapp"
 	"github.com/francowini/rafiki/app/domain/valueapp"
 	"github.com/francowini/rafiki/app/domain/vexportapp"
+	"github.com/francowini/rafiki/app/domain/vobjectiveactivityapp"
 	"github.com/francowini/rafiki/app/sdk/mux"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
 	"github.com/francowini/rafiki/foundation/web"
@@ -81,5 +82,11 @@ func (Add) Add(app *web.App, cfg mux.Config) {
 	vexportapp.Routes(app, vexportapp.Config{
 		VExportBus: cfg.BusConfig.VExportBus,
 		Auth:       cfg.BusConfig.Auth,
+	})
+
+	vobjectiveactivityapp.Routes(app, vobjectiveactivityapp.Config{
+		Log:                   cfg.Log,
+		VObjectiveActivityBus: cfg.BusConfig.VObjectiveActivityBus,
+		Auth:                  cfg.BusConfig.Auth,
 	})
 }

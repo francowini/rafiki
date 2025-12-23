@@ -12,6 +12,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { MoreVertical, Edit, Archive, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { calculateProgress, getProgressColors } from '@/lib/utils/progress';
 import type { Objective } from '@/lib/types';
 
 interface ObjectiveCardProps {
@@ -29,10 +30,12 @@ export function ObjectiveCard({
   onClick,
   onUpdateProgress,
 }: ObjectiveCardProps) {
-  const progress =
-    objective.currentMetric && objective.targetMetric
-      ? Math.round((objective.currentMetric / objective.targetMetric) * 100)
-      : 0;
+  const progressData =
+    objective.currentMetric !== undefined && objective.targetMetric
+      ? calculateProgress(objective.beginMetric, objective.currentMetric, objective.targetMetric)
+      : { percentage: 0, isInverse: false, isNegativeProgress: false, displayText: '0 de 0' };
+
+  const colors = getProgressColors(progressData.isNegativeProgress);
 
   return (
     <Card
@@ -95,12 +98,18 @@ export function ObjectiveCard({
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Progreso</span>
-            <span className="font-medium">
-              {objective.currentMetric || 0} / {objective.targetMetric}
-            </span>
+            <span className="font-medium">{progressData.displayText}</span>
           </div>
-          <Progress value={progress} className="h-2" />
-          <p className="text-xs text-muted-foreground text-right">{progress}% completado</p>
+          <Progress value={progressData.percentage} className={cn('h-2', colors.barColor)} />
+          <div className="flex justify-between items-center">
+            <p className={cn('text-xs', colors.textColor)}>
+              {progressData.percentage}% completado
+              {progressData.isNegativeProgress && ' (retroceso)'}
+            </p>
+            {objective.beginMetric !== undefined && (
+              <p className="text-xs text-muted-foreground">Inicio: {objective.beginMetric}</p>
+            )}
+          </div>
         </div>
       </CardContent>
 

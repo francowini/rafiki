@@ -37,6 +37,7 @@ This document catalogs critical errors specific to backend (Go) development.
 29. [Time Formatting: Hardcoded Format Strings](#29-time-formatting-hardcoded-format-strings)
 30. [Transaction Safety: Non-Atomic Multi-Operation Business Logic](#30-transaction-safety-non-atomic-multi-operation-business-logic)
 31. [Defense-in-Depth: Dropping Constraints Without Trigger Replacement](#31-defense-in-depth-dropping-constraints-without-trigger-replacement)
+32. [Slice Safety: Accessing First Element Without Length Check](#32-slice-safety-accessing-first-element-without-length-check)
 
 ---
 
@@ -1362,3 +1363,59 @@ CREATE TRIGGER validate_task_contribution_trigger
 - [ ] If business layer handles validation, add trigger for defense-in-depth
 - [ ] Triggers should use RAISE EXCEPTION with SQLSTATE for proper error handling
 - [ ] Document the business layer validation that the trigger backs up
+
+---
+
+## 32. Slice Safety: Accessing First Element Without Length Check
+
+### Severity: CRITICAL (Runtime Panic)
+
+### Problem
+
+Accessing `slice[0]` without first checking that the slice is non-empty causes a runtime panic. This is especially common when iterating through data to build derived structures.
+
+### Bad Example
+
+```go
+// BAD: Panics if days is empty
+func calculateMonthlyStreaks(days []DayActivity, requiredPerMonth int) (current, longest int) {
+    monthActivity := make(map[string]int)
+    for _, day := range days {
+        // ...
+    }
+
+    // PANIC: index out of range [0] with length 0
+    for month := 1; month <= 12; month++ {
+        key := fmt.Sprintf("%d-%02d", days[0].Date.Year(), month)
+        // ...
+    }
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Guard against empty slice at function start
+func calculateMonthlyStreaks(days []DayActivity, requiredPerMonth int) (current, longest int) {
+    if len(days) == 0 {
+        return 0, 0
+    }
+
+    monthActivity := make(map[string]int)
+    for _, day := range days {
+        // ...
+    }
+
+    // Safe: len(days) > 0 guaranteed by guard above
+    for month := 1; month <= 12; month++ {
+        key := fmt.Sprintf("%d-%02d", days[0].Date.Year(), month)
+        // ...
+    }
+}
+```
+
+### Checklist
+
+- [ ] Add `if len(slice) == 0 { return ... }` guard before accessing `slice[0]`
+- [ ] Return appropriate zero values (0, nil, empty struct) for empty input
+- [ ] Place guard at function entry point for consistent handling

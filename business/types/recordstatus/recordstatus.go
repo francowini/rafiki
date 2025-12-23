@@ -5,9 +5,9 @@ import "fmt"
 
 // The set of record statuses.
 var (
-	Completed           = newStatus("completed")             // Completed the habit
+	Completed            = newStatus("completed")             // Completed the habit
 	IntentionallySkipped = newStatus("intentionally_skipped") // Intentionally skipped (rest day)
-	Skipped             = newStatus("skipped")               // Missed (unintentional)
+	Skipped              = newStatus("skipped")               // Missed (unintentional)
 )
 
 // Set of known statuses.

@@ -53,14 +53,14 @@ func (s *Store) Create(ctx context.Context, obj objectivebus.Objective) error {
 	INSERT INTO objectives (
 		objective_id, user_id, life_vision_id, title,
 		tracking_type, status,
-		target_metric, current_metric,
+		target_metric, current_metric, begin_metric,
 		frequency_type, frequency_count, compliance_target_pct,
 		archived_at,
 		date_created, date_updated
 	) VALUES (
 		:objective_id, :user_id, :life_vision_id, :title,
 		:tracking_type, :status,
-		:target_metric, :current_metric,
+		:target_metric, :current_metric, :begin_metric,
 		:frequency_type, :frequency_count, :compliance_target_pct,
 		:archived_at,
 		:date_created, :date_updated
@@ -86,6 +86,7 @@ func (s *Store) Update(ctx context.Context, obj objectivebus.Objective) error {
 		status = :status,
 		target_metric = :target_metric,
 		current_metric = :current_metric,
+		begin_metric = :begin_metric,
 		frequency_type = :frequency_type,
 		frequency_count = :frequency_count,
 		compliance_target_pct = :compliance_target_pct,
@@ -147,7 +148,7 @@ func (s *Store) Query(ctx context.Context, filter objectivebus.QueryFilter, orde
 	SELECT
 		objective_id, user_id, life_vision_id, title,
 		tracking_type, status,
-		target_metric, current_metric,
+		target_metric, current_metric, begin_metric,
 		frequency_type, frequency_count, compliance_target_pct,
 		archived_at,
 		date_created, date_updated
@@ -170,7 +171,7 @@ func (s *Store) QueryByID(ctx context.Context, objectiveID uuid.UUID) (objective
 	SELECT
 		objective_id, user_id, life_vision_id, title,
 		tracking_type, status,
-		target_metric, current_metric,
+		target_metric, current_metric, begin_metric,
 		frequency_type, frequency_count, compliance_target_pct,
 		archived_at,
 		date_created, date_updated

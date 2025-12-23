@@ -17,14 +17,16 @@ export const taskSchema = z
     contribution: z
       .number()
       .int('La contribución debe ser un número entero')
-      .min(1, 'La contribución debe ser al menos 1')
+      .min(0, 'La contribución debe ser 0 o mayor')
       .max(10, 'La contribución debe ser máximo 10')
       .optional()
       .nullable(),
   })
   .refine(
     (data) => {
-      if (data.objectiveId && !data.contribution) {
+      // Contribution is optional for linked tasks (can be 0 or null)
+      // Only require it to be defined if objectiveId is set
+      if (data.objectiveId && data.contribution === undefined) {
         return false;
       }
       return true;
