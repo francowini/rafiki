@@ -889,7 +889,7 @@ SELECT
     o.frequency_count,
     o.compliance_target_pct,
     COALESCE(activity.record_date, CURRENT_DATE) AS activity_date,
-    COALESCE(activity.activity_count, 0) AS activity_count,
+    COALESCE(activity.has_activity, 0) AS has_activity,
     COALESCE(activity.status, ARRAY['no_record']) AS activity_status,
     o.date_created,
     o.date_updated
@@ -898,7 +898,7 @@ LEFT JOIN (
     SELECT
         objective_id,
         record_date,
-        COUNT(*) AS activity_count,
+        1 AS has_activity,
         ARRAY_AGG(DISTINCT status ORDER BY status) AS status
     FROM objective_records
     WHERE record_date >= CURRENT_DATE - INTERVAL '365 days'
@@ -906,7 +906,7 @@ LEFT JOIN (
 ) activity ON o.objective_id = activity.objective_id
 WHERE o.archived_at IS NULL;
 
-COMMENT ON VIEW view_objective_activity IS 'Aggregates objective activity from records; supports year-based heatmap queries';
+COMMENT ON VIEW view_objective_activity IS 'Aggregates objective activity presence (0/1) from records; has_activity indicates presence due to unique constraint on (objective_id, record_date)';
 
 -- =============================================================================
 -- Fix constraints to support inverse objectives (begin > target) and contribution=0

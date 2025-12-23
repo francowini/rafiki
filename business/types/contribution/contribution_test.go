@@ -2,55 +2,57 @@ package contribution
 
 import (
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestParse(t *testing.T) {
 	tests := []struct {
 		name    string
 		value   int
-		want    int
+		want    Contribution
 		wantErr bool
 	}{
 		{
 			name:    "valid minimum boundary (0)",
 			value:   0,
-			want:    0,
+			want:    MustParse(0),
 			wantErr: false,
 		},
 		{
 			name:    "valid maximum boundary (10)",
 			value:   10,
-			want:    10,
+			want:    MustParse(10),
 			wantErr: false,
 		},
 		{
 			name:    "valid middle value (5)",
 			value:   5,
-			want:    5,
+			want:    MustParse(5),
 			wantErr: false,
 		},
 		{
 			name:    "invalid below minimum (-1)",
 			value:   -1,
-			want:    0,
+			want:    Contribution{},
 			wantErr: true,
 		},
 		{
 			name:    "invalid above maximum (11)",
 			value:   11,
-			want:    0,
+			want:    Contribution{},
 			wantErr: true,
 		},
 		{
 			name:    "invalid large negative",
 			value:   -100,
-			want:    0,
+			want:    Contribution{},
 			wantErr: true,
 		},
 		{
 			name:    "invalid large positive",
 			value:   100,
-			want:    0,
+			want:    Contribution{},
 			wantErr: true,
 		},
 	}
@@ -62,8 +64,10 @@ func TestParse(t *testing.T) {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && got.Value() != tt.want {
-				t.Errorf("Parse() = %v, want %v", got.Value(), tt.want)
+			if !tt.wantErr {
+				if diff := cmp.Diff(tt.want, got); diff != "" {
+					t.Errorf("Parse() mismatch (-want +got):\n%s", diff)
+				}
 			}
 		})
 	}
@@ -77,9 +81,10 @@ func TestMustParse(t *testing.T) {
 			}
 		}()
 
-		c := MustParse(5)
-		if c.Value() != 5 {
-			t.Errorf("MustParse() = %v, want 5", c.Value())
+		got := MustParse(5)
+		want := MustParse(5) // MustParse is safe here since we know 5 is valid
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("MustParse() mismatch (-want +got):\n%s", diff)
 		}
 	})
 
@@ -130,43 +135,43 @@ func TestContribution_UnmarshalText(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    int
+		want    Contribution
 		wantErr bool
 	}{
 		{
 			name:    "valid value",
 			input:   "5",
-			want:    5,
+			want:    MustParse(5),
 			wantErr: false,
 		},
 		{
 			name:    "boundary min",
 			input:   "0",
-			want:    0,
+			want:    MustParse(0),
 			wantErr: false,
 		},
 		{
 			name:    "boundary max",
 			input:   "10",
-			want:    10,
+			want:    MustParse(10),
 			wantErr: false,
 		},
 		{
 			name:    "invalid not a number",
 			input:   "abc",
-			want:    0,
+			want:    Contribution{},
 			wantErr: true,
 		},
 		{
 			name:    "invalid out of range",
 			input:   "11",
-			want:    0,
+			want:    Contribution{},
 			wantErr: true,
 		},
 		{
 			name:    "invalid negative",
 			input:   "-1",
-			want:    0,
+			want:    Contribution{},
 			wantErr: true,
 		},
 	}
@@ -179,8 +184,10 @@ func TestContribution_UnmarshalText(t *testing.T) {
 				t.Errorf("UnmarshalText() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && c.Value() != tt.want {
-				t.Errorf("UnmarshalText() = %v, want %v", c.Value(), tt.want)
+			if !tt.wantErr {
+				if diff := cmp.Diff(tt.want, c); diff != "" {
+					t.Errorf("UnmarshalText() mismatch (-want +got):\n%s", diff)
+				}
 			}
 		})
 	}
@@ -190,12 +197,14 @@ func TestContribution_UnmarshalText(t *testing.T) {
 // 0 = tracked but doesn't contribute numerically to the objective.
 func TestSemanticMeaning(t *testing.T) {
 	t.Run("zero is valid and means no contribution", func(t *testing.T) {
-		c, err := Parse(0)
+		got, err := Parse(0)
 		if err != nil {
 			t.Errorf("Parse(0) should be valid: %v", err)
+			return
 		}
-		if c.Value() != 0 {
-			t.Errorf("Parse(0).Value() = %v, want 0", c.Value())
+		want := MustParse(0)
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("Parse(0) mismatch (-want +got):\n%s", diff)
 		}
 	})
 }

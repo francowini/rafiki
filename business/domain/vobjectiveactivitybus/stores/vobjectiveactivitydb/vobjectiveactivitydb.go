@@ -117,7 +117,7 @@ func (s *Store) Query(ctx context.Context, filter vobjectiveactivitybus.QueryFil
 	dayMap := make(map[string][]vobjectiveactivitybus.ActivityItem)
 	for _, row := range rows {
 		dateKey := row.ActivityDate.Format("2006-01-02")
-		dayMap[dateKey] = append(dayMap[dateKey], toBusActivityItem(row))
+		dayMap[dateKey] = append(dayMap[dateKey], toBusActivityItem(ctx, s.log, row))
 	}
 
 	// Build days slice for all days in the year

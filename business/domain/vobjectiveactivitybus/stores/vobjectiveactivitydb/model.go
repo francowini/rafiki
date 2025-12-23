@@ -2,6 +2,7 @@
 package vobjectiveactivitydb
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 	"github.com/francowini/rafiki/business/types/notes"
 	"github.com/francowini/rafiki/business/types/recordstatus"
 	"github.com/francowini/rafiki/business/types/tasktitle"
+	"github.com/francowini/rafiki/foundation/logger"
 )
 
 // activityRow represents a single activity row from the database.
@@ -28,7 +30,8 @@ type activityRow struct {
 }
 
 // toBusActivityItem converts a database row to a business activity item.
-func toBusActivityItem(row activityRow) vobjectiveactivitybus.ActivityItem {
+// Parse errors are logged at debug level but do not fail the conversion.
+func toBusActivityItem(ctx context.Context, log *logger.Logger, row activityRow) vobjectiveactivitybus.ActivityItem {
 	item := vobjectiveactivitybus.ActivityItem{
 		ID:           row.ItemID,
 		ActivityType: vobjectiveactivitybus.ActivityType(row.ActivityType),
@@ -39,6 +42,8 @@ func toBusActivityItem(row activityRow) vobjectiveactivitybus.ActivityItem {
 	if row.RecordStatus != nil {
 		if rs, err := recordstatus.Parse(*row.RecordStatus); err == nil {
 			item.RecordStatus = &rs
+		} else {
+			log.Debug(ctx, "toBusActivityItem.recordstatus.parse", "itemID", row.ItemID, "rawValue", *row.RecordStatus, "err", err)
 		}
 	}
 
@@ -46,6 +51,8 @@ func toBusActivityItem(row activityRow) vobjectiveactivitybus.ActivityItem {
 	if row.Notes != nil {
 		if n, err := notes.Parse(*row.Notes); err == nil {
 			item.Notes = &n
+		} else {
+			log.Debug(ctx, "toBusActivityItem.notes.parse", "itemID", row.ItemID, "rawValue", *row.Notes, "err", err)
 		}
 	}
 
@@ -53,6 +60,8 @@ func toBusActivityItem(row activityRow) vobjectiveactivitybus.ActivityItem {
 	if row.TaskTitle != nil {
 		if tt, err := tasktitle.Parse(*row.TaskTitle); err == nil {
 			item.TaskTitle = &tt
+		} else {
+			log.Debug(ctx, "toBusActivityItem.tasktitle.parse", "itemID", row.ItemID, "rawValue", *row.TaskTitle, "err", err)
 		}
 	}
 
@@ -60,6 +69,8 @@ func toBusActivityItem(row activityRow) vobjectiveactivitybus.ActivityItem {
 	if row.Contribution != nil {
 		if c, err := contribution.Parse(*row.Contribution); err == nil {
 			item.Contribution = &c
+		} else {
+			log.Debug(ctx, "toBusActivityItem.contribution.parse", "itemID", row.ItemID, "rawValue", *row.Contribution, "err", err)
 		}
 	}
 
