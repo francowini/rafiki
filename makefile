@@ -129,16 +129,28 @@ reset-dev:
 	@echo ""
 	@echo "⏳ Waiting for database to be ready..."
 	@sleep 5
-	@until docker exec rafiki-postgres pg_isready -U rafiki -d rafiki > /dev/null 2>&1; do \
-		echo "   Waiting for PostgreSQL..."; \
+	@ATTEMPTS=0; MAX_ATTEMPTS=30; \
+	until docker exec rafiki-postgres pg_isready -U rafiki -d rafiki > /dev/null 2>&1; do \
+		ATTEMPTS=$$((ATTEMPTS + 1)); \
+		if [ $$ATTEMPTS -ge $$MAX_ATTEMPTS ]; then \
+			echo "❌ Error: PostgreSQL failed to start after $$MAX_ATTEMPTS attempts"; \
+			exit 1; \
+		fi; \
+		echo "   Waiting for PostgreSQL... (attempt $$ATTEMPTS/$$MAX_ATTEMPTS)"; \
 		sleep 2; \
 	done
 	@echo "✅ Database is ready"
 	@echo ""
 	@echo "⏳ Waiting for API to be ready..."
 	@sleep 3
-	@until curl -sf http://localhost:3000/v1/readiness > /dev/null 2>&1; do \
-		echo "   Waiting for API..."; \
+	@ATTEMPTS=0; MAX_ATTEMPTS=30; \
+	until curl -sf http://localhost:3000/v1/readiness > /dev/null 2>&1; do \
+		ATTEMPTS=$$((ATTEMPTS + 1)); \
+		if [ $$ATTEMPTS -ge $$MAX_ATTEMPTS ]; then \
+			echo "❌ Error: API failed to start after $$MAX_ATTEMPTS attempts"; \
+			exit 1; \
+		fi; \
+		echo "   Waiting for API... (attempt $$ATTEMPTS/$$MAX_ATTEMPTS)"; \
 		sleep 2; \
 	done
 	@echo "✅ API is ready"

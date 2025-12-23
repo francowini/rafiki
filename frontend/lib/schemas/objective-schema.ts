@@ -8,7 +8,7 @@ export const objectiveSchema = z.discriminatedUnion('trackingType', [
       lifeVisionId: z.string().min(1, 'Visión de vida es requerida'),
       title: z.string().min(5, 'Mínimo 5 caracteres').max(200, 'Máximo 200 caracteres'),
       targetMetric: z.number().min(1, 'La meta debe ser mayor a 0'),
-      beginMetric: z.number().optional(),
+      beginMetric: z.number().min(0, 'El valor inicial no puede ser negativo').optional(),
     })
     .refine(
       (data) => {

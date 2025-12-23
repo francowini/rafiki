@@ -85,6 +85,7 @@ func (Add) Add(app *web.App, cfg mux.Config) {
 	})
 
 	vobjectiveactivityapp.Routes(app, vobjectiveactivityapp.Config{
+		Log:                   cfg.Log,
 		VObjectiveActivityBus: cfg.BusConfig.VObjectiveActivityBus,
 		Auth:                  cfg.BusConfig.Auth,
 	})

@@ -6,12 +6,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/francowini/rafiki/business/types/contribution"
+	"github.com/francowini/rafiki/business/types/notes"
+	"github.com/francowini/rafiki/business/types/recordstatus"
+	"github.com/francowini/rafiki/business/types/tasktitle"
 )
 
 // Domain errors
 var (
 	ErrNotFound          = errors.New("activity not found")
-	ErrInvalidYear       = errors.New("year must be between 2000 and 2100")
 	ErrNotObjectiveOwner = errors.New("user does not own objective")
 )
 
@@ -41,12 +45,12 @@ type ActivityItem struct {
 	DateCreated  time.Time
 
 	// Record fields (nil for tasks)
-	RecordStatus *string
-	Notes        *string
+	RecordStatus *recordstatus.RecordStatus
+	Notes        *notes.Notes
 
 	// Task fields (nil for records)
-	TaskTitle    *string
-	Contribution *int
+	TaskTitle    *tasktitle.TaskTitle
+	Contribution *contribution.Contribution
 }
 
 // DayActivity represents activity data for a single day.

@@ -42,7 +42,6 @@ echo -e "${BLUE}Running seed data tool...${NC}"
 # Check if using external database
 if [ -n "$PARTNER_DB_HOST" ]; then
     DB_URL="postgresql://${PARTNER_DB_USER}:${PARTNER_DB_PASSWORD}@${PARTNER_DB_HOST}:${PARTNER_DB_PORT}/${PARTNER_DB_NAME}?sslmode=${PARTNER_DB_SSLMODE:-require}"
-    "$SEEDDATA_DIR/seeddata" "$DB_URL" "$PARTNER_ENCRYPTION_KEY"
 else
     # Use local docker postgres
     POSTGRES_USER=${POSTGRES_USER:-rafiki}
@@ -56,11 +55,13 @@ else
         echo -e "${YELLOW}Start with: make up${NC}"
         exit 1
     fi
-
-    "$SEEDDATA_DIR/seeddata" "$DB_URL" "$PARTNER_ENCRYPTION_KEY"
 fi
 
+# Temporarily disable errexit to capture exit code
+set +e
+"$SEEDDATA_DIR/seeddata" "$DB_URL" "$PARTNER_ENCRYPTION_KEY"
 RESULT=$?
+set -e
 
 if [ $RESULT -eq 0 ]; then
     echo ""

@@ -1,6 +1,6 @@
 'use client';
 
-import { cloneElement, useState, type SVGAttributes, type HTMLAttributes } from 'react';
+import React, { cloneElement, useState } from 'react';
 import { ActivityCalendar, type Activity, type BlockElement } from 'react-activity-calendar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -18,6 +18,19 @@ import type { ObjectiveActivityDay } from '@/lib/types';
 interface ObjectiveHeatmapProps {
   objectiveId: string;
   year: number;
+}
+
+// Helper to format date string for display
+function formatDateTitle(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`[F7] Invalid date: ${dateStr}`);
+    }
+    return 'Fecha inválida';
+  }
+  return date.toLocaleDateString('es-ES', { dateStyle: 'long' });
 }
 
 export function ObjectiveHeatmap({ objectiveId, year }: ObjectiveHeatmapProps) {
@@ -81,7 +94,9 @@ export function ObjectiveHeatmap({ objectiveId, year }: ObjectiveHeatmapProps) {
   const handleDayClick = (clickedDate: string) => {
     const dayData = data.days.find((d) => d.date === clickedDate);
     if (!dayData) {
-      console.warn(`[F17] Day data not found for date: ${clickedDate}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[F17] Day data not found for date: ${clickedDate}`);
+      }
       return;
     }
     if (dayData.hasActivity) {
@@ -90,14 +105,18 @@ export function ObjectiveHeatmap({ objectiveId, year }: ObjectiveHeatmapProps) {
     }
   };
 
-  const renderBlock = (block: BlockElement, activity: Activity) => {
-    return cloneElement(block, {
+  const renderBlock = (
+    block: BlockElement,
+    activity: Activity,
+  ): React.ReactElement<React.SVGProps<SVGRectElement>> => {
+    const blockProps = block.props as React.SVGProps<SVGRectElement>;
+    return cloneElement<React.SVGProps<SVGRectElement>>(block, {
       onClick: () => handleDayClick(activity.date),
       style: {
-        ...(block.props as SVGAttributes<SVGRectElement> & HTMLAttributes<SVGRectElement>).style,
+        ...blockProps.style,
         cursor: activity.level > 0 ? 'pointer' : 'default',
       },
-    } as SVGAttributes<SVGRectElement>);
+    });
   };
 
   return (
@@ -124,19 +143,7 @@ export function ObjectiveHeatmap({ objectiveId, year }: ObjectiveHeatmapProps) {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>
-              {selectedDay?.date
-                ? (() => {
-                    // F7: Validate date before formatting
-                    const date = new Date(selectedDay.date);
-                    if (isNaN(date.getTime())) {
-                      console.warn(`[F7] Invalid date: ${selectedDay.date}`);
-                      return 'Fecha inválida';
-                    }
-                    return date.toLocaleDateString('es-ES', { dateStyle: 'long' });
-                  })()
-                : ''}
-            </SheetTitle>
+            <SheetTitle>{formatDateTitle(selectedDay?.date)}</SheetTitle>
             <SheetDescription>Detalle de actividades</SheetDescription>
           </SheetHeader>
 

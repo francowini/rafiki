@@ -44,12 +44,9 @@ func NewBusiness(log *logger.Logger, storer Storer, extensions ...Extension) Ext
 }
 
 // Query retrieves activity data for an objective within a year.
+// Year validation is handled by the year.Year type at parse time.
 func (b *Business) Query(ctx context.Context, filter QueryFilter) (Activity, error) {
 	b.log.Info(ctx, "vobjectiveactivity.query", "objectiveID", filter.ObjectiveID, "year", filter.Year)
-
-	if filter.Year < 2000 || filter.Year > 2100 {
-		return Activity{}, ErrInvalidYear
-	}
 
 	activity, err := b.storer.Query(ctx, filter)
 	if err != nil {

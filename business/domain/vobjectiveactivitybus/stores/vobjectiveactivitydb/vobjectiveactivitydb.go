@@ -58,8 +58,9 @@ func (s *Store) Query(ctx context.Context, filter vobjectiveactivitybus.QueryFil
 	}
 
 	// Query activity data from the view for the specified year
-	startDate := time.Date(filter.Year, 1, 1, 0, 0, 0, 0, time.UTC)
-	endDate := time.Date(filter.Year, 12, 31, 23, 59, 59, 0, time.UTC)
+	yearVal := filter.Year.Value()
+	startDate := time.Date(yearVal, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(yearVal, 12, 31, 23, 59, 59, 0, time.UTC)
 
 	// Query combines objective_records and completed tasks
 	activityQuery := `
@@ -140,7 +141,7 @@ func (s *Store) Query(ctx context.Context, filter vobjectiveactivitybus.QueryFil
 			for _, item := range items {
 				if item.ActivityType == vobjectiveactivitybus.ActivityTypeTask {
 					totalCompletions++
-				} else if item.RecordStatus != nil && *item.RecordStatus == "completed" {
+				} else if item.RecordStatus != nil && item.RecordStatus.IsCompleted() {
 					totalCompletions++
 				}
 			}
@@ -155,7 +156,7 @@ func (s *Store) Query(ctx context.Context, filter vobjectiveactivitybus.QueryFil
 	return vobjectiveactivitybus.Activity{
 		ObjectiveID:      filter.ObjectiveID,
 		UserID:           filter.UserID,
-		Year:             filter.Year,
+		Year:             yearVal,
 		Days:             days,
 		TotalCompletions: totalCompletions,
 		CurrentStreak:    currentStreak,
@@ -179,32 +180,43 @@ func calculateStreaks(days []vobjectiveactivitybus.DayActivity, freqType *string
 }
 
 // calculateDailyStreaks computes streaks for daily frequency (consecutive days with activity).
+// Iterates backwards from most recent day, counting consecutive activity days.
+// Current streak is the most recent unbroken run; longest is the maximum seen.
 func calculateDailyStreaks(days []vobjectiveactivitybus.DayActivity) (current, longest int) {
+	if len(days) == 0 {
+		return 0, 0
+	}
+
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 	streak := 0
+	foundCurrentStreak := false
 
+	// Iterate backwards from most recent day
 	for i := len(days) - 1; i >= 0; i-- {
 		day := days[i]
+
+		// Skip future days
 		if day.Date.After(today) {
 			continue
 		}
+
 		if day.HasActivity {
 			streak++
 			if streak > longest {
 				longest = streak
 			}
 		} else {
-			if day.Date.Equal(today) || day.Date.Equal(today.AddDate(0, 0, -1)) {
-				// If today or yesterday has no activity, reset current streak
-				if streak > 0 {
-					current = streak
-				}
+			// First gap encountered - capture current streak and stop
+			if !foundCurrentStreak && streak > 0 {
+				current = streak
+				foundCurrentStreak = true
 			}
 			streak = 0
 		}
 	}
 
-	if streak > 0 {
+	// If we never hit a gap, the entire run is the current streak
+	if !foundCurrentStreak && streak > 0 {
 		current = streak
 	}
 
@@ -213,6 +225,10 @@ func calculateDailyStreaks(days []vobjectiveactivitybus.DayActivity) (current, l
 
 // calculateWeeklyStreaks computes streaks for n_per_week frequency.
 func calculateWeeklyStreaks(days []vobjectiveactivitybus.DayActivity, requiredPerWeek int) (current, longest int) {
+	if len(days) == 0 {
+		return 0, 0
+	}
+
 	// Group days by ISO week
 	weekActivity := make(map[string]int)
 
@@ -254,6 +270,10 @@ func calculateWeeklyStreaks(days []vobjectiveactivitybus.DayActivity, requiredPe
 
 // calculateMonthlyStreaks computes streaks for n_per_month frequency.
 func calculateMonthlyStreaks(days []vobjectiveactivitybus.DayActivity, requiredPerMonth int) (current, longest int) {
+	if len(days) == 0 {
+		return 0, 0
+	}
+
 	// Group days by month
 	monthActivity := make(map[string]int)
 

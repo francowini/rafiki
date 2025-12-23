@@ -47,14 +47,30 @@ func toAppActivityResponse(a vobjectiveactivitybus.Activity) ActivityResponse {
 	for i, day := range a.Days {
 		items := make([]ItemResponse, len(day.Items))
 		for j, item := range day.Items {
-			items[j] = ItemResponse{
-				ID:           item.ID.String(),
-				Type:         string(item.ActivityType),
-				Status:       item.RecordStatus,
-				Notes:        item.Notes,
-				Title:        item.TaskTitle,
-				Contribution: item.Contribution,
+			ir := ItemResponse{
+				ID:   item.ID.String(),
+				Type: string(item.ActivityType),
 			}
+
+			// Convert strong types back to primitives for JSON
+			if item.RecordStatus != nil {
+				s := item.RecordStatus.String()
+				ir.Status = &s
+			}
+			if item.Notes != nil {
+				n := item.Notes.String()
+				ir.Notes = &n
+			}
+			if item.TaskTitle != nil {
+				t := item.TaskTitle.String()
+				ir.Title = &t
+			}
+			if item.Contribution != nil {
+				c := item.Contribution.Value()
+				ir.Contribution = &c
+			}
+
+			items[j] = ir
 		}
 		days[i] = DayResponse{
 			Date:        day.Date.Format("2006-01-02"),

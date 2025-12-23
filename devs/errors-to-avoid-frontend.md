@@ -27,6 +27,7 @@ This document catalogs critical errors specific to frontend (TypeScript/React) d
 - [F19. Types: Null Coalescing for Optional-to-Nullable Conversion](#f19-types-null-coalescing-for-optional-to-nullable-conversion)
 - [F20. React Query: Cache Invalidation Key Hierarchy Mismatch](#f20-react-query-cache-invalidation-key-hierarchy-mismatch)
 - [F21. API Calls: Inline Fetch Bypassing Centralized Patterns](#f21-api-calls-inline-fetch-bypassing-centralized-patterns)
+- [F22. Math: Division by Zero in Progress Calculations](#f22-math-division-by-zero-in-progress-calculations)
 
 ---
 
@@ -1204,3 +1205,47 @@ export function useMyAction(): UseMutationResult<Response, Error, Params> {
 - [ ] Mutations use React Query hooks for proper cache invalidation
 - [ ] If toast action needs to call API, use existing mutation hooks
 - [ ] Create new hooks in `lib/hooks/` for missing use cases
+
+---
+
+## F22. Math: Division by Zero in Progress Calculations
+
+### Severity: Major (Runtime Error / NaN Display)
+
+### Problem
+
+When calculating percentage progress, dividing by `totalRange` without checking for zero produces `NaN` or `Infinity`, which displays incorrectly in the UI. This happens when `begin === target` (the goal is already at the target).
+
+### Bad Example
+
+```typescript
+// BAD: Division by zero when startValue === target
+const totalRange = target - startValue; // Could be 0!
+const percentage = (progress / totalRange) * 100; // NaN or Infinity
+```
+
+### Good Example
+
+```typescript
+// GOOD: Guard against division by zero
+const totalRange = target - startValue;
+
+if (totalRange === 0) {
+  // Already at target - return 100% or appropriate value
+  return {
+    percentage: 100,
+    isInverse: false,
+    isNegativeProgress: current < startValue,
+    displayText: 'Meta alcanzada',
+  };
+}
+
+const percentage = Math.min(100, Math.max(0, (progress / totalRange) * 100));
+```
+
+### Checklist
+
+- [ ] Check for zero before dividing by calculated ranges
+- [ ] Return sensible default (100% when already at target)
+- [ ] Apply Math.min/Math.max clamping after the division
+- [ ] Handle edge case in both increase and decrease goal branches

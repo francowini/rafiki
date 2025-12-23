@@ -16,6 +16,17 @@ export function calculateProgress(
   if (isInverse) {
     // Decrease goal (weight loss: 80 -> 70)
     const totalRange = startValue - target;
+
+    // Guard against division by zero (startValue === target)
+    if (totalRange === 0) {
+      return {
+        percentage: 100,
+        isInverse: true,
+        isNegativeProgress: current > startValue,
+        displayText: 'Meta alcanzada',
+      };
+    }
+
     const progress = startValue - current;
     const percentage = Math.min(100, Math.max(0, (progress / totalRange) * 100));
     const isNegativeProgress = current > startValue;
@@ -34,6 +45,17 @@ export function calculateProgress(
   } else {
     // Increase goal (books: 0 -> 12)
     const totalRange = target - startValue;
+
+    // Guard against division by zero (startValue === target)
+    if (totalRange === 0) {
+      return {
+        percentage: 100,
+        isInverse: false,
+        isNegativeProgress: current < startValue,
+        displayText: 'Meta alcanzada',
+      };
+    }
+
     const progress = current - startValue;
     const percentage = Math.min(100, Math.max(0, (progress / totalRange) * 100));
     const isNegativeProgress = current < startValue;

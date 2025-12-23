@@ -854,9 +854,9 @@ COMMENT ON COLUMN objectives.begin_metric IS 'Starting metric value for result-t
 
 -- Composite index for LEFT JOIN in view_objective_activity
 -- Supports: WHERE objective_id = X AND record_date >= Y
+-- Note: No WHERE clause needed since table constraint already limits status values
 CREATE INDEX IF NOT EXISTS objective_records_objective_date_composite_idx
-ON objective_records(objective_id, record_date DESC)
-WHERE status IN ('completed', 'intentionally_skipped', 'skipped');
+ON objective_records(objective_id, record_date DESC);
 
 COMMENT ON INDEX objective_records_objective_date_composite_idx IS 'Supports view_objective_activity LEFT JOIN and date-range filtering';
 

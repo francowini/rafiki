@@ -149,7 +149,13 @@ func (b *Business) Create(ctx context.Context, no NewObjective) (Objective, erro
 		var initial currentmetric.CurrentMetric
 		if no.BeginMetric != nil && no.TargetMetric != nil && no.BeginMetric.Value() > no.TargetMetric.Value() {
 			// Decrease goal: start at begin value
-			initial, _ = currentmetric.Parse(no.BeginMetric.Value())
+			var err error
+			initial, err = currentmetric.Parse(no.BeginMetric.Value())
+			if err != nil {
+				// BeginMetric was already validated at app layer, but log and use safe default
+				b.log.Error(ctx, "objectivebus.create.parsecurrentmetric", "beginMetricValue", no.BeginMetric.Value(), "err", err)
+				initial = currentmetric.Zero()
+			}
 		} else {
 			// Increase goal: start at 0
 			initial = currentmetric.Zero()
@@ -347,12 +353,9 @@ func (b *Business) IncrementProgress(ctx context.Context, objective Objective, r
 	}
 
 	// Direction-aware validation: only block exceeding target for increasing goals
-	isInverseGoal := objective.BeginMetric != nil && objective.BeginMetric.Value() > objective.TargetMetric.Value()
-	if !isInverseGoal && newValue > objective.TargetMetric.Value() {
-		// For increasing goals (e.g., 0 → 100): current must not exceed target
-		return Objective{}, ErrProgressExceedsTarget
+	if err := validateProgressNotExceedsTarget(objective, newValue); err != nil {
+		return Objective{}, err
 	}
-	// For inverse goals (e.g., 100 → 70): current CAN be > target (that's 0-99% progress)
 
 	// Parse validates non-negative (which we've already ensured above)
 	newCurrentMetric, err := currentmetric.Parse(newValue)
@@ -399,12 +402,9 @@ func (b *Business) UpdateProgress(ctx context.Context, objective Objective, req 
 	}
 
 	// Direction-aware validation: only block exceeding target for increasing goals
-	isInverseGoal := objective.BeginMetric != nil && objective.BeginMetric.Value() > objective.TargetMetric.Value()
-	if !isInverseGoal && newValue > objective.TargetMetric.Value() {
-		// For increasing goals (e.g., 0 → 100): current must not exceed target
-		return Objective{}, ErrProgressExceedsTarget
+	if err := validateProgressNotExceedsTarget(objective, newValue); err != nil {
+		return Objective{}, err
 	}
-	// For inverse goals (e.g., 100 → 70): current CAN be > target (that's 0-99% progress)
 
 	// Parse validates non-negative (which we've already ensured above)
 	newCurrentMetric, err := currentmetric.Parse(newValue)
@@ -514,4 +514,20 @@ func validateStatusTransition(from, to objectivestatus.ObjectiveStatus) error {
 	}
 
 	return ErrStatusTransitionNotAllowed
+}
+
+// isInverseGoal returns true if this is a decrease goal (begin > target).
+// For example: reducing weight from 80kg to 70kg.
+func isInverseGoal(obj Objective) bool {
+	return obj.BeginMetric != nil && obj.TargetMetric != nil && obj.BeginMetric.Value() > obj.TargetMetric.Value()
+}
+
+// validateProgressNotExceedsTarget checks if the new progress value is valid.
+// For increasing goals: newValue must not exceed target.
+// For inverse goals: newValue CAN exceed target (that's 0-99% progress).
+func validateProgressNotExceedsTarget(obj Objective, newValue int) error {
+	if !isInverseGoal(obj) && obj.TargetMetric != nil && newValue > obj.TargetMetric.Value() {
+		return ErrProgressExceedsTarget
+	}
+	return nil
 }
