@@ -222,3 +222,125 @@ func TestCalculateDailyStreaks_SingleDay(t *testing.T) {
 		t.Errorf("expected longest streak 1, got %d", longest)
 	}
 }
+
+// TestCalculateWeeklyStreaks_YearBoundaryDec30_31 verifies that ISO week year
+// boundaries are handled correctly. Dec 30/31 of some years belong to ISO week 1
+// of the next year (e.g., Dec 31, 2024 is in ISO week 2025-01).
+// The weeks list should only contain weeks from the data year's ISO calendar.
+func TestCalculateWeeklyStreaks_YearBoundaryDec30_31(t *testing.T) {
+	// 2024: Dec 30 is Monday of week 2025-01, Dec 31 is Tuesday of week 2025-01
+	// Create a full year of 2024 data with activity on Dec 30-31
+	days := make([]vobjectiveactivitybus.DayActivity, 366) // 2024 is a leap year
+	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	for i := range days {
+		d := startDate.AddDate(0, 0, i)
+		days[i] = vobjectiveactivitybus.DayActivity{
+			Date:        d,
+			HasActivity: true, // All days have activity
+		}
+	}
+
+	// With activity every day, all 52 weeks of 2024 should meet requirement of 3/week
+	// Dec 30-31 fall into ISO week 2025-01 and should NOT create a week "2025-01"
+	current, longest := calculateWeeklyStreaks(days, 3)
+
+	// 2024 has 52 ISO weeks (week 52 ends Dec 29)
+	// Longest should be 52 (all weeks of 2024 meet requirement)
+	if longest != 52 {
+		t.Errorf("expected longest streak 52 (all ISO weeks of 2024), got %d", longest)
+	}
+
+	// Current streak depends on current date - but shouldn't be affected by 2025-01
+	// Since we're testing historical data, current may be 0 or some value
+	// The key assertion is that longest is correct and no panic occurs
+	_ = current
+}
+
+// TestCalculateWeeklyStreaks_YearBoundaryJan1_2 verifies early January dates
+// that may belong to the previous year's ISO week are handled correctly.
+func TestCalculateWeeklyStreaks_YearBoundaryJan1_2(t *testing.T) {
+	// 2025: Jan 1-5 are in ISO week 2025-01
+	// Create data for 2025 with activity in first week
+	days := make([]vobjectiveactivitybus.DayActivity, 365)
+	startDate := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	for i := range days {
+		d := startDate.AddDate(0, 0, i)
+		// Activity only in first 4 weeks (28 days)
+		days[i] = vobjectiveactivitybus.DayActivity{
+			Date:        d,
+			HasActivity: i < 28,
+		}
+	}
+
+	current, longest := calculateWeeklyStreaks(days, 3)
+
+	// First 4 weeks have 7 days of activity each (meets 3/week)
+	// Longest should be 4
+	if longest != 4 {
+		t.Errorf("expected longest streak 4, got %d", longest)
+	}
+
+	// Current streak should be 0 since activity stopped after week 4
+	// and we're testing 2025 data (assuming current date is in 2025)
+	_ = current
+}
+
+// TestCalculateWeeklyStreaks_ConsecutiveWeeksWithGap tests that gaps properly
+// break streaks and current vs longest are calculated correctly.
+func TestCalculateWeeklyStreaks_ConsecutiveWeeksWithGap(t *testing.T) {
+	// Create 12 weeks of data with a gap in week 5
+	days := make([]vobjectiveactivitybus.DayActivity, 84) // 12 weeks
+	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	for i := range days {
+		d := startDate.AddDate(0, 0, i)
+		weekNum := i / 7
+		// Activity in weeks 0-3 (4 weeks), gap in week 4, activity in weeks 5-11 (7 weeks)
+		hasActivity := weekNum != 4
+		days[i] = vobjectiveactivitybus.DayActivity{
+			Date:        d,
+			HasActivity: hasActivity,
+		}
+	}
+
+	_, longest := calculateWeeklyStreaks(days, 3)
+
+	// Weeks 5-11 have 7 consecutive weeks meeting requirement
+	// Weeks 0-3 have 4 consecutive weeks
+	// Longest should be 7
+	if longest != 7 {
+		t.Errorf("expected longest streak 7, got %d", longest)
+	}
+}
+
+// TestCalculateMonthlyStreaks_ConsecutiveMonthsWithGap tests monthly streak
+// calculation with a gap in the middle.
+func TestCalculateMonthlyStreaks_ConsecutiveMonthsWithGap(t *testing.T) {
+	// Create a year of data: activity in Jan-Apr (4 months), gap in May,
+	// activity in Jun-Dec (7 months)
+	days := make([]vobjectiveactivitybus.DayActivity, 365)
+	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	for i := range days {
+		d := startDate.AddDate(0, 0, i)
+		month := d.Month()
+		// Activity in all months except May (month 5)
+		hasActivity := month != 5
+		days[i] = vobjectiveactivitybus.DayActivity{
+			Date:        d,
+			HasActivity: hasActivity,
+		}
+	}
+
+	// With ~30 days/month of activity and requirement of 10/month
+	_, longest := calculateMonthlyStreaks(days, 10)
+
+	// Jun-Dec = 7 consecutive months meeting requirement
+	// Jan-Apr = 4 consecutive months
+	// Longest should be 7
+	if longest != 7 {
+		t.Errorf("expected longest streak 7, got %d", longest)
+	}
+}

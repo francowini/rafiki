@@ -245,19 +245,24 @@ func calculateWeeklyStreaks(days []vobjectiveactivitybus.DayActivity, requiredPe
 	dataYear := days[0].Date.Year()
 	var weeks []string
 
-	// Start from first day of year and iterate week by week
+	// Start from first day of year and iterate day by day to capture all weeks
+	// Note: We iterate daily because week boundaries don't align with 7-day jumps
 	startOfYear := time.Date(dataYear, 1, 1, 0, 0, 0, 0, time.UTC)
 	endOfYear := time.Date(dataYear, 12, 31, 0, 0, 0, 0, time.UTC)
 
 	currentDate := startOfYear
 	for currentDate.Before(endOfYear) || currentDate.Equal(endOfYear) {
-		year, week := currentDate.ISOWeek()
-		key := fmt.Sprintf("%d-%02d", year, week)
-		// Avoid duplicates (multiple days map to same week)
-		if len(weeks) == 0 || weeks[len(weeks)-1] != key {
-			weeks = append(weeks, key)
+		isoYear, week := currentDate.ISOWeek()
+		// Only include weeks that belong to the data year's ISO calendar
+		// This prevents Dec 30/31 from adding "next-year-01" weeks
+		if isoYear == dataYear {
+			key := fmt.Sprintf("%d-%02d", isoYear, week)
+			// Avoid duplicates
+			if len(weeks) == 0 || weeks[len(weeks)-1] != key {
+				weeks = append(weeks, key)
+			}
 		}
-		currentDate = currentDate.AddDate(0, 0, 7)
+		currentDate = currentDate.AddDate(0, 0, 1)
 	}
 
 	// Determine current week
