@@ -3,9 +3,11 @@ package anthropic
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -55,6 +57,11 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+// ptrFloat64 returns a pointer to the given float64 value.
+func ptrFloat64(v float64) *float64 {
+	return &v
+}
+
 func TestNewClientWithConfig(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -76,7 +83,16 @@ func TestNewClientWithConfig(t *testing.T) {
 				APIKey:      "test-key",
 				Model:       "claude-haiku-4-5",
 				MaxTokens:   1000,
-				Temperature: 0.5,
+				Temperature: ptrFloat64(0.5),
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid config with zero temperature",
+			cfg: Config{
+				APIKey:      "test-key",
+				Model:       "claude-haiku-4-5",
+				Temperature: ptrFloat64(0.0), // Explicit 0.0 should be preserved
 			},
 			wantErr: false,
 		},
@@ -99,6 +115,9 @@ func TestNewClientWithConfig(t *testing.T) {
 				if err == nil {
 					t.Error("NewClientWithConfig() expected error, got nil")
 					return
+				}
+				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("NewClientWithConfig() error = %q, want substring %q", err.Error(), tt.errMsg)
 				}
 				return
 			}
@@ -397,5 +416,52 @@ func TestIntegration_SendMessage(t *testing.T) {
 	}
 	if resp.Usage.OutputTokens == 0 {
 		t.Error("Expected non-zero output tokens")
+	}
+}
+
+// =============================================================================
+// Error Helper Tests
+// =============================================================================
+
+func TestIsRetryableError(t *testing.T) {
+	tests := []struct {
+		name      string
+		err       error
+		wantRetry bool
+	}{
+		{
+			name:      "rate limit error is retryable",
+			err:       &RateLimitError{StatusCode: 429, Message: "rate limited"},
+			wantRetry: true,
+		},
+		{
+			name:      "5xx API error is retryable",
+			err:       &APIError{StatusCode: 500, Retryable: true, Message: "server error"},
+			wantRetry: true,
+		},
+		{
+			name:      "4xx API error is not retryable",
+			err:       &APIError{StatusCode: 400, Retryable: false, Message: "bad request"},
+			wantRetry: false,
+		},
+		{
+			name:      "unknown error is not retryable",
+			err:       errors.New("some unknown error"),
+			wantRetry: false,
+		},
+		{
+			name:      "nil error is not retryable",
+			err:       nil,
+			wantRetry: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsRetryableError(tt.err)
+			if got != tt.wantRetry {
+				t.Errorf("IsRetryableError() = %v, want %v", got, tt.wantRetry)
+			}
+		})
 	}
 }

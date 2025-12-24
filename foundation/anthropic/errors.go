@@ -63,6 +63,8 @@ func IsRetryableError(err error) bool {
 		return ae.Retryable
 	}
 
-	// Network errors are generally retryable
+	// Unknown errors (including network errors) are treated as non-retryable
+	// by default to avoid infinite retry loops. Callers can implement their
+	// own retry logic for specific network error types if needed.
 	return false
 }

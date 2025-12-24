@@ -35,7 +35,7 @@ type Config struct {
 	APIKey      string
 	Model       string
 	MaxTokens   int
-	Temperature float64
+	Temperature *float64 // Pointer to distinguish unset (nil) from explicit 0.0
 }
 
 // NewClient creates a new Anthropic client with the specified API key and model.
@@ -77,9 +77,9 @@ func NewClientWithConfig(cfg Config) (*Client, error) {
 		return nil, fmt.Errorf("max tokens must be <= %d, got %d", maxTokensLimit, maxTokens)
 	}
 
-	temperature := cfg.Temperature
-	if temperature == 0 {
-		temperature = defaultTemperature
+	temperature := defaultTemperature
+	if cfg.Temperature != nil {
+		temperature = *cfg.Temperature
 	}
 
 	return &Client{
