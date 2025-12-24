@@ -261,18 +261,50 @@ Paso 6 - Intensidad
 
 ## Deliverables
 
-### Deliverable 1: Anthropic Client
+### Deliverable 1: Anthropic Client ✅ DONE
 
 **Scope**: `foundation/anthropic/`
 
 | File | Purpose |
 |------|---------|
-| `client.go` | HTTP client for Anthropic Messages API |
-| `errors.go` | Error handling (rate limits, retries) |
+| `anthropic.go` | HTTP client for Anthropic Messages API |
+| `errors.go` | Error types (RateLimitError, APIError) and helpers |
+| `anthropic_test.go` | Unit tests + integration test |
+
+**Purpose of Foundation Layer**:
+The foundation layer provides a **generic, decoupled** HTTP client for the Anthropic API. It:
+- Returns raw text content from Claude (no JSON parsing)
+- Includes token usage information
+- Handles error classification (rate limits, retryable errors)
+- Has ZERO business domain dependencies
+
+The **app layer** (job workers) is responsible for:
+- Defining domain-specific response structures
+- Parsing Claude's raw text into those structures
+- Building prompts with business context
+
+This separation ensures the client can be reused for any AI feature, not just moment tracking.
 
 **Environment Variables**:
-- `PARTNER_ANTHROPIC_APIKEY` - API key
-- `PARTNER_ANTHROPIC_MODEL` - Model (e.g., `claude-3-5-sonnet-20241022`)
+- `PARTNER_ANTHROPIC_APIKEY` - API key (required)
+- `PARTNER_ANTHROPIC_MODEL` - Model (default: `claude-haiku-4-5`)
+- `PARTNER_ANTHROPIC_MAXTOKENS` - Max response tokens (default: 500)
+- `PARTNER_ANTHROPIC_TEMPERATURE` - Temperature (default: 0.7)
+
+**API**:
+```go
+// Create client
+client, err := anthropic.NewClient(apiKey, model)
+
+// Send message - returns raw content
+resp, err := client.SendMessage(ctx, anthropic.MessageRequest{
+    SystemPrompt: "You are a helpful assistant",
+    UserMessage:  "Hello",
+})
+
+// resp.Content = raw text from Claude
+// resp.Usage.InputTokens, resp.Usage.OutputTokens
+```
 
 **Dependencies**: None
 
@@ -488,12 +520,14 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 
 ## Environment Variables
 
-| Variable | Description | Example |
+| Variable | Description | Default |
 |----------|-------------|---------|
-| `PARTNER_ANTHROPIC_APIKEY` | Anthropic API key | `sk-ant-...` |
-| `PARTNER_ANTHROPIC_MODEL` | Claude model | `claude-3-5-sonnet-20241022` |
-| `PARTNER_TELEGRAM_BOTTOKEN` | Telegram bot token | `123456:ABC-DEF...` |
-| `PARTNER_TELEGRAM_WEBHOOKSECRET` | Webhook signature secret | `random-secret-string` |
+| `PARTNER_ANTHROPIC_APIKEY` | Anthropic API key | (required) |
+| `PARTNER_ANTHROPIC_MODEL` | Claude model | `claude-haiku-4-5` |
+| `PARTNER_ANTHROPIC_MAXTOKENS` | Max response tokens | `500` |
+| `PARTNER_ANTHROPIC_TEMPERATURE` | Response temperature | `0.7` |
+| `PARTNER_TELEGRAM_BOTTOKEN` | Telegram bot token | (required) |
+| `PARTNER_TELEGRAM_WEBHOOKSECRET` | Webhook signature secret | (required) |
 
 ---
 
