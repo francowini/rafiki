@@ -3,6 +3,7 @@ package retrycount
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // RetryCount represents a validated retry count (0-2) for AI validation failures.
@@ -32,8 +33,8 @@ func (r RetryCount) MarshalText() ([]byte, error) {
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (r *RetryCount) UnmarshalText(data []byte) error {
-	var value int
-	if _, err := fmt.Sscanf(string(data), "%d", &value); err != nil {
+	value, err := strconv.Atoi(string(data))
+	if err != nil {
 		return fmt.Errorf("invalid retry count value: %w", err)
 	}
 

@@ -3,6 +3,7 @@ package sessionstep
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // SessionStep represents a validated step in the Telegram ACT Moment flow (1-6).
@@ -10,15 +11,25 @@ type SessionStep struct {
 	value int
 }
 
-// Pre-defined step constants for use in business logic.
-var (
-	Step1Situacion     = SessionStep{1}
-	Step2Sintomas      = SessionStep{2}
-	Step3Conducta      = SessionStep{3}
-	Step4Consecuencias = SessionStep{4}
-	Step5Valores       = SessionStep{5}
-	Step6Intensidad    = SessionStep{6}
-)
+// Step accessor functions provide immutable step values for use in business logic.
+
+// Step1Situacion returns the first step (Situación).
+func Step1Situacion() SessionStep { return SessionStep{1} }
+
+// Step2Sintomas returns the second step (Síntomas).
+func Step2Sintomas() SessionStep { return SessionStep{2} }
+
+// Step3Conducta returns the third step (Conducta).
+func Step3Conducta() SessionStep { return SessionStep{3} }
+
+// Step4Consecuencias returns the fourth step (Consecuencias).
+func Step4Consecuencias() SessionStep { return SessionStep{4} }
+
+// Step5Valores returns the fifth step (Valores).
+func Step5Valores() SessionStep { return SessionStep{5} }
+
+// Step6Intensidad returns the sixth step (Intensidad).
+func Step6Intensidad() SessionStep { return SessionStep{6} }
 
 // Value returns the int value of the session step.
 func (s SessionStep) Value() int {
@@ -42,8 +53,8 @@ func (s SessionStep) MarshalText() ([]byte, error) {
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (s *SessionStep) UnmarshalText(data []byte) error {
-	var value int
-	if _, err := fmt.Sscanf(string(data), "%d", &value); err != nil {
+	value, err := strconv.Atoi(string(data))
+	if err != nil {
 		return fmt.Errorf("invalid session step value: %w", err)
 	}
 
