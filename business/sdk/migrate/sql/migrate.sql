@@ -975,3 +975,79 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON CONSTRAINT objectives_progress_bounds ON objectives IS 'Allows current_metric >= 0; upper bound validated by business logic for inverse objectives';
 COMMENT ON CONSTRAINT tasks_contribution_check ON tasks IS 'Contribution 0-10 scale; 0 for tasks tracked without numeric contribution';
+
+
+-- Version: 20
+-- Description: Add Telegram integration with generic multi-step session support
+-- Adds telegram_linked_at to users, telegram_sessions table for any conversation flow
+
+-- =============================================================================
+-- Add telegram_linked_at to users table
+-- =============================================================================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_linked_at TIMESTAMP NULL;
+
+COMMENT ON COLUMN users.telegram_linked_at IS 'Timestamp when user first linked their Telegram account (NULL if never linked)';
+
+-- =============================================================================
+-- Create UNIQUE index on users.telegram_chat_id for one-to-one mapping
+-- =============================================================================
+-- Enforces business rule: one Telegram account -> one Rafiki user
+-- Allows fast lookups when Telegram webhook receives message
+CREATE UNIQUE INDEX IF NOT EXISTS users_telegram_chat_id_unique_idx
+    ON users(telegram_chat_id)
+    WHERE telegram_chat_id IS NOT NULL;
+
+-- =============================================================================
+-- Create telegram_sessions table for generic multi-step conversation tracking
+-- =============================================================================
+-- Design: Sessions are ACTIVE only. Deleted on completion, expiry, or abandonment.
+-- No history stored here - use domain-specific tables for completed data (e.g., moments).
+CREATE TABLE IF NOT EXISTS telegram_sessions (
+    session_id          UUID        NOT NULL,
+    user_id             UUID        NOT NULL,
+    chat_id             BIGINT      NOT NULL,
+    session_type        TEXT        NOT NULL,
+    current_step        INTEGER     NOT NULL,
+    total_steps         INTEGER     NOT NULL,
+    retry_count         INTEGER     NOT NULL DEFAULT 0,
+    context_data        JSONB       NOT NULL DEFAULT '{}',
+    last_activity       TIMESTAMP   NOT NULL,
+    date_created        TIMESTAMP   NOT NULL,
+    date_updated        TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (session_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- =============================================================================
+-- Indexes for telegram_sessions
+-- =============================================================================
+
+-- UNIQUE constraint: one active session per user per session_type
+-- Allows user to have different session types simultaneously if needed
+CREATE UNIQUE INDEX IF NOT EXISTS telegram_sessions_user_type_unique_idx
+    ON telegram_sessions(user_id, session_type);
+
+-- Fast lookup when Telegram webhook receives message (chat_id -> session)
+CREATE INDEX IF NOT EXISTS telegram_sessions_chat_id_idx
+    ON telegram_sessions(chat_id);
+
+-- TTL cleanup: find stale sessions by last_activity timestamp
+-- Business layer handles cleanup (background job or on-demand)
+CREATE INDEX IF NOT EXISTS telegram_sessions_last_activity_idx
+    ON telegram_sessions(last_activity);
+
+-- =============================================================================
+-- Comments documenting telegram_sessions schema
+-- =============================================================================
+
+COMMENT ON TABLE telegram_sessions IS 'Active multi-step Telegram conversation sessions (deleted on completion/expiry)';
+COMMENT ON COLUMN telegram_sessions.session_id IS 'Unique session identifier';
+COMMENT ON COLUMN telegram_sessions.user_id IS 'Rafiki user associated with session';
+COMMENT ON COLUMN telegram_sessions.chat_id IS 'Telegram chat_id for message routing';
+COMMENT ON COLUMN telegram_sessions.session_type IS 'Conversation flow type (e.g., moment_tracking, habit_check_in)';
+COMMENT ON COLUMN telegram_sessions.current_step IS 'Current step in the multi-step flow (1-based)';
+COMMENT ON COLUMN telegram_sessions.total_steps IS 'Total steps for this session type';
+COMMENT ON COLUMN telegram_sessions.retry_count IS 'Validation retry attempts for current step';
+COMMENT ON COLUMN telegram_sessions.context_data IS 'Session-type specific data collected during conversation (JSONB)';
+COMMENT ON COLUMN telegram_sessions.last_activity IS 'Timestamp of last user interaction (for TTL cleanup)';
