@@ -1,4 +1,4 @@
-// Package sessionstep represents a validated step in the Telegram ACT Moment flow (1-6).
+// Package sessionstep represents a validated step in a multi-step conversation flow.
 package sessionstep
 
 import (
@@ -6,30 +6,11 @@ import (
 	"strconv"
 )
 
-// SessionStep represents a validated step in the Telegram ACT Moment flow (1-6).
+// SessionStep represents a validated step number (1-based positive integer).
+// Upper bound validation is done at runtime against the session's total_steps.
 type SessionStep struct {
 	value int
 }
-
-// Step accessor functions provide immutable step values for use in business logic.
-
-// Step1Situacion returns the first step (Situación).
-func Step1Situacion() SessionStep { return SessionStep{1} }
-
-// Step2Sintomas returns the second step (Síntomas).
-func Step2Sintomas() SessionStep { return SessionStep{2} }
-
-// Step3Conducta returns the third step (Conducta).
-func Step3Conducta() SessionStep { return SessionStep{3} }
-
-// Step4Consecuencias returns the fourth step (Consecuencias).
-func Step4Consecuencias() SessionStep { return SessionStep{4} }
-
-// Step5Valores returns the fifth step (Valores).
-func Step5Valores() SessionStep { return SessionStep{5} }
-
-// Step6Intensidad returns the sixth step (Intensidad).
-func Step6Intensidad() SessionStep { return SessionStep{6} }
 
 // Value returns the int value of the session step.
 func (s SessionStep) Value() int {
@@ -69,10 +50,11 @@ func (s *SessionStep) UnmarshalText(data []byte) error {
 
 // =============================================================================
 
-// Parse validates and creates a SessionStep (1-6).
+// Parse validates and creates a SessionStep (must be >= 1).
+// Upper bound validation should be done at the business layer against total_steps.
 func Parse(value int) (SessionStep, error) {
-	if value < 1 || value > 6 {
-		return SessionStep{}, fmt.Errorf("session step must be between 1 and 6, got %d", value)
+	if value < 1 {
+		return SessionStep{}, fmt.Errorf("session step must be >= 1, got %d", value)
 	}
 
 	return SessionStep{value}, nil
@@ -90,21 +72,26 @@ func MustParse(value int) SessionStep {
 
 // =============================================================================
 
-// Next returns the next step, or error if already at step 6.
-func (s SessionStep) Next() (SessionStep, error) {
-	if s.value >= 6 {
-		return SessionStep{}, fmt.Errorf("already at final step (6)")
-	}
-
-	return SessionStep{s.value + 1}, nil
-}
-
 // IsFirst returns true if this is step 1.
 func (s SessionStep) IsFirst() bool {
 	return s.value == 1
 }
 
-// IsFinal returns true if this is step 6 (intensidad).
-func (s SessionStep) IsFinal() bool {
-	return s.value == 6
+// IsFinal returns true if this step equals totalSteps.
+func (s SessionStep) IsFinal(totalSteps int) bool {
+	return s.value == totalSteps
+}
+
+// Next returns the next step. Returns error if already at or beyond totalSteps.
+func (s SessionStep) Next(totalSteps int) (SessionStep, error) {
+	if s.value >= totalSteps {
+		return SessionStep{}, fmt.Errorf("already at final step (%d)", totalSteps)
+	}
+
+	return SessionStep{s.value + 1}, nil
+}
+
+// IsValid checks if the step is within valid range for the given totalSteps.
+func (s SessionStep) IsValid(totalSteps int) bool {
+	return s.value >= 1 && s.value <= totalSteps
 }
