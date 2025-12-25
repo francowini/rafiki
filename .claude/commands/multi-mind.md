@@ -256,7 +256,13 @@ Each original agent should:
      - Do new models use types from `business/types/` (not primitives)?
      - Are validation rules in the type, not scattered in business logic?
 
-  6. **Query Domain Pattern** (if applicable)
+  6. **Database as Dumb Storage**
+     - Are CHECK constraints avoided in database schemas?
+     - Is validation handled ONLY in the business layer (strong types)?
+     - Does the database store data without enforcing business rules?
+     - This ensures single source of truth for validation and decouples schema from implementation
+
+  7. **Query Domain Pattern** (if applicable)
      - Are multi-model reads using database views?
      - Is the query domain read-only (no Create/Update/Delete)?
 
