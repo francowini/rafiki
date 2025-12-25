@@ -975,3 +975,79 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON CONSTRAINT objectives_progress_bounds ON objectives IS 'Allows current_metric >= 0; upper bound validated by business logic for inverse objectives';
 COMMENT ON CONSTRAINT tasks_contribution_check ON tasks IS 'Contribution 0-10 scale; 0 for tasks tracked without numeric contribution';
+
+
+-- Version: 20
+-- Description: Add Telegram integration for ACT Moment tracking (Deliverable 2)
+-- Adds telegram_linked_at to users, telegram_sessions table with wellness tracking support
+
+-- =============================================================================
+-- Add telegram_linked_at to users table
+-- =============================================================================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_linked_at TIMESTAMP NULL;
+
+COMMENT ON COLUMN users.telegram_linked_at IS 'Timestamp when user first linked their Telegram account (NULL if never linked)';
+
+-- =============================================================================
+-- Create UNIQUE index on users.telegram_chat_id for one-to-one mapping
+-- =============================================================================
+-- Enforces business rule: one Telegram account -> one Rafiki user
+-- Allows fast lookups when Telegram webhook receives message
+CREATE UNIQUE INDEX IF NOT EXISTS users_telegram_chat_id_unique_idx
+    ON users(telegram_chat_id)
+    WHERE telegram_chat_id IS NOT NULL;
+
+-- =============================================================================
+-- Create telegram_sessions table for multi-step conversation tracking
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS telegram_sessions (
+    session_id          UUID        NOT NULL,
+    user_id             UUID        NOT NULL,
+    chat_id             BIGINT      NOT NULL,
+    current_step        INTEGER     NOT NULL CHECK (current_step BETWEEN 1 AND 6),
+    retry_count         INTEGER     NOT NULL DEFAULT 0 CHECK (retry_count BETWEEN 0 AND 2),
+    initial_intensity   INTEGER     NULL CHECK (initial_intensity IS NULL OR (initial_intensity >= 0 AND initial_intensity <= 10)),
+    abandonment_step    INTEGER     NULL CHECK (abandonment_step IS NULL OR (abandonment_step BETWEEN 1 AND 6)),
+    parsed_data         JSONB       NOT NULL DEFAULT '{}',
+    last_activity       TIMESTAMP   NOT NULL,
+    date_created        TIMESTAMP   NOT NULL,
+    date_updated        TIMESTAMP   NOT NULL,
+
+    PRIMARY KEY (session_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- =============================================================================
+-- Indexes for telegram_sessions
+-- =============================================================================
+
+-- UNIQUE constraint: one active session per user
+-- Business logic also enforces this, but DB constraint provides defense-in-depth
+CREATE UNIQUE INDEX IF NOT EXISTS telegram_sessions_user_id_unique_idx
+    ON telegram_sessions(user_id);
+
+-- Fast lookup when Telegram webhook receives message (chat_id -> session)
+CREATE INDEX IF NOT EXISTS telegram_sessions_chat_id_idx
+    ON telegram_sessions(chat_id);
+
+-- TTL cleanup: find sessions inactive for > 20 minutes
+CREATE INDEX IF NOT EXISTS telegram_sessions_last_activity_idx
+    ON telegram_sessions(last_activity);
+
+-- User session history queries
+CREATE INDEX IF NOT EXISTS telegram_sessions_user_date_idx
+    ON telegram_sessions(user_id, date_created DESC);
+
+-- =============================================================================
+-- Comments documenting telegram_sessions schema
+-- =============================================================================
+
+COMMENT ON TABLE telegram_sessions IS 'Multi-step Telegram conversation sessions for ACT-based moment tracking (20 min TTL)';
+COMMENT ON COLUMN telegram_sessions.session_id IS 'Unique session identifier';
+COMMENT ON COLUMN telegram_sessions.user_id IS 'Rafiki user associated with session';
+COMMENT ON COLUMN telegram_sessions.chat_id IS 'Telegram chat_id for message routing (non-zero int64)';
+COMMENT ON COLUMN telegram_sessions.current_step IS 'Current step in 6-step ACT functional analysis (1=situacion, 2=sintomas, 3=conducta, 4=consecuencias, 5=valores, 6=intensidad)';
+COMMENT ON COLUMN telegram_sessions.retry_count IS 'AI validation retry attempts for current step (0-2, auto-approves at 2)';
+COMMENT ON COLUMN telegram_sessions.initial_intensity IS 'User-reported intensity (0-10) captured at session start for ACT validation';
+COMMENT ON COLUMN telegram_sessions.abandonment_step IS 'Step where user abandoned session for analytics (NULL if active/completed)';
+COMMENT ON COLUMN telegram_sessions.last_activity IS 'Timestamp of last user message (for 20-minute TTL cleanup)';
