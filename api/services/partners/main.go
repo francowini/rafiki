@@ -17,6 +17,7 @@ import (
 
 	"github.com/francowini/rafiki/api/services/partners/all"
 	"github.com/francowini/rafiki/app/jobs/healthcheck"
+	"github.com/francowini/rafiki/app/jobs/sessioncleanup"
 	"github.com/francowini/rafiki/app/jobs/telegramnotify"
 	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/debug"
@@ -33,6 +34,8 @@ import (
 	"github.com/francowini/rafiki/business/domain/objectiverecordbus/stores/objectiverecorddb"
 	"github.com/francowini/rafiki/business/domain/taskbus"
 	"github.com/francowini/rafiki/business/domain/taskbus/stores/taskdb"
+	"github.com/francowini/rafiki/business/domain/telegramsessionbus"
+	"github.com/francowini/rafiki/business/domain/telegramsessionbus/stores/telegramsessiondb"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus/stores/thinkdb"
 	"github.com/francowini/rafiki/business/domain/userbus"
@@ -287,6 +290,10 @@ func run(ctx context.Context, log *logger.Logger) error {
 	vobjectiveactivityStore := vobjectiveactivitydb.NewStore(log, db)
 	vobjectiveactivityBus := vobjectiveactivitybus.NewBusiness(log, vobjectiveactivityStore)
 
+	// Create telegram session domain (child of user, manages Telegram conversation sessions)
+	telegramSessionStore := telegramsessiondb.NewStore(log, db)
+	telegramSessionBus := telegramsessionbus.NewBusinessWithDelegate(log, dlg, telegramSessionStore)
+
 	// -------------------------------------------------------------------------
 	// Initialize Telegram Client (optional - only if token configured)
 
@@ -317,6 +324,10 @@ func run(ctx context.Context, log *logger.Logger) error {
 	// Register workers
 	workers := jobqueue.NewWorkers()
 	jobqueue.AddWorker(workers, healthcheck.NewWorker(log))
+
+	// Register session cleanup worker
+	sessionCleanupWorker := sessioncleanup.NewWorker(log, telegramSessionBus)
+	jobqueue.AddWorker(workers, sessionCleanupWorker)
 
 	// Add Telegram notification worker if client is configured
 	if telegramClient != nil {
@@ -389,6 +400,32 @@ func run(ctx context.Context, log *logger.Logger) error {
 			}
 		}
 	}()
+
+	// -------------------------------------------------------------------------
+	// Start Session Cleanup Job Scheduler (every 5 minutes)
+
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+
+		// Insert first cleanup immediately on startup
+		if _, err := jq.Insert(heartbeatCtx, sessioncleanup.Args{}, nil); err != nil {
+			log.Error(heartbeatCtx, "session_cleanup_scheduler", "status", "insert_failed", "err", err)
+		}
+
+		for {
+			select {
+			case <-ticker.C:
+				if _, err := jq.Insert(heartbeatCtx, sessioncleanup.Args{}, nil); err != nil {
+					log.Error(heartbeatCtx, "session_cleanup_scheduler", "status", "insert_failed", "err", err)
+				}
+			case <-heartbeatCtx.Done():
+				return
+			}
+		}
+	}()
+
+	log.Info(ctx, "startup", "status", "session cleanup scheduler started")
 
 	// -------------------------------------------------------------------------
 	// Start Telegram Notification Scheduler

@@ -1,3 +1,9 @@
+---
+model: opus
+description: Multi-Mind - Rafiki Development Team (6-agent collaborative analysis)
+allowed-tools: Read, Glob, Grep, Task, Write(docs/**), Edit(docs/**)
+---
+
 # Multi-Mind - Rafiki Development Team
 
 Execute a collaborative analysis using six specialized subagents (including the Product Agent which is included by default unless --no-product) for the Rafiki personal development tracker project.
@@ -17,6 +23,10 @@ This is a personal development tracking application (Rafiki) with a Go backend, 
 ## Implementation
 
 Execute this six-specialist analysis using the Task tool to create independent subagents.
+
+**Model Configuration**:
+- Main orchestration: **opus** (set via frontmatter)
+- All subagents: **MUST specify `model: "sonnet"`** when using the Task tool
 
 **Default: TWO rounds** (can be extended to more rounds if user requests)
 

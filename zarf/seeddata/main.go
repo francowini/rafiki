@@ -14,8 +14,9 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/google/uuid"
+
+	"github.com/francowini/rafiki/business/sdk/encrypt"
 )
 
 const (

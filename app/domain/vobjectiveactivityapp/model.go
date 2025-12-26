@@ -34,7 +34,7 @@ type DayResponse struct {
 // ItemResponse represents a single activity item in the API response.
 type ItemResponse struct {
 	ID           string  `json:"id"`
-	Type         string  `json:"type"`         // "task" or "record"
+	Type         string  `json:"type"`             // "task" or "record"
 	Status       *string `json:"status,omitempty"` // record status
 	Notes        *string `json:"notes,omitempty"`
 	Title        *string `json:"title,omitempty"` // task title
