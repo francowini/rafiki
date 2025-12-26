@@ -203,6 +203,37 @@ log.Error(ctx, "error message", "err", err)
 ### Service Configuration
 Add new config fields to the `cfg` struct in `main.go` with `conf` tags for defaults and environment variable mapping.
 
+**IMPORTANT - How `ardanlabs/conf/v3` handles environment variables:**
+
+The library uses a prefix (`PARTNER_`) that gets **stripped** during parsing:
+
+1. It only reads env vars that start with `PARTNER_`
+2. It removes the prefix internally for lookup
+3. The `env:` tag specifies the name **after** the prefix is stripped
+
+**Example:**
+```go
+// In main.go
+const prefix = "Partner"
+conf.Parse(prefix, &cfg)
+
+// Config struct
+Telegram struct {
+    BotToken string `conf:"env:TELEGRAM_BOTTOKEN,mask"`  // env: tag = name WITHOUT prefix
+}
+```
+
+| `.env` file (with prefix) | `env:` tag (without prefix) |
+|---------------------------|----------------------------|
+| `PARTNER_TELEGRAM_BOTTOKEN=xxx` | `env:TELEGRAM_BOTTOKEN` |
+| `PARTNER_WEB_APIHOST=:3000` | (auto: `WEB_APIHOST`) |
+| `PARTNER_ENCRYPTION_KEY=xxx` | (auto: `ENCRYPTION_KEY`) |
+
+**Rules:**
+- `.env` and `docker-compose.yml`: Always use `PARTNER_` prefix
+- Code `env:` tag: Use the name WITHOUT the prefix
+- Without explicit `env:` tag: The library auto-generates from struct path (e.g., `Web.APIHost` → `PARTNER_WEB_APIHOST`)
+
 ### Business Types with Validation
 IMPORTANT: The business layer ALWAYS uses strong types with validation for domain values. Never use primitive types (int, string, float64) directly in business domain models.
 

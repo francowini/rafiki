@@ -1,6 +1,7 @@
 package userbus
 
 import (
+	"database/sql"
 	"net/mail"
 	"time"
 
@@ -12,15 +13,18 @@ import (
 
 // User represents information about an individual user.
 type User struct {
-	ID           uuid.UUID
-	Name         name.Name
-	Email        mail.Address
-	Roles        []role.Role
-	PasswordHash []byte
-	Department   name.Null
-	Enabled      bool
-	DateCreated  time.Time
-	DateUpdated  time.Time
+	ID               uuid.UUID
+	Name             name.Name
+	Email            mail.Address
+	Roles            []role.Role
+	PasswordHash     []byte
+	Department       name.Null
+	Enabled          bool
+	TelegramChatID   sql.NullInt64
+	TelegramEnabled  bool
+	TelegramLinkedAt sql.NullTime
+	DateCreated      time.Time
+	DateUpdated      time.Time
 }
 
 // NewUser contains information needed to create a new user.

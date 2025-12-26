@@ -13,6 +13,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/telegramchatid"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
@@ -121,6 +122,23 @@ func (s *Store) QueryByEmail(ctx context.Context, email mail.Address) (userbus.U
 	}
 
 	usr, err := s.storer.QueryByEmail(ctx, email)
+	if err != nil {
+		return userbus.User{}, err
+	}
+
+	s.writeCache(usr)
+
+	return usr, nil
+}
+
+// QueryByTelegramChatID gets the specified user from the database by Telegram chat ID.
+func (s *Store) QueryByTelegramChatID(ctx context.Context, chatID telegramchatid.TelegramChatID) (userbus.User, error) {
+	cachedUsr, ok := s.readCache(chatID.String())
+	if ok {
+		return cachedUsr, nil
+	}
+
+	usr, err := s.storer.QueryByTelegramChatID(ctx, chatID)
 	if err != nil {
 		return userbus.User{}, err
 	}

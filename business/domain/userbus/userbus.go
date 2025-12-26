@@ -15,6 +15,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/telegramchatid"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
@@ -36,6 +37,7 @@ type Storer interface {
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, userID uuid.UUID) (User, error)
 	QueryByEmail(ctx context.Context, email mail.Address) (User, error)
+	QueryByTelegramChatID(ctx context.Context, chatID telegramchatid.TelegramChatID) (User, error)
 }
 
 // ExtBusiness interface provides support for extensions that wrap extra functionality
@@ -49,6 +51,7 @@ type ExtBusiness interface {
 	Count(ctx context.Context, filter QueryFilter) (int, error)
 	QueryByID(ctx context.Context, userID uuid.UUID) (User, error)
 	QueryByEmail(ctx context.Context, email mail.Address) (User, error)
+	QueryByTelegramChatID(ctx context.Context, chatID telegramchatid.TelegramChatID) (User, error)
 	Authenticate(ctx context.Context, email mail.Address, password string) (User, error)
 }
 
@@ -216,6 +219,16 @@ func (b *Business) QueryByEmail(ctx context.Context, email mail.Address) (User, 
 		return User{}, fmt.Errorf("query: email[%s]: %w", email, err)
 	}
 
+	return user, nil
+}
+
+// QueryByTelegramChatID finds the user by Telegram chat ID.
+// Returns ErrNotFound if no user is linked to this chat ID.
+func (b *Business) QueryByTelegramChatID(ctx context.Context, chatID telegramchatid.TelegramChatID) (User, error) {
+	user, err := b.storer.QueryByTelegramChatID(ctx, chatID)
+	if err != nil {
+		return User{}, fmt.Errorf("query: chatID[%s]: %w", chatID, err)
+	}
 	return user, nil
 }
 

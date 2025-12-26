@@ -15,6 +15,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/telegramchatid"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
@@ -204,6 +205,35 @@ func (s *Store) QueryByEmail(ctx context.Context, email mail.Address) (userbus.U
 		users
 	WHERE
 		email = :email`
+
+	var dbUsr user
+	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &dbUsr); err != nil {
+		if errors.Is(err, sqldb.ErrDBNotFound) {
+			return userbus.User{}, fmt.Errorf("db: %w", userbus.ErrNotFound)
+		}
+		return userbus.User{}, fmt.Errorf("db: %w", err)
+	}
+
+	return toBusUser(dbUsr)
+}
+
+// QueryByTelegramChatID gets the user by Telegram chat ID.
+func (s *Store) QueryByTelegramChatID(ctx context.Context, chatID telegramchatid.TelegramChatID) (userbus.User, error) {
+	data := struct {
+		ChatID int64 `db:"telegram_chat_id"`
+	}{
+		ChatID: chatID.Value(),
+	}
+
+	const q = `
+	SELECT
+		user_id, name, email, password_hash, roles, department, enabled,
+		telegram_chat_id, telegram_enabled, telegram_linked_at,
+		date_created, date_updated
+	FROM
+		users
+	WHERE
+		telegram_chat_id = :telegram_chat_id`
 
 	var dbUsr user
 	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &dbUsr); err != nil {
