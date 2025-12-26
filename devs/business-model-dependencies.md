@@ -10,6 +10,7 @@
 7. [Database Views for Multi-Model Queries](#database-views-for-multi-model-queries)
 8. [Architectural Patterns](#architectural-patterns)
 9. [Best Practices](#best-practices)
+10. [Externalized Messages & Prompts](#externalized-messages--prompts)
 
 ---
 
@@ -991,6 +992,230 @@ tx.Commit()  // Both succeed or both fail
 
 ---
 
+## Externalized Messages & Prompts
+
+### Overview
+
+User-facing messages (Spanish copy, error messages) and AI prompts (system prompts, instructions) should be **externalized** from Go code into YAML files, embedded at compile time using `go:embed`.
+
+**Benefits:**
+- Non-developers can edit copy without Go knowledge
+- Version controlled with meaningful diffs
+- Compile-time safety (malformed YAML caught at build time)
+- No runtime file I/O or external dependencies
+
+### Existing Patterns in Codebase
+
+| Location | Content | Pattern |
+|----------|---------|---------|
+| `app/sdk/auth/rego/*.rego` | OPA policies | App SDK embedded files |
+| `business/sdk/migrate/sql/migrate.sql` | Database migrations | Business SDK embedded files |
+
+### Message Location Rules
+
+#### Rule 1: User-Facing Messages → App Layer (Co-located with Handler)
+
+User-facing messages (HTTP responses, bot messages, error texts) belong in the **app layer**, co-located with the handler that uses them.
+
+**Location Pattern:** `app/domain/[domainapp]/messages/[lang].yaml`
+
+**Example:**
+```
+app/domain/telegramapp/
+├── telegramapp.go      # Handler
+├── messages.go         # Loader (go:embed)
+└── messages/
+    └── es.yaml         # Spanish user-facing messages
+```
+
+**Why App Layer?**
+- Messages are HTTP/bot response text (orchestration concern)
+- Tightly coupled to specific handler logic
+- Not reusable across different handlers
+- Similar to `app/sdk/auth/rego/` pattern
+
+**Implementation:**
+```go
+package telegramapp
+
+import (
+    _ "embed"
+    "gopkg.in/yaml.v3"
+)
+
+//go:embed messages/es.yaml
+var messagesYAML []byte
+
+type Messages struct {
+    Commands CommandMessages `yaml:"commands"`
+    Errors   ErrorMessages   `yaml:"errors"`
+}
+
+func Msg() Messages {
+    // Parse once, cache result
+}
+```
+
+#### Rule 2: AI Prompts → App Layer (Co-located with Job Worker)
+
+AI prompts (system prompts, step instructions, parsing rules) belong in the **app layer**, co-located with the job worker that orchestrates AI calls.
+
+**Location Pattern:** `app/jobs/[jobname]/prompts/[name].yaml`
+
+**Example:**
+```
+app/jobs/telegrammessage/
+├── telegrammessage.go  # Job worker
+├── handler.go          # Processing logic
+├── prompts.go          # Loader (go:embed)
+└── prompts/
+    ├── system.md       # System prompt (Markdown)
+    └── steps.yaml      # Per-step prompts
+```
+
+**Why App Layer (not Business)?**
+- Prompts are orchestration instructions for external AI service
+- Job workers live in app layer (`app/jobs/`)
+- Prompts are specific to job implementation, not business rules
+- Business layer should not know about AI service details
+
+**Implementation:**
+```go
+package telegrammessage
+
+import (
+    _ "embed"
+    "gopkg.in/yaml.v3"
+)
+
+//go:embed prompts/system.md
+var systemPrompt string
+
+//go:embed prompts/steps.yaml
+var stepsYAML []byte
+
+type StepPrompts struct {
+    Steps map[int]StepPrompt `yaml:"steps"`
+}
+
+type StepPrompt struct {
+    Question    string   `yaml:"question"`     // User-facing (Spanish)
+    Instruction string   `yaml:"instruction"`  // AI instruction (English)
+    ParseFields []string `yaml:"parse_fields"` // Expected output fields
+}
+```
+
+#### Rule 3: Shared/Reusable Messages → Business SDK
+
+If messages are **shared across multiple handlers** (rare), they can go in a business SDK package.
+
+**Location Pattern:** `business/sdk/messages/[category]/[lang].yaml`
+
+**Example:**
+```
+business/sdk/messages/
+├── validation/
+│   └── es.yaml         # Shared validation error messages
+└── common/
+    └── es.yaml         # Common UI labels
+```
+
+**When to Use:**
+- Message is used by 3+ different handlers
+- Message represents a business concept (not handler-specific)
+- Changing the message should affect all consumers
+
+**Anti-pattern:** Don't put handler-specific messages here.
+
+### Decision Matrix
+
+| Content Type | Location | Example |
+|--------------|----------|---------|
+| **Telegram bot responses** | `app/domain/telegramapp/messages/` | Command responses, errors |
+| **AI system prompts** | `app/jobs/[jobname]/prompts/` | Claude instructions |
+| **AI step prompts** | `app/jobs/[jobname]/prompts/` | Conversation flow |
+| **Email templates** | `app/jobs/[emailjob]/templates/` | Notification emails |
+| **Push notification text** | `business/domain/notificationbus/` | Scheduled notifications (business logic) |
+| **Shared validation errors** | `business/sdk/messages/` | Cross-handler validation |
+
+### YAML File Structure
+
+**User-Facing Messages (`es.yaml`):**
+```yaml
+# Category-based organization
+commands:
+  help: |
+    *Ayuda* 🌟
+    Texto de ayuda aquí...
+
+  example: |
+    *Ejemplo* 💡
+    Texto de ejemplo...
+
+errors:
+  not_found: |
+    No encontramos lo que buscás.
+
+  technical: |
+    Ups, algo falló de mi lado. 😅
+```
+
+**AI Prompts (`steps.yaml`):**
+```yaml
+system: |
+  You are a helpful assistant...
+
+steps:
+  1:
+    question: "¿Qué pasó?"           # User sees this (Spanish)
+    instruction: |                    # AI sees this (English)
+      Extract: situation, thoughts
+      Validate: concrete details provided
+    parse_fields:
+      - situation
+      - thoughts
+```
+
+### Loader Pattern
+
+```go
+package telegramapp
+
+import (
+    _ "embed"
+    "sync"
+    "gopkg.in/yaml.v3"
+)
+
+//go:embed messages/es.yaml
+var messagesYAML []byte
+
+var (
+    msgs     Messages
+    msgsOnce sync.Once
+)
+
+// Msg returns loaded messages. Panics on malformed YAML (caught at startup).
+func Msg() Messages {
+    msgsOnce.Do(func() {
+        if err := yaml.Unmarshal(messagesYAML, &msgs); err != nil {
+            panic("telegramapp: failed to parse messages/es.yaml: " + err.Error())
+        }
+    })
+    return msgs
+}
+```
+
+### Important Notes
+
+1. **Rebuild Required**: Any message change requires rebuild and redeploy
+2. **Startup Validation**: Malformed YAML panics at startup (fails fast)
+3. **Language in Filename**: Use `es.yaml`, `en.yaml` for future i18n support
+4. **Markdown in YAML**: Use `|` for multiline strings with formatting
+5. **No Database Storage**: Messages are compiled into binary, not stored in DB
+
+---
+
 ## Summary
 
 This architecture enforces **strict dependency rules** through:
@@ -1002,6 +1227,6 @@ This architecture enforces **strict dependency rules** through:
 5. **Strong Types**: Business rules enforced in the type system
 6. **Interface Contracts**: Dependencies as interfaces, not concrete types
 7. **Transactional Support**: Atomic operations across domains
+8. **Externalized Messages**: User-facing text and AI prompts in YAML, co-located with handlers
 
 **Core Principle:** Parent domains know nothing about children. Children know about parents through interfaces. Cross-domain communication happens through events or database views.
-5
