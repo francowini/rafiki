@@ -3,6 +3,7 @@ package telegramsessionbus
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/sdk/delegate"
@@ -16,14 +17,15 @@ func (b *Business) registerDelegateFunctions(dlg *delegate.Delegate) {
 }
 
 // actionUserDeleted handles user deletion by cleaning up their sessions.
-// Delegate handlers are idempotent, so failures are logged but do not abort the user deletion flow.
+// Unmarshal errors are returned to allow job queue retry/alerting.
+// Delete failures are logged but do not abort the user deletion flow.
 func (b *Business) actionUserDeleted(ctx context.Context, data delegate.Data) error {
 	var params userbus.ActionDeletedParms
 	if err := json.Unmarshal(data.RawParams, &params); err != nil {
 		b.log.Error(ctx, "telegramsessionbus.user_deleted.unmarshal",
 			"err", err,
 		)
-		return nil // Log and continue, don't block user deletion
+		return fmt.Errorf("unmarshal user deleted params: %w", err)
 	}
 
 	// Delete all sessions for this user (cascade)

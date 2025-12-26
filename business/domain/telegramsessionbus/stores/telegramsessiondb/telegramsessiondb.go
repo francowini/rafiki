@@ -75,8 +75,13 @@ func (s *Store) Update(ctx context.Context, sess telegramsessionbus.Session) err
 		return fmt.Errorf("to db session: %w", err)
 	}
 
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, dbSession); err != nil {
+	rowsAffected, err := sqldb.NamedExecContextWithResult(ctx, s.log, s.db, q, dbSession)
+	if err != nil {
 		return fmt.Errorf("namedexeccontext: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return sqldb.ErrDBNotFound
 	}
 
 	return nil
