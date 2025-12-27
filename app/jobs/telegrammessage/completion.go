@@ -9,6 +9,7 @@ import (
 
 	"github.com/francowini/rafiki/business/domain/momentbus"
 	"github.com/francowini/rafiki/business/domain/telegramsessionbus"
+	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/types/content"
 	"github.com/francowini/rafiki/business/types/intensity"
 )
@@ -36,6 +37,7 @@ func (w *Worker) completeMoment(ctx context.Context, session telegramsessionbus.
 
 	recentMoments, err := w.momentBus.Query(ctx, momentbus.QueryFilter{
 		UserID: &session.UserID,
+		Page:   page.MustParse("1", "100"),
 	})
 	if err != nil {
 		return fmt.Errorf("idempotency check: %w", err)
@@ -180,10 +182,9 @@ func (w *Worker) buildNewMoment(ctx context.Context, session telegramsessionbus.
 	intensityParsed, err := parseIntensity(intensityStr)
 	if err != nil {
 		intensityParsed = intensity.MustParse(5) // Default to medium
-		w.log.Error(ctx, "telegrammessage.completion.intensity_parse_failed",
+		w.log.Warn(ctx, "telegrammessage.completion.intensity_parse_failed",
 			"session_id", session.ID,
 			"value", intensityStr,
-			"err", err,
 		)
 	}
 
