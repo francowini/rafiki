@@ -17,12 +17,15 @@ import (
 	"github.com/francowini/rafiki/business/domain/objectivebus"
 	"github.com/francowini/rafiki/business/domain/objectiverecordbus"
 	"github.com/francowini/rafiki/business/domain/taskbus"
+	"github.com/francowini/rafiki/business/domain/telegramsessionbus"
 	"github.com/francowini/rafiki/business/domain/thinkbus"
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/domain/valuebus"
 	"github.com/francowini/rafiki/business/domain/vexportbus"
 	"github.com/francowini/rafiki/business/domain/vobjectiveactivitybus"
+	"github.com/francowini/rafiki/foundation/jobqueue"
 	"github.com/francowini/rafiki/foundation/logger"
+	"github.com/francowini/rafiki/foundation/telegram"
 	"github.com/francowini/rafiki/foundation/web"
 )
 
@@ -70,17 +73,21 @@ type BusConfig struct {
 	TaskBus               taskbus.ExtBusiness
 	VExportBus            vexportbus.ExtBusiness
 	VObjectiveActivityBus vobjectiveactivitybus.ExtBusiness
+	TelegramSessionBus    *telegramsessionbus.Business
 	UserBus               userbus.ExtBusiness
 	Auth                  *auth.Auth
 }
 
 // Config contains all the mandatory systems required by handlers.
 type Config struct {
-	Build     string
-	Log       *logger.Logger
-	DB        *sqlx.DB
-	Tracer    trace.Tracer
-	BusConfig BusConfig
+	Build          string
+	Log            *logger.Logger
+	DB             *sqlx.DB
+	Tracer         trace.Tracer
+	BusConfig      BusConfig
+	TelegramClient *telegram.Client
+	JobQueue       *jobqueue.Client
+	WebhookSecret  string
 }
 
 // RouteAdder defines behavior that sets the routes to bind for an instance

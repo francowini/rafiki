@@ -130,10 +130,11 @@ func run(ctx context.Context, log *logger.Logger) error {
 			// this even lower.
 		}
 		Telegram struct {
-			BotToken    string `conf:"env:TELEGRAM_BOTTOKEN,mask"`
-			MorningTime string `conf:"default:08:00,env:TELEGRAM_MORNINGTIME"`
-			EveningTime string `conf:"default:21:00,env:TELEGRAM_EVENINGTIME"`
-			Timezone    string `conf:"default:America/Argentina/Buenos_Aires,env:TELEGRAM_TIMEZONE"`
+			BotToken      string `conf:"env:TELEGRAM_BOTTOKEN,mask"`
+			WebhookSecret string `conf:"env:TELEGRAM_WEBHOOKSECRET,mask"`
+			MorningTime   string `conf:"default:08:00,env:TELEGRAM_MORNINGTIME"`
+			EveningTime   string `conf:"default:21:00,env:TELEGRAM_EVENINGTIME"`
+			Timezone      string `conf:"default:America/Argentina/Buenos_Aires,env:TELEGRAM_TIMEZONE"`
 		}
 	}{
 		Version: conf.Version{
@@ -545,9 +546,13 @@ func run(ctx context.Context, log *logger.Logger) error {
 			TaskBus:               taskBus,
 			VExportBus:            vexportBus,
 			VObjectiveActivityBus: vobjectiveactivityBus,
+			TelegramSessionBus:    telegramSessionBus,
 			UserBus:               userBus,
 			Auth:                  authInstance,
 		},
+		TelegramClient: telegramClient,
+		JobQueue:       jq,
+		WebhookSecret:  cfg.Telegram.WebhookSecret,
 	}
 
 	webAPI, err := mux.WebAPI(cfgMux,

@@ -9,6 +9,7 @@ import (
 	"github.com/francowini/rafiki/app/domain/objectiveapp"
 	"github.com/francowini/rafiki/app/domain/objectiverecordapp"
 	"github.com/francowini/rafiki/app/domain/taskapp"
+	"github.com/francowini/rafiki/app/domain/telegramapp"
 	"github.com/francowini/rafiki/app/domain/thinkapp"
 	"github.com/francowini/rafiki/app/domain/valueapp"
 	"github.com/francowini/rafiki/app/domain/vexportapp"
@@ -89,4 +90,15 @@ func (Add) Add(app *web.App, cfg mux.Config) {
 		VObjectiveActivityBus: cfg.BusConfig.VObjectiveActivityBus,
 		Auth:                  cfg.BusConfig.Auth,
 	})
+
+	if cfg.TelegramClient != nil && cfg.WebhookSecret != "" {
+		telegramapp.Routes(app, telegramapp.Config{
+			Log:                cfg.Log,
+			UserBus:            cfg.BusConfig.UserBus,
+			TelegramSessionBus: cfg.BusConfig.TelegramSessionBus,
+			TelegramClient:     cfg.TelegramClient,
+			JobQueue:           cfg.JobQueue,
+			WebhookSecret:      cfg.WebhookSecret,
+		})
+	}
 }

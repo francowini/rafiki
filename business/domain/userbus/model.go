@@ -7,20 +7,25 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/francowini/rafiki/business/types/name"
+	"github.com/francowini/rafiki/business/types/nulltime"
 	"github.com/francowini/rafiki/business/types/role"
+	"github.com/francowini/rafiki/business/types/telegramchatid"
 )
 
 // User represents information about an individual user.
 type User struct {
-	ID           uuid.UUID
-	Name         name.Name
-	Email        mail.Address
-	Roles        []role.Role
-	PasswordHash []byte
-	Department   name.Null
-	Enabled      bool
-	DateCreated  time.Time
-	DateUpdated  time.Time
+	ID               uuid.UUID
+	Name             name.Name
+	Email            mail.Address
+	Roles            []role.Role
+	PasswordHash     []byte
+	Department       name.Null
+	Enabled          bool
+	TelegramChatID   telegramchatid.Null
+	TelegramEnabled  bool
+	TelegramLinkedAt nulltime.Null
+	DateCreated      time.Time
+	DateUpdated      time.Time
 }
 
 // NewUser contains information needed to create a new user.

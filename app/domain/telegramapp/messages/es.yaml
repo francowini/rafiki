@@ -1,0 +1,169 @@
+# =============================================================================
+# Telegram Moment Tracking - Spanish Messages
+# =============================================================================
+# These are user-facing messages shown in Telegram bot responses.
+# Edit this file to change bot copy without modifying Go code.
+#
+# Formatting:
+#   - *bold* for emphasis
+#   - _italic_ for examples/quotes
+#   - Emojis for visual warmth
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# COMMAND RESPONSES (Synchronous - sent immediately)
+# -----------------------------------------------------------------------------
+commands:
+  # /ayuda, /help, /start - Help command response (NO therapy jargon per Product feedback)
+  ayuda: |
+    *¿Cómo funciona Rafiki?* 🌟
+
+    Cuando algo te genera malestar, Rafiki te acompaña a procesarlo. Te voy a hacer seis preguntas para entender qué pasó, cómo te sentiste, y qué podés aprender.
+
+    *Comandos disponibles:*
+    📝 /momento - Comenzar a registrar un momento
+    ⏸️ /cancel - Pausar el registro actual
+    💡 /ejemplo - Ver un ejemplo completo
+
+    *¿Cuánto tiempo toma?*
+    Entre 3 y 5 minutos. Podés tomarte el tiempo que necesites.
+
+    ¿Listo? Escribí /momento cuando quieras empezar.
+
+  # /ejemplo - Example conversation response
+  ejemplo: |
+    *Ejemplo de registro completo* 💡
+
+    _Paso 1 - ¿Qué pasó?_
+    "Estaba en casa después de almorzar, solo en el sillón. Me apareció el pensamiento de que estoy perdiendo el tiempo."
+
+    _Paso 2 - ¿Qué sentiste?_
+    "Sentí palpitaciones y las manos transpiradas. Me sentía ansioso."
+
+    _Paso 3 - ¿Qué hiciste?_
+    "Agarré el celular y me puse a scrollear."
+
+    _Paso 4 - ¿Qué pasó después?_
+    "Me distraje un rato pero después volvió la ansiedad."
+
+    _Paso 5 - ¿Te acercó o alejó?_
+    "Evité estar conmigo mismo. Me alejó de lo que quería hacer."
+
+    _Paso 6 - Intensidad_
+    "7"
+
+    ✅ *Momento guardado*
+
+    ───────────────────────
+
+    _Nota: No hay respuestas "correctas". Contá lo que sentís con tus palabras._
+
+    ¿Querés empezar? Escribí /momento.
+
+# -----------------------------------------------------------------------------
+# SESSION MANAGEMENT
+# -----------------------------------------------------------------------------
+session:
+  # User tries /momento with active session
+  exists: |
+    Ya tenés una sesión en curso 🔄
+
+    Podés:
+    • Continuar respondiendo la pregunta actual
+    • Escribir /cancel para pausar y empezar de nuevo
+
+    ¿Qué preferís?
+
+  # User tries /cancel without active session
+  no_session: |
+    No tenés ninguna sesión activa en este momento.
+
+    Cuando quieras registrar un momento, escribí /momento. 📝
+
+  # Session cancelled (NEUTRAL per Product feedback)
+  canceled: |
+    Listo, pausamos acá.
+
+    Cuando quieras volver a registrar algo, acá voy a estar. 💙
+
+  # Session expired (warm re-entry)
+  timeout: |
+    Tu sesión expiró, pero no pasa nada.
+
+    Cuando estés listo, usá /momento para empezar de nuevo. 💙
+
+  # Successful completion
+  saved: |
+    ✅ *Momento guardado*
+
+    Gracias por compartirlo. Podés verlo en la app web.
+
+    Cuando quieras registrar otro momento, escribí /momento.
+
+# -----------------------------------------------------------------------------
+# STEP PROMPTS (for moment tracking conversation)
+# -----------------------------------------------------------------------------
+steps:
+  # Step 1: What happened?
+  step_1: |
+    *Paso 1 de 6* 📝
+
+    ¿Qué pasó? Contame la situación que te generó malestar.
+
+    _Incluí dónde estabas, qué estabas haciendo, y qué pensamientos aparecieron._
+
+# -----------------------------------------------------------------------------
+# ERROR MESSAGES (warm, take ownership)
+# -----------------------------------------------------------------------------
+errors:
+  # User not linked to Rafiki account
+  unlinked_user: |
+    Disculpá, todavía no tengo tu cuenta conectada. 🔗
+
+    Para vincular tu Telegram con Rafiki:
+    1. Abrí la app web: https://app.rafiki.lat
+    2. Andá a Configuración → Telegram
+    3. Seguí las instrucciones
+
+    Si tenés problemas, escribí a soporte@rafiki.lat
+
+  # API/processing failure (takes ownership per Product feedback)
+  technical: |
+    Ups, algo falló de mi lado. 😅
+
+    ¿Podés intentar de nuevo en un momento?
+
+    Si el problema sigue, escribí a soporte@rafiki.lat
+
+  # User sent empty message
+  empty_response: |
+    Parece que no escribiste nada. 🤔
+
+    Tomá el tiempo que necesites. Cuando estés listo, escribí tu respuesta.
+
+    Si preferís dejarlo para otro momento, escribí /cancel.
+
+  # Random text without active session
+  outside_session: |
+    Hola! 👋
+
+    Para registrar un momento, escribí /momento.
+    Si necesitás ayuda, escribí /ayuda.
+
+  # Unknown command
+  unknown_command: |
+    No reconozco ese comando. 🤔
+
+    Escribí /ayuda para ver los comandos disponibles.
+
+  # Group chat not supported
+  group_not_supported: |
+    Rafiki solo funciona en chats privados. 👤
+
+    Por favor, escribime directamente en un chat privado.
+
+  # Step 6 invalid number
+  invalid_intensity: |
+    Necesito un número del 0 al 10.
+
+    ¿Qué intensidad le pondrías a este momento?

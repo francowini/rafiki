@@ -1,0 +1,40 @@
+meta {
+  name: Momento Telegram
+  type: http
+  seq: 22
+}
+
+post {
+  url: http://localhost:3000/v1/telegram/webhook
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  X-Telegram-Bot-Api-Secret-Token: local-test-secret-12345
+}
+
+body:json {
+  {
+    "update_id": 2,
+    "message": {
+      "message_id": 2,
+      "from": {
+        "id": 123456789,
+        "first_name": "Test"
+      },
+      "chat": {
+        "id": 380049174,
+        "type": "private"
+      },
+      "date": 1703520001,
+      "text": "/momento"
+    }
+  }
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}

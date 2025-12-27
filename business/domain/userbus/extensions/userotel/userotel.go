@@ -12,6 +12,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/telegramchatid"
 	"github.com/francowini/rafiki/foundation/otel"
 )
 
@@ -98,6 +99,14 @@ func (ext *Extension) QueryByEmail(ctx context.Context, email mail.Address) (use
 	defer span.End()
 
 	return ext.bus.QueryByEmail(ctx, email)
+}
+
+// QueryByTelegramChatID applies otel to the user query by Telegram chat ID process.
+func (ext *Extension) QueryByTelegramChatID(ctx context.Context, chatID telegramchatid.TelegramChatID) (userbus.User, error) {
+	ctx, span := otel.AddSpan(ctx, "business.userbus.querybytelegramchatid")
+	defer span.End()
+
+	return ext.bus.QueryByTelegramChatID(ctx, chatID)
 }
 
 // Authenticate applies otel to the user authentication process.

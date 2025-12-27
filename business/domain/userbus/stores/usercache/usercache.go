@@ -13,6 +13,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/order"
 	"github.com/francowini/rafiki/business/sdk/page"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/business/types/telegramchatid"
 	"github.com/francowini/rafiki/foundation/logger"
 )
 
@@ -130,6 +131,23 @@ func (s *Store) QueryByEmail(ctx context.Context, email mail.Address) (userbus.U
 	return usr, nil
 }
 
+// QueryByTelegramChatID gets the specified user from the database by Telegram chat ID.
+func (s *Store) QueryByTelegramChatID(ctx context.Context, chatID telegramchatid.TelegramChatID) (userbus.User, error) {
+	cachedUsr, ok := s.readCache(chatID.String())
+	if ok {
+		return cachedUsr, nil
+	}
+
+	usr, err := s.storer.QueryByTelegramChatID(ctx, chatID)
+	if err != nil {
+		return userbus.User{}, err
+	}
+
+	s.writeCache(usr)
+
+	return usr, nil
+}
+
 // readCache performs a safe search in the cache for the specified key.
 func (s *Store) readCache(key string) (userbus.User, bool) {
 	usr, exists := s.cache.Get(key)
@@ -144,10 +162,20 @@ func (s *Store) readCache(key string) (userbus.User, bool) {
 func (s *Store) writeCache(bus userbus.User) {
 	s.cache.Set(bus.ID.String(), bus)
 	s.cache.Set(bus.Email.Address, bus)
+
+	// Also cache by TelegramChatID if present
+	if bus.TelegramChatID.Valid {
+		s.cache.Set(bus.TelegramChatID.String(), bus)
+	}
 }
 
 // deleteCache performs a safe removal from the cache for the specified userbus.
 func (s *Store) deleteCache(bus userbus.User) {
 	s.cache.Delete(bus.ID.String())
 	s.cache.Delete(bus.Email.Address)
+
+	// Also remove TelegramChatID cache entry if present
+	if bus.TelegramChatID.Valid {
+		s.cache.Delete(bus.TelegramChatID.String())
+	}
 }
