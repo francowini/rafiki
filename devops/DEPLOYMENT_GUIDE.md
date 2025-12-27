@@ -699,6 +699,69 @@ docker compose restart partner-service
 
 ---
 
+## Telegram Moment Tracking (Webhook)
+
+Allows users to track moments via Telegram chat using `/momento` command.
+
+### 1. Environment Variables
+
+```bash
+# On server: /opt/rafiki/.env
+PARTNER_TELEGRAM_BOTTOKEN=<token_from_botfather>
+PARTNER_TELEGRAM_WEBHOOKSECRET=<generate_with_openssl_rand_hex_32>
+```
+
+### 2. One-Time Webhook Registration
+
+```bash
+# Generate secret
+openssl rand -hex 32
+
+# Register webhook with Telegram
+curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.rafiki.lat/v1/telegram/webhook",
+    "secret_token": "<SECRET>",
+    "allowed_updates": ["message"]
+  }'
+
+# Verify
+curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo" | jq
+```
+
+### 3. Bot Commands (@BotFather)
+
+```
+/setcommands → Select bot → Send:
+momento - Comenzar a registrar un momento 📝
+cancel - Pausar el registro actual ⏸️
+ayuda - Ver ayuda y cómo funciona ❓
+ejemplo - Ver un ejemplo completo 💡
+```
+
+### 4. Webhook Management
+
+```bash
+# Check status
+curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
+
+# Delete (emergency)
+curl -X POST "https://api.telegram.org/bot<TOKEN>/deleteWebhook"
+
+# Logs
+docker compose logs -f partner-service | grep telegram
+```
+
+### 5. Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `telegram_sessions` | Active conversation sessions |
+| `river_job` | Job queue (telegram_message jobs) |
+
+---
+
 ## Troubleshooting
 
 ### Health Check Fails
