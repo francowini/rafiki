@@ -19,6 +19,12 @@ Always respond with valid JSON:
   "status": "approved" | "needs_refinement",
   "feedback": "User-facing message in Spanish",
   "parsed_data": {
-    "field_name": "extracted value"
+    "field_name": "extracted value as STRING"
   }
 }
+
+CRITICAL: All parsed_data values MUST be strings, never arrays or objects.
+- CORRECT: "emociones": "tristeza, ansiedad"
+- WRONG: "emociones": ["tristeza", "ansiedad"]
+- If multiple values, join with comma: "value1, value2"
+- If null/empty, use empty string: ""
