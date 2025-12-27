@@ -1,13 +1,13 @@
 package userbus
 
 import (
-	"database/sql"
 	"net/mail"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/francowini/rafiki/business/types/name"
+	"github.com/francowini/rafiki/business/types/nulltime"
 	"github.com/francowini/rafiki/business/types/role"
 	"github.com/francowini/rafiki/business/types/telegramchatid"
 )
@@ -23,7 +23,7 @@ type User struct {
 	Enabled          bool
 	TelegramChatID   telegramchatid.Null
 	TelegramEnabled  bool
-	TelegramLinkedAt sql.NullTime
+	TelegramLinkedAt nulltime.Null
 	DateCreated      time.Time
 	DateUpdated      time.Time
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/francowini/rafiki/business/domain/userbus"
 	"github.com/francowini/rafiki/business/sdk/sqldb/dbarray"
 	"github.com/francowini/rafiki/business/types/name"
+	"github.com/francowini/rafiki/business/types/nulltime"
 	"github.com/francowini/rafiki/business/types/role"
 	"github.com/francowini/rafiki/business/types/telegramchatid"
 )
@@ -47,7 +48,7 @@ func toDBUser(bus userbus.User) user {
 			Valid: bus.TelegramChatID.Valid,
 		},
 		TelegramEnabled:  bus.TelegramEnabled,
-		TelegramLinkedAt: bus.TelegramLinkedAt,
+		TelegramLinkedAt: bus.TelegramLinkedAt.ToSQLNullTime(),
 		DateCreated:      bus.DateCreated.UTC(),
 		DateUpdated:      bus.DateUpdated.UTC(),
 	}
@@ -93,7 +94,7 @@ func toBusUser(db user) (userbus.User, error) {
 		Department:       department,
 		TelegramChatID:   chatID,
 		TelegramEnabled:  db.TelegramEnabled,
-		TelegramLinkedAt: db.TelegramLinkedAt,
+		TelegramLinkedAt: nulltime.FromSQLNullTime(db.TelegramLinkedAt),
 		DateCreated:      db.DateCreated.UTC(),
 		DateUpdated:      db.DateUpdated.UTC(),
 	}

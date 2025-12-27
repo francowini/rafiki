@@ -141,3 +141,24 @@ func (n Null) MarshalText() ([]byte, error) {
 	}
 	return n.ChatID.MarshalText()
 }
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+// Treats "null" or empty string as a null value.
+func (n *Null) UnmarshalText(data []byte) error {
+	s := string(data)
+
+	// Treat "null" or empty string as null
+	if s == "" || s == "null" {
+		*n = Null{}
+		return nil
+	}
+
+	// Delegate to TelegramChatID parsing
+	var chatID TelegramChatID
+	if err := chatID.UnmarshalText(data); err != nil {
+		return err
+	}
+
+	*n = NewNull(chatID)
+	return nil
+}
