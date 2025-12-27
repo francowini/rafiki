@@ -380,6 +380,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 		telegramMessageWorker := telegrammessage.NewWorker(
 			log,
 			telegramSessionBus,
+			momentBus,
 			anthropicClient,
 			telegramClient,
 		)

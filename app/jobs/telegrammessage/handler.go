@@ -110,6 +110,29 @@ func (w *Worker) handleApproved(ctx context.Context, session telegramsessionbus.
 			return session, "", fmt.Errorf("store final step: %w", err)
 		}
 
+		// =====================================================================
+		// NEW: Create moment (Deliverable 5c)
+		// =====================================================================
+		if err := w.completeMoment(ctx, updatedSession); err != nil {
+			// Log but don't fail - idempotent retry will handle it
+			w.log.Error(ctx, "telegrammessage.completion_failed",
+				"session_id", updatedSession.ID,
+				"user_id", updatedSession.UserID,
+				"err", err,
+			)
+		}
+
+		// =====================================================================
+		// Delete session (cleanup)
+		// =====================================================================
+		if err := w.sessionBus.Delete(ctx, updatedSession); err != nil {
+			w.log.Error(ctx, "telegrammessage.session_delete_failed",
+				"session_id", updatedSession.ID,
+				"err", err,
+			)
+			// Don't fail - cleanup job handles stale sessions
+		}
+
 		// Generate AI summary for completion
 		summary := w.generateCompletionSummary(updatedSession)
 		return updatedSession, summary, nil
@@ -180,37 +203,6 @@ func (w *Worker) handleCompassionateAutoApproval(ctx context.Context, session te
 	return updatedSession, reply, nil
 }
 
-// generateCompletionSummary creates ACT-informed summary after all steps complete.
-// PRODUCT DECISION: Reinforce learning with pattern reflection + curiosity invitation.
-func (w *Worker) generateCompletionSummary(session telegramsessionbus.Session) string {
-	// Extract key data from session context
-	step1Data, _ := session.ContextData.GetStep("step_1")
-	step3Data, _ := session.ContextData.GetStep("step_3")
-	step5Data, _ := session.ContextData.GetStep("step_5")
-
-	situacion := step1Data.ParsedValues["situacion"]            //nolint:misspell // Spanish word
-	conducta := step3Data.ParsedValues["conducta"]              //nolint:misspell // Spanish word
-	valoresDescripcion := step5Data.ParsedValues["descripcion"] //nolint:misspell // Spanish word
-
-	// Build summary
-	summary := completionConfirmation + "\n\n"
-
-	// Pattern reflection
-	if situacion != "" && conducta != "" {
-		summary += fmt.Sprintf("Notaste que cuando %s, tu respuesta fue %s.", situacion, conducta)
-	}
-
-	// Values connection (if available)
-	if valoresDescripcion != "" {
-		summary += " " + valoresDescripcion
-	}
-
-	// Curiosity invitation
-	summary += "\n\n" + curiosityInvitation
-
-	return summary
-}
-
 // getDefaultDataForStep returns default parsed values for auto-approval.
 func getDefaultDataForStep(stepNum int) map[string]string {
 	switch stepNum {
@@ -233,12 +225,6 @@ const (
 
 	// PRODUCT DECISION: Educational message when defaulting intensity to 5
 	compassionateIntensityMessage = "Asigné intensidad 5 (media). Con la práctica, te va a resultar más fácil identificar estas diferencias. ✓"
-
-	// Completion confirmation
-	completionConfirmation = "✓ Momento guardado"
-
-	// Curiosity invitation (ACT-aligned)
-	curiosityInvitation = "¿Reconocés este patrón en otros momentos?"
 )
 
 // sendTelegramMessage sends a message to the user.

@@ -8,6 +8,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/francowini/rafiki/app/domain/telegramapp"
+	"github.com/francowini/rafiki/business/domain/momentbus"
 	"github.com/francowini/rafiki/business/domain/telegramsessionbus"
 	"github.com/francowini/rafiki/foundation/anthropic"
 	"github.com/francowini/rafiki/foundation/jobqueue"
@@ -20,6 +21,7 @@ type Worker struct {
 	river.WorkerDefaults[telegramapp.TelegramMessageArgs]
 	log             *logger.Logger
 	sessionBus      *telegramsessionbus.Business
+	momentBus       *momentbus.Business
 	anthropicClient *anthropic.Client
 	telegramClient  *telegram.Client
 }
@@ -28,12 +30,14 @@ type Worker struct {
 func NewWorker(
 	log *logger.Logger,
 	sessionBus *telegramsessionbus.Business,
+	momentBus *momentbus.Business,
 	anthropicClient *anthropic.Client,
 	telegramClient *telegram.Client,
 ) *Worker {
 	return &Worker{
 		log:             log,
 		sessionBus:      sessionBus,
+		momentBus:       momentBus,
 		anthropicClient: anthropicClient,
 		telegramClient:  telegramClient,
 	}
