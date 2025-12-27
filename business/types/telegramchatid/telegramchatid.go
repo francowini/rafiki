@@ -48,6 +48,38 @@ func (t *TelegramChatID) UnmarshalText(data []byte) error {
 	return nil
 }
 
+// MarshalJSON implements json.Marshaler interface.
+func (t TelegramChatID) MarshalJSON() ([]byte, error) {
+	return []byte(t.String()), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler interface.
+// Accepts both number and string formats: 123456789 or "123456789"
+func (t *TelegramChatID) UnmarshalJSON(data []byte) error {
+	// Try parsing as number first
+	value, err := strconv.ParseInt(string(data), 10, 64)
+	if err != nil {
+		// Try parsing as quoted string
+		s := string(data)
+		if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+			value, err = strconv.ParseInt(s[1:len(s)-1], 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid telegram chat ID: %w", err)
+			}
+		} else {
+			return fmt.Errorf("invalid telegram chat ID format: %s", s)
+		}
+	}
+
+	parsed, err := Parse(value)
+	if err != nil {
+		return err
+	}
+
+	*t = parsed
+	return nil
+}
+
 // =============================================================================
 
 // Parse validates and creates a TelegramChatID (non-zero int64).

@@ -18,6 +18,7 @@ import (
 	"github.com/francowini/rafiki/api/services/partners/all"
 	"github.com/francowini/rafiki/app/jobs/healthcheck"
 	"github.com/francowini/rafiki/app/jobs/sessioncleanup"
+	"github.com/francowini/rafiki/app/jobs/telegrammessage"
 	"github.com/francowini/rafiki/app/jobs/telegramnotify"
 	"github.com/francowini/rafiki/app/sdk/auth"
 	"github.com/francowini/rafiki/app/sdk/debug"
@@ -52,6 +53,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/encrypt"
 	"github.com/francowini/rafiki/business/sdk/migrate"
 	"github.com/francowini/rafiki/business/sdk/sqldb"
+	"github.com/francowini/rafiki/foundation/anthropic"
 	"github.com/francowini/rafiki/foundation/jobqueue"
 	"github.com/francowini/rafiki/foundation/keystore"
 	"github.com/francowini/rafiki/foundation/logger"
@@ -135,6 +137,12 @@ func run(ctx context.Context, log *logger.Logger) error {
 			MorningTime   string `conf:"default:08:00,env:TELEGRAM_MORNINGTIME"`
 			EveningTime   string `conf:"default:21:00,env:TELEGRAM_EVENINGTIME"`
 			Timezone      string `conf:"default:America/Argentina/Buenos_Aires,env:TELEGRAM_TIMEZONE"`
+		}
+		Anthropic struct {
+			APIKey      string  `conf:"env:ANTHROPIC_APIKEY,mask"`
+			Model       string  `conf:"default:claude-sonnet-4-5-20251029,env:ANTHROPIC_MODEL"`
+			MaxTokens   int     `conf:"default:500,env:ANTHROPIC_MAXTOKENS"`
+			Temperature float64 `conf:"default:0.7,env:ANTHROPIC_TEMPERATURE"`
 		}
 	}{
 		Version: conf.Version{
@@ -352,6 +360,33 @@ func run(ctx context.Context, log *logger.Logger) error {
 			"evening", cfg.Telegram.EveningTime,
 			"timezone", cfg.Telegram.Timezone,
 		)
+
+		// Register Telegram message worker if Anthropic API key is configured
+		// CRITICAL: Anthropic API key is required when Telegram is enabled
+		if cfg.Anthropic.APIKey == "" {
+			return fmt.Errorf("telegrammessage: PARTNER_ANTHROPIC_APIKEY is required when Telegram is enabled")
+		}
+
+		anthropicClient, err := anthropic.NewClientWithConfig(anthropic.Config{
+			APIKey:      cfg.Anthropic.APIKey,
+			Model:       cfg.Anthropic.Model,
+			MaxTokens:   cfg.Anthropic.MaxTokens,
+			Temperature: &cfg.Anthropic.Temperature,
+		})
+		if err != nil {
+			return fmt.Errorf("create anthropic client: %w", err)
+		}
+
+		telegramMessageWorker := telegrammessage.NewWorker(
+			log,
+			telegramSessionBus,
+			anthropicClient,
+			telegramClient,
+		)
+		jobqueue.AddWorker(workers, telegramMessageWorker)
+
+		log.Info(ctx, "startup", "status", "telegram message worker registered",
+			"model", cfg.Anthropic.Model)
 	}
 
 	// Create and start job queue
