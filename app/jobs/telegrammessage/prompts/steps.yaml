@@ -1,0 +1,94 @@
+steps:
+  1:
+    question: "¿Qué pasó? Contanos qué estaba pasando cuando empezaste a sentirte mal. ¿Dónde estabas? ¿Qué estabas haciendo? Y si podés, contanos también qué pensamientos te aparecieron en ese momento."
+    instruction: |
+      Extract the triggering situation and thoughts from the user's response.
+      - Situacion: Observable context (where, when, what was happening)
+      - Pensamientos: Cognitive content (thoughts that appeared)
+    parse_fields:
+      - situacion
+      - pensamientos
+    eval_first: |
+      STRICT: Require BOTH situation AND thoughts to be present.
+      - Situation must be concrete (not just "estaba mal")
+      - Thoughts must be mentioned (even brief is OK)
+      If missing either, status: needs_refinement
+    eval_retry: |
+      PERMISSIVE: Accept any genuine attempt.
+      - If only situation OR only thoughts, still approve
+      - Extract what's available, leave other field empty
+
+  2:
+    question: "¿Qué sentiste en el cuerpo? ¿Y qué emociones aparecieron? Por ejemplo: palpitaciones, tensión, sudor, nudo en el estómago. Emociones como ansiedad, tristeza, enojo."
+    instruction: |
+      Extract physical symptoms and emotions from the user's response.
+      - Sintomas_fisicos: Body sensations (palpitations, tension, sweating, etc.)
+      - Emociones: Emotional labels (anxiety, sadness, anger, etc.)
+    parse_fields:
+      - sintomas_fisicos
+      - emociones
+    eval_first: |
+      REQUIRE at least ONE physical symptom OR ONE emotion.
+      If neither mentioned, status: needs_refinement with specific prompting.
+    eval_retry: |
+      PERMISSIVE: Accept "me sentí mal" or similar vague responses.
+      Extract what's mentioned, infer if reasonable.
+
+  3:
+    question: "Cuando aparecieron esas sensaciones y emociones, ¿qué hiciste? Puede ser algo que hiciste o algo que dejaste de hacer."
+    instruction: |
+      Extract the behavioral response from the user.
+      - Conducta: What the user DID (or didn't do) in response
+      Note: Inaction ("me quedé paralizado") IS a valid behavior
+    parse_fields:
+      - conducta
+    eval_first: |
+      REQUIRE a clear behavior description.
+      Accept inaction as valid behavior.
+    eval_retry: |
+      PERMISSIVE: Accept "no hice nada" or similar.
+
+  4:
+    question: "Después de hacer eso, ¿cómo te sentiste? ¿Cambió algo?"
+    instruction: |
+      Extract the consequences of the behavior.
+      - Consecuencias: What happened after (immediate effects)
+      Note: "No cambió nada" is a valid consequence
+    parse_fields:
+      - consecuencias
+    eval_first: |
+      REQUIRE some description of aftermath.
+    eval_retry: |
+      PERMISSIVE: Accept "siguió igual" or similar brief responses.
+
+  5:
+    question: "Pensando en lo que hiciste, ¿sentís que te acercó a algo que valorás o te alejó? ¿Evitaste algo incómodo?"
+    instruction: |
+      Extract values reflection - approach vs avoidance.
+      - Tipo: "aproximacion" (moved toward values) or "evitacion" (moved away)
+      - Descripcion: User's reflection on values alignment
+      Note: This is the hardest step - be very gentle. "No sé" is acceptable.
+    parse_fields:
+      - tipo
+      - descripcion
+    eval_first: |
+      GENTLE: Accept any reflection attempt.
+      Don't require technical understanding of approach/avoidance.
+    eval_retry: |
+      VERY PERMISSIVE: "No sé" or similar is acceptable.
+      Approve with tipo: "indefinido" if unclear.
+
+  6:
+    question: "Para cerrar, ¿qué intensidad le pondrías a este momento? Del 0 al 10, donde 0 es nada de malestar y 10 es lo más intenso que podrías sentir."
+    instruction: |
+      Extract intensity rating (0-10 scale).
+      - Intensidad: Number from 0 to 10
+      Accept variations: "7", "un 7", "siete", "como 7"
+    parse_fields:
+      - intensidad
+    eval_first: |
+      REQUIRE a number from 0 to 10.
+      Parse Spanish number words: "siete" -> "7"
+    eval_retry: |
+      If "no sé" or can't determine, will be auto-approved with default.
+      Still try to extract if any number is mentioned.

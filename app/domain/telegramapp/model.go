@@ -45,8 +45,8 @@ type TelegramChat struct {
 
 // TelegramMessageArgs contains data for async job processing.
 type TelegramMessageArgs struct {
-	SessionID uuid.UUID                       `json:"session_id"`
-	UserID    uuid.UUID                       `json:"user_id"`
-	ChatID    telegramchatid.TelegramChatID   `json:"chat_id"`
-	Text      string                          `json:"text"`
+	SessionID uuid.UUID                     `json:"session_id"`
+	UserID    uuid.UUID                     `json:"user_id"`
+	ChatID    telegramchatid.TelegramChatID `json:"chat_id"`
+	Text      string                        `json:"text"`
 }

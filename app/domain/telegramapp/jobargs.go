@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/riverqueue/river"
+
 	"github.com/francowini/rafiki/foundation/jobqueue"
 )
 
