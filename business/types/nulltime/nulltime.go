@@ -39,8 +39,8 @@ func (n Null) ToSQLNullTime() sql.NullTime {
 	}
 }
 
-// Value returns the time.Time value, or zero time if null.
-func (n Null) Value() time.Time {
+// TimeValue returns the time.Time value, or zero time if null.
+func (n Null) TimeValue() time.Time {
 	if !n.Valid {
 		return time.Time{}
 	}
@@ -145,8 +145,8 @@ func (n *Null) Scan(value any) error {
 	}
 }
 
-// DriverValue implements the driver.Valuer interface for database writes.
-func (n Null) DriverValue() (driver.Value, error) {
+// Value implements the driver.Valuer interface for database writes.
+func (n Null) Value() (driver.Value, error) {
 	if !n.Valid {
 		return nil, nil
 	}
