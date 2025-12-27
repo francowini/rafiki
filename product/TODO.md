@@ -119,7 +119,7 @@ This is a **mental health tool**. Users may express:
 - [ ] Legal review for liability
 
 **Crisis Resources (Argentina)**:
-- Centro de Atencion al Suicida: 135 (free, 24/7)
+- Centro de Atención al Suicida: 135 (free, 24/7)
 - Help line: [to be determined]
 
 **Temporary Mitigation**:

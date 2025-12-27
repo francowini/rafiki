@@ -69,7 +69,11 @@ func (w *Worker) buildUserMessage(session telegramsessionbus.Session, userText s
 		for i := 1; i < session.CurrentStep.Value(); i++ {
 			stepKey := fmt.Sprintf("step_%d", i)
 			if data, ok := session.ContextData.GetStep(stepKey); ok {
-				sb.WriteString(fmt.Sprintf("- Step %d: %s\n", i, data.RawResponse))
+				response := data.RawResponse
+				if response == "" {
+					response = "(auto-approved)"
+				}
+				sb.WriteString(fmt.Sprintf("- Step %d: %s\n", i, response))
 			}
 		}
 		sb.WriteString("\n")
@@ -155,10 +159,11 @@ func isRetryable(err error) bool {
 	return errors.As(err, &rateLimitErr)
 }
 
-// truncate shortens a string for logging.
+// truncate shortens a string for logging (rune-aware for UTF-8 safety).
 func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
 		return s
 	}
-	return s[:maxLen] + "..."
+	return string(runes[:maxLen]) + "..."
 }

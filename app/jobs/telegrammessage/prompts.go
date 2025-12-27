@@ -64,11 +64,14 @@ func LoadPrompts() Prompts {
 }
 
 // getStepPrompt returns the user-facing question for a step.
+// Returns "[step not found]" if the step doesn't exist.
 func getStepPrompt(stepNum int) string {
 	prompts := LoadPrompts()
 	step, ok := prompts.Steps[stepNum]
 	if !ok {
-		return ""
+		// Log warning - step prompts should always exist for valid steps
+		// This indicates a configuration issue in steps.yaml
+		return fmt.Sprintf("[step %d not found]", stepNum)
 	}
 	return step.Question
 }
