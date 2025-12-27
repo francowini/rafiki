@@ -150,6 +150,18 @@ errors:
     Para registrar un momento, escribí /momento.
     Si necesitás ayuda, escribí /ayuda.
 
+  # Unknown command
+  unknown_command: |
+    No reconozco ese comando. 🤔
+
+    Escribí /ayuda para ver los comandos disponibles.
+
+  # Group chat not supported
+  group_not_supported: |
+    Rafiki solo funciona en chats privados. 👤
+
+    Por favor, escribime directamente en un chat privado.
+
   # Step 6 invalid number
   invalid_intensity: |
     Necesito un número del 0 al 10.

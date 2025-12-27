@@ -12,6 +12,7 @@ import (
 	"github.com/francowini/rafiki/business/sdk/sqldb/dbarray"
 	"github.com/francowini/rafiki/business/types/name"
 	"github.com/francowini/rafiki/business/types/role"
+	"github.com/francowini/rafiki/business/types/telegramchatid"
 )
 
 type user struct {
@@ -40,8 +41,11 @@ func toDBUser(bus userbus.User) user {
 			String: bus.Department.String(),
 			Valid:  bus.Department.Valid(),
 		},
-		Enabled:          bus.Enabled,
-		TelegramChatID:   bus.TelegramChatID,
+		Enabled: bus.Enabled,
+		TelegramChatID: sql.NullInt64{
+			Int64: bus.TelegramChatID.Value(),
+			Valid: bus.TelegramChatID.Valid,
+		},
 		TelegramEnabled:  bus.TelegramEnabled,
 		TelegramLinkedAt: bus.TelegramLinkedAt,
 		DateCreated:      bus.DateCreated.UTC(),
@@ -69,6 +73,16 @@ func toBusUser(db user) (userbus.User, error) {
 		return userbus.User{}, fmt.Errorf("parse department: %w", err)
 	}
 
+	// Convert sql.NullInt64 to telegramchatid.Null
+	var chatID telegramchatid.Null
+	if db.TelegramChatID.Valid {
+		parsed, err := telegramchatid.Parse(db.TelegramChatID.Int64)
+		if err != nil {
+			return userbus.User{}, fmt.Errorf("parse telegram_chat_id: %w", err)
+		}
+		chatID = telegramchatid.NewNull(parsed)
+	}
+
 	bus := userbus.User{
 		ID:               db.ID,
 		Name:             nme,
@@ -77,11 +91,11 @@ func toBusUser(db user) (userbus.User, error) {
 		PasswordHash:     db.PasswordHash,
 		Enabled:          db.Enabled,
 		Department:       department,
-		TelegramChatID:   db.TelegramChatID,
+		TelegramChatID:   chatID,
 		TelegramEnabled:  db.TelegramEnabled,
 		TelegramLinkedAt: db.TelegramLinkedAt,
-		DateCreated:      db.DateCreated.In(time.Local),
-		DateUpdated:      db.DateUpdated.In(time.Local),
+		DateCreated:      db.DateCreated.UTC(),
+		DateUpdated:      db.DateUpdated.UTC(),
 	}
 
 	return bus, nil

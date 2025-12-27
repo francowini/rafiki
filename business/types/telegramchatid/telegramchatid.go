@@ -68,3 +68,76 @@ func MustParse(value int64) TelegramChatID {
 
 	return chatID
 }
+
+// =============================================================================
+// Null represents a nullable TelegramChatID for optional fields.
+// =============================================================================
+
+// Null represents a nullable TelegramChatID.
+type Null struct {
+	ChatID TelegramChatID
+	Valid  bool // Valid is true if ChatID is set
+}
+
+// NewNull creates a valid Null with the given TelegramChatID.
+func NewNull(chatID TelegramChatID) Null {
+	return Null{
+		ChatID: chatID,
+		Valid:  true,
+	}
+}
+
+// NullFromInt64 parses an int64 and creates a Null.
+// If value is 0, returns an invalid (null) Null.
+func NullFromInt64(value int64) (Null, error) {
+	if value == 0 {
+		return Null{}, nil
+	}
+
+	chatID, err := Parse(value)
+	if err != nil {
+		return Null{}, err
+	}
+
+	return NewNull(chatID), nil
+}
+
+// Value returns the int64 value, or 0 if null.
+func (n Null) Value() int64 {
+	if !n.Valid {
+		return 0
+	}
+	return n.ChatID.Value()
+}
+
+// String returns the string representation, or empty string if null.
+func (n Null) String() string {
+	if !n.Valid {
+		return ""
+	}
+	return n.ChatID.String()
+}
+
+// IsNull returns true if this Null represents a null value.
+func (n Null) IsNull() bool {
+	return !n.Valid
+}
+
+// Equal provides support for the go-cmp package and testing.
+func (n Null) Equal(n2 Null) bool {
+	if n.Valid != n2.Valid {
+		return false
+	}
+	if !n.Valid {
+		return true // Both are null
+	}
+	return n.ChatID.Equal(n2.ChatID)
+}
+
+// MarshalText provides support for logging and any marshal needs.
+func (n Null) MarshalText() ([]byte, error) {
+	if !n.Valid {
+		return []byte("null"), nil
+	}
+	return n.ChatID.MarshalText()
+}

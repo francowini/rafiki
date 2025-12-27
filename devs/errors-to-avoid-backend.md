@@ -38,6 +38,9 @@ This document catalogs critical errors specific to backend (Go) development.
 30. [Transaction Safety: Non-Atomic Multi-Operation Business Logic](#30-transaction-safety-non-atomic-multi-operation-business-logic)
 31. [Defense-in-Depth: Dropping Constraints Without Trigger Replacement](#31-defense-in-depth-dropping-constraints-without-trigger-replacement)
 32. [Slice Safety: Accessing First Element Without Length Check](#32-slice-safety-accessing-first-element-without-length-check)
+33. [Domain Models: Leaking Storage Concerns](#33-domain-models-leaking-storage-concerns)
+34. [Cache Consistency: Incomplete Key Management](#34-cache-consistency-incomplete-key-management)
+35. [Configuration Validation: Late Failure on Missing Config](#35-configuration-validation-late-failure-on-missing-config)
 
 ---
 
@@ -1419,3 +1422,177 @@ func calculateMonthlyStreaks(days []DayActivity, requiredPerMonth int) (current,
 - [ ] Add `if len(slice) == 0 { return ... }` guard before accessing `slice[0]`
 - [ ] Return appropriate zero values (0, nil, empty struct) for empty input
 - [ ] Place guard at function entry point for consistent handling
+
+---
+
+## 33. Domain Models: Leaking Storage Concerns
+
+### Severity: MAJOR (Architecture Violation)
+
+### Problem
+
+Using database-specific types like `sql.NullInt64`, `sql.NullString`, or `sql.NullTime` in business domain models leaks storage concerns into the domain layer, breaking separation of concerns.
+
+### Bad Example
+
+```go
+// BAD: sql.Null* types in domain model leak storage details
+type User struct {
+    ID             uuid.UUID
+    Name           name.Name
+    TelegramChatID sql.NullInt64  // Leaks storage concern
+    TelegramLinkedAt sql.NullTime // Leaks storage concern
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Use strong business types with nullable variants
+// In business/types/telegramchatid/telegramchatid.go:
+type Null struct {
+    ChatID TelegramChatID
+    Valid  bool
+}
+
+// In business/domain/userbus/model.go:
+type User struct {
+    ID             uuid.UUID
+    Name           name.Name
+    TelegramChatID telegramchatid.Null  // Business type
+    TelegramLinkedAt sql.NullTime       // (time.Time is acceptable, or create time.Null)
+}
+
+// In business/domain/userbus/stores/userdb/model.go:
+// Convert between sql.NullInt64 and telegramchatid.Null at storage boundary
+func toBusUser(db user) (userbus.User, error) {
+    var chatID telegramchatid.Null
+    if db.TelegramChatID.Valid {
+        parsed, err := telegramchatid.Parse(db.TelegramChatID.Int64)
+        if err != nil {
+            return userbus.User{}, fmt.Errorf("parse telegram_chat_id: %w", err)
+        }
+        chatID = telegramchatid.NewNull(parsed)
+    }
+    // ...
+}
+```
+
+### Checklist
+
+- [ ] Domain models use strong business types, not sql.Null* types
+- [ ] Nullable business types have a `Null` variant (e.g., `telegramchatid.Null`)
+- [ ] Storage layer handles conversion between database types and business types
+- [ ] Exception: `sql.NullTime` is acceptable if no time-specific validation needed
+
+---
+
+## 34. Cache Consistency: Incomplete Key Management
+
+### Severity: MAJOR (Performance / Data Consistency)
+
+### Problem
+
+When caching entities that can be looked up by multiple keys (ID, email, telegram_chat_id), failing to cache by all lookup keys causes cache misses and repeated database hits.
+
+### Bad Example
+
+```go
+// BAD: QueryByTelegramChatID uses chatID.String() as cache key
+// but writeCache only stores by ID and email
+func (s *Store) QueryByTelegramChatID(ctx context.Context, chatID telegramchatid.TelegramChatID) (userbus.User, error) {
+    cachedUsr, ok := s.readCache(chatID.String())  // Will always miss!
+    if ok {
+        return cachedUsr, nil
+    }
+    // ...
+}
+
+func (s *Store) writeCache(bus userbus.User) {
+    s.cache.Set(bus.ID.String(), bus)
+    s.cache.Set(bus.Email.Address, bus)
+    // Missing: s.cache.Set(bus.TelegramChatID.String(), bus)
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Cache by all lookup keys
+func (s *Store) writeCache(bus userbus.User) {
+    s.cache.Set(bus.ID.String(), bus)
+    s.cache.Set(bus.Email.Address, bus)
+
+    // Also cache by TelegramChatID if present
+    if bus.TelegramChatID.Valid {
+        s.cache.Set(bus.TelegramChatID.String(), bus)
+    }
+}
+
+func (s *Store) deleteCache(bus userbus.User) {
+    s.cache.Delete(bus.ID.String())
+    s.cache.Delete(bus.Email.Address)
+
+    // Also remove TelegramChatID cache entry if present
+    if bus.TelegramChatID.Valid {
+        s.cache.Delete(bus.TelegramChatID.String())
+    }
+}
+```
+
+### Checklist
+
+- [ ] For each `QueryByX` method, ensure `writeCache` stores by that key
+- [ ] For each `QueryByX` method, ensure `deleteCache` removes that key
+- [ ] Use consistent string key format between read and write operations
+
+---
+
+## 35. Configuration Validation: Late Failure on Missing Config
+
+### Severity: MAJOR (Operational Issue)
+
+### Problem
+
+When middleware or services depend on configuration values but only validate them at request time, configuration errors are detected late (first request) instead of at startup, leading to confusing error messages.
+
+### Bad Example
+
+```go
+// BAD: Missing config causes misleading "invalid signature" errors at runtime
+func verifyTelegramSignature(webhookSecret string) web.MidFunc {
+    return func(next web.HandlerFunc) web.HandlerFunc {
+        return func(ctx context.Context, r *http.Request) web.Encoder {
+            // If webhookSecret is empty, this silently fails every request
+            if subtle.ConstantTimeCompare([]byte(token), []byte(webhookSecret)) != 1 {
+                return errs.New(errs.Unauthenticated, errors.New("invalid telegram signature"))
+            }
+            return next(ctx, r)
+        }
+    }
+}
+```
+
+### Good Example
+
+```go
+// GOOD: Fail fast at startup with clear error message
+func verifyTelegramSignature(webhookSecret string) web.MidFunc {
+    // Fail fast on missing configuration - detect at startup, not at runtime
+    if webhookSecret == "" {
+        panic("telegramapp: missing telegram webhook secret in configuration")
+    }
+
+    return func(next web.HandlerFunc) web.HandlerFunc {
+        return func(ctx context.Context, r *http.Request) web.Encoder {
+            // ...
+        }
+    }
+}
+```
+
+### Checklist
+
+- [ ] Validate required configuration at middleware/service construction time
+- [ ] Use panic with clear message for configuration errors (startup-time failures)
+- [ ] Never silently accept empty required configuration values

@@ -41,11 +41,13 @@ type StepMessages struct {
 
 // ErrorMessages contains error response messages.
 type ErrorMessages struct {
-	UnlinkedUser     string `yaml:"unlinked_user"`
-	Technical        string `yaml:"technical"`
-	EmptyResponse    string `yaml:"empty_response"`
-	OutsideSession   string `yaml:"outside_session"`
-	InvalidIntensity string `yaml:"invalid_intensity"`
+	UnlinkedUser      string `yaml:"unlinked_user"`
+	Technical         string `yaml:"technical"`
+	EmptyResponse     string `yaml:"empty_response"`
+	OutsideSession    string `yaml:"outside_session"`
+	UnknownCommand    string `yaml:"unknown_command"`
+	GroupNotSupported string `yaml:"group_not_supported"`
+	InvalidIntensity  string `yaml:"invalid_intensity"`
 }
 
 var (

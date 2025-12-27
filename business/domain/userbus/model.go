@@ -9,6 +9,7 @@ import (
 
 	"github.com/francowini/rafiki/business/types/name"
 	"github.com/francowini/rafiki/business/types/role"
+	"github.com/francowini/rafiki/business/types/telegramchatid"
 )
 
 // User represents information about an individual user.
@@ -20,7 +21,7 @@ type User struct {
 	PasswordHash     []byte
 	Department       name.Null
 	Enabled          bool
-	TelegramChatID   sql.NullInt64
+	TelegramChatID   telegramchatid.Null
 	TelegramEnabled  bool
 	TelegramLinkedAt sql.NullTime
 	DateCreated      time.Time

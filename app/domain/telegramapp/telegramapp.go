@@ -65,6 +65,13 @@ func (a *app) webhook(ctx context.Context, r *http.Request) web.Encoder {
 		return nil
 	}
 
+	// Reject non-private chats (groups, supergroups, channels)
+	if msg.Chat.Type != "private" {
+		a.log.Info(ctx, "telegram_webhook.group_rejected", "chat_id", chatID, "chat_type", msg.Chat.Type)
+		a.sendMessage(ctx, chatID, Msg().Errors.GroupNotSupported)
+		return nil
+	}
+
 	// Lookup user by telegram_chat_id
 	user, err := a.userBus.QueryByTelegramChatID(ctx, chatID)
 	if err != nil {
@@ -88,9 +95,10 @@ func (a *app) webhook(ctx context.Context, r *http.Request) web.Encoder {
 
 // routeCommand handles bot commands.
 func (a *app) routeCommand(ctx context.Context, chatID telegramchatid.TelegramChatID, userID uuid.UUID, text string) web.Encoder {
-	// Extract command (handle @botname suffix)
+	// Extract command (handle @botname suffix) and normalize to lowercase
 	cmd := strings.Split(text, " ")[0]
 	cmd = strings.Split(cmd, "@")[0]
+	cmd = strings.ToLower(cmd)
 
 	switch cmd {
 	case "/momento":
@@ -104,8 +112,8 @@ func (a *app) routeCommand(ctx context.Context, chatID telegramchatid.TelegramCh
 		a.sendMessage(ctx, chatID, Msg().Commands.Ejemplo)
 		return nil
 	default:
-		// Unknown command - send help
-		a.sendMessage(ctx, chatID, Msg().Errors.OutsideSession)
+		// Unknown command - suggest /ayuda
+		a.sendMessage(ctx, chatID, Msg().Errors.UnknownCommand)
 		return nil
 	}
 }
